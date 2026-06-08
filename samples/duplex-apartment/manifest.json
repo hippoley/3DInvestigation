@@ -93,9 +93,11 @@
     {
       "name": "Duplex_A_20110907.ifc",
       "kind": "ifc-architecture",
-      "status": "lfs-pointer-only",
+      "status": "downloaded-from-public-mirror",
       "lfsOidSha256": "b347a2c8aa8fff6db896a4417a9c50c22ac0ccd7c5cfc22b99b8d29336c606ed",
-      "expectedBytes": 2380763
+      "expectedBytes": 2380763,
+      "localBytes": 2380763,
+      "mirrorUrl": "https://raw.githubusercontent.com/stijngoedertier/georeference-ifc/master/Duplex_A_20110907.ifc"
     },
     {
       "name": "Duplex_Electrical_20121207.ifc",
@@ -126,10 +128,47 @@
       "expectedBytes": 31556138
     }
   ],
+  "documentFolder": {
+    "status": "downloaded",
+    "sourcePath": "IFC 2.3.0.1 (IFC 2x3)/Duplex Apartment/document",
+    "localPath": "raw/document",
+    "fileCount": 47,
+    "totalBytes": 47219481,
+    "inventoryFile": "document-files.pretty.json"
+  },
+  "convertedModels": [
+    {
+      "provider": "xeokit-model-conversion-tests",
+      "model": "Duplex_A_20110907",
+      "status": "downloaded",
+      "localPath": "converted/xeokit/Duplex_A_20110907",
+      "files": [
+        "model.xkt.manifest.json",
+        "model.xkt",
+        "model.json",
+        "log.txt"
+      ],
+      "source": "https://xeokit.github.io/xeokit-model-conversion-tests/ifc-tests.html"
+    },
+    {
+      "provider": "xeokit-model-conversion-tests",
+      "model": "Duplex_MEP_20110907",
+      "status": "downloaded",
+      "localPath": "converted/xeokit/Duplex_MEP_20110907",
+      "files": [
+        "model.xkt.manifest.json",
+        "model.xkt",
+        "model.json",
+        "log.txt"
+      ],
+      "source": "https://xeokit.github.io/xeokit-model-conversion-tests/ifc-tests.html"
+    }
+  ],
   "knownGaps": [
-    "The true IFC binaries are not available locally yet because the upstream GitHub LFS endpoint returned an unavailable/budget-blocked response.",
+    "The true Electrical, MEP, Rooms/Spaces, and Plumbing IFC binaries are not available locally yet because the upstream GitHub LFS endpoint returned unavailable/budget-blocked or connection-reset responses.",
+    "The Architecture IFC binary is available locally from a public mirror and matches the upstream expected byte size.",
     "This public sample contains MEP, electrical, and plumbing models, but it is not a full private residential construction package with HVAC shop drawings, floor heating design, domestic water installation drawings, and site photos.",
-    "Product PDFs in the upstream document folder are not mirrored locally yet."
+    "The xeokit converted models are useful for viewer validation but are not substitutes for the original IFC source files."
   ],
   "targetExtraction": {
     "architecture": [
@@ -154,4 +193,3 @@
     ]
   }
 }
-

@@ -6,4 +6,5 @@
 *.png binary
 *.jpg binary
 *.xlsx binary
-
+*.pdf binary
+*.xkt binary

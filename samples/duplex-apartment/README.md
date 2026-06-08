@@ -30,12 +30,14 @@ That makes it a useful public baseline for:
 
 ## Current Local Status
 
-The local `raw/` folder contains the downloadable non-LFS files and Git LFS
-pointers for the IFC models.
+The local `raw/` folder contains the downloadable non-LFS files, the architecture
+IFC binary, and Git LFS pointers for the remaining discipline IFC models.
 
-The true IFC binaries are currently blocked by the upstream repository's GitHub
-LFS budget response. The pointer files are kept intentionally because they
-record the exact SHA-256 object IDs and expected byte sizes.
+The architecture IFC was recovered from a public mirror and matches the upstream
+expected byte size. The Electrical, MEP, Rooms/Spaces, and Plumbing IFC binaries
+are still blocked by the upstream repository's GitHub LFS budget or connection
+reset responses. Their pointer files are kept intentionally because they record
+the exact SHA-256 object IDs and expected byte sizes.
 
 Run this to retry downloads:
 
@@ -54,12 +56,14 @@ Available locally:
 - `2020-11-11-DuplexEle.jpg`
 - `2020-11-11-DuplexMec.jpg`
 - `2020-11-11-DuplexPlu.jpg`
-- IFC LFS pointers for Architecture, Electrical, MEP, Rooms/Spaces, Plumbing
+- `Duplex_A_20110907.ifc`
+- IFC LFS pointers for Electrical, MEP, Rooms/Spaces, Plumbing
+- 47 product and equipment PDFs in `raw/document/`
+- xeokit converted viewer assets for Architecture and MEP in `converted/xeokit/`
 
 Still needed for full extraction:
 
-- true IFC binaries from Git LFS or another public mirror
-- optional product PDFs from the upstream `document/` folder
+- true Electrical, MEP, Rooms/Spaces, and Plumbing IFC binaries from Git LFS or another public mirror
 - any native authoring files, if available elsewhere
 
 ## Intended Compiler Flow
@@ -72,4 +76,3 @@ raw BIM / COBie / views
   -> spatial-meta JSON
   -> Three.js / Unity / Godot adapters
 ```
-
