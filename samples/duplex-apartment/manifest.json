@@ -1,0 +1,157 @@
+{
+  "id": "duplex-apartment",
+  "title": "Duplex Apartment Test Files",
+  "type": "public-residential-bim-sample",
+  "source": {
+    "repository": "buildingsmart-community/Community-Sample-Test-Files",
+    "path": "IFC 2.3.0.1 (IFC 2x3)/Duplex Apartment",
+    "url": "https://github.com/buildingsmart-community/Community-Sample-Test-Files/tree/main/IFC%202.3.0.1%20(IFC%202x3)/Duplex%20Apartment",
+    "observedCommit": "7ddf57a201f88a0c213d5322b02ed15e94a60a40",
+    "attribution": "BSI (2020) \"Duplex Apartment Test Files,\" buildingSMART International",
+    "license": "CC BY 4.0 per upstream README"
+  },
+  "files": [
+    {
+      "name": "README.md",
+      "kind": "source-readme",
+      "status": "downloaded"
+    },
+    {
+      "name": "2012-03-23-Duplex-Design.xlsx",
+      "kind": "cobie-design",
+      "status": "downloaded",
+      "sheets": [
+        "Instruction",
+        "Contact",
+        "Facility",
+        "Floor",
+        "Space",
+        "Zone",
+        "Type",
+        "Component",
+        "System",
+        "Assembly",
+        "Spare",
+        "Resource",
+        "Job",
+        "Impact",
+        "Document",
+        "Attribute",
+        "Coordinate",
+        "Connection",
+        "Issue",
+        "PickLists"
+      ]
+    },
+    {
+      "name": "2012-03-23-Duplex-Handover.xlsx",
+      "kind": "cobie-handover",
+      "status": "downloaded",
+      "sheets": [
+        "Instruction",
+        "Contact",
+        "Facility",
+        "Floor",
+        "Space",
+        "Zone",
+        "Type",
+        "Component",
+        "System",
+        "Assembly",
+        "Spare",
+        "Resource",
+        "Job",
+        "Impact",
+        "Document",
+        "Attribute",
+        "Coordinate",
+        "Connection",
+        "Issue",
+        "PickLists"
+      ]
+    },
+    {
+      "name": "2020-11-11-DuplexArc.jpg",
+      "kind": "architecture-view",
+      "status": "downloaded"
+    },
+    {
+      "name": "2020-11-11-DuplexEle.jpg",
+      "kind": "electrical-view",
+      "status": "downloaded"
+    },
+    {
+      "name": "2020-11-11-DuplexMec.jpg",
+      "kind": "mechanical-view",
+      "status": "downloaded"
+    },
+    {
+      "name": "2020-11-11-DuplexPlu.jpg",
+      "kind": "plumbing-view",
+      "status": "downloaded"
+    },
+    {
+      "name": "Duplex_A_20110907.ifc",
+      "kind": "ifc-architecture",
+      "status": "lfs-pointer-only",
+      "lfsOidSha256": "b347a2c8aa8fff6db896a4417a9c50c22ac0ccd7c5cfc22b99b8d29336c606ed",
+      "expectedBytes": 2380763
+    },
+    {
+      "name": "Duplex_Electrical_20121207.ifc",
+      "kind": "ifc-electrical",
+      "status": "lfs-pointer-only",
+      "lfsOidSha256": "d47b014ed5b3428496683ee75e4664013f6df8237ea571b8d13f877cea0b7a94",
+      "expectedBytes": 1602758
+    },
+    {
+      "name": "Duplex_MEP_20110907.ifc",
+      "kind": "ifc-mep",
+      "status": "lfs-pointer-only",
+      "lfsOidSha256": "13976a8e223f177a6d7123679e4b02e750cd90c13f7bb20c593be125d9407119",
+      "expectedBytes": 17871432
+    },
+    {
+      "name": "Duplex_M_20111024_ROOMS_AND_SPACES.ifc",
+      "kind": "ifc-rooms-and-spaces",
+      "status": "lfs-pointer-only",
+      "lfsOidSha256": "3cd577ecff9daf91632789a408070251a431b198de7be47f64e01c7fda1be92b",
+      "expectedBytes": 8781887
+    },
+    {
+      "name": "Duplex_Plumbing_20121113.ifc",
+      "kind": "ifc-plumbing",
+      "status": "lfs-pointer-only",
+      "lfsOidSha256": "abfaf5c0979b6b4b05182aec7ada8945374bdb414db76c763724d549b41b212b",
+      "expectedBytes": 31556138
+    }
+  ],
+  "knownGaps": [
+    "The true IFC binaries are not available locally yet because the upstream GitHub LFS endpoint returned an unavailable/budget-blocked response.",
+    "This public sample contains MEP, electrical, and plumbing models, but it is not a full private residential construction package with HVAC shop drawings, floor heating design, domestic water installation drawings, and site photos.",
+    "Product PDFs in the upstream document folder are not mirrored locally yet."
+  ],
+  "targetExtraction": {
+    "architecture": [
+      "facility",
+      "floors",
+      "spaces",
+      "walls",
+      "slabs",
+      "doors",
+      "windows",
+      "stairs",
+      "openings"
+    ],
+    "mep": [
+      "mechanical systems",
+      "electrical systems",
+      "plumbing systems",
+      "components",
+      "connections",
+      "coordinates",
+      "documents"
+    ]
+  }
+}
+

@@ -1,0 +1,711 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>空间系统快速生成器</title>
+  <style>
+    :root {
+      --panel: rgba(248, 250, 252, 0.92);
+      --ink: #172033;
+      --muted: #5c6677;
+      --line: rgba(23, 32, 51, 0.16);
+      --blue: #2f80ed;
+      --cyan: #16a6c9;
+      --red: #e24b4b;
+      --gold: #c79c22;
+      --violet: #8b5cf6;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      font-family: Inter, "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+      color: var(--ink);
+      background: #d8dde5;
+    }
+
+    #app {
+      position: fixed;
+      inset: 0;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .topbar {
+      position: fixed;
+      top: 18px;
+      left: 50%;
+      z-index: 4;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      padding: 8px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: 0 12px 30px rgba(23, 32, 51, 0.16);
+      transform: translateX(-50%);
+      backdrop-filter: blur(12px);
+    }
+
+    .toolbar {
+      position: fixed;
+      left: 50%;
+      bottom: 22px;
+      z-index: 4;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(112px, 1fr));
+      gap: 8px;
+      width: min(560px, calc(100vw - 28px));
+      padding: 8px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: 0 12px 30px rgba(23, 32, 51, 0.16);
+      transform: translateX(-50%);
+      backdrop-filter: blur(12px);
+    }
+
+    button {
+      min-height: 38px;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      font: 600 13px/1.2 Inter, "Microsoft YaHei", system-ui, sans-serif;
+      color: var(--ink);
+      background: #ffffff;
+      cursor: pointer;
+      transition: background 150ms ease, border-color 150ms ease, color 150ms ease;
+    }
+
+    button:hover,
+    button.active {
+      border-color: rgba(47, 128, 237, 0.32);
+      color: #0d57b5;
+      background: #eaf3ff;
+    }
+
+    .icon-button {
+      width: 38px;
+      min-width: 38px;
+      padding: 0;
+      font-size: 16px;
+    }
+
+    .select {
+      height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 0 10px;
+      background: #fff;
+      color: var(--ink);
+      font: 600 13px/1 Inter, "Microsoft YaHei", system-ui, sans-serif;
+    }
+
+    .hud {
+      position: fixed;
+      left: 18px;
+      top: 18px;
+      z-index: 3;
+      width: min(320px, calc(100vw - 36px));
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: 0 12px 30px rgba(23, 32, 51, 0.14);
+      backdrop-filter: blur(12px);
+    }
+
+    .hud h1 {
+      margin: 0 0 8px;
+      font-size: 15px;
+      line-height: 1.3;
+      letter-spacing: 0;
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .metric {
+      min-height: 48px;
+      padding: 8px;
+      border: 1px solid rgba(23, 32, 51, 0.08);
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.72);
+    }
+
+    .metric b {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .metric span {
+      display: block;
+      margin-top: 3px;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .tag {
+      padding: 4px 7px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fff;
+      font-size: 12px;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    @media (max-width: 760px) {
+      .hud {
+        display: none;
+      }
+
+      .topbar {
+        top: 10px;
+      }
+
+      .toolbar {
+        bottom: 10px;
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+
+  <section class="hud" aria-label="system status">
+    <h1>全屋暖通与水路系统</h1>
+    <div class="tag">spatial-meta/v1 · Three.js adapter</div>
+    <div class="metrics">
+      <div class="metric"><b>VRF 室内机</b><span id="vrfCount">0</span></div>
+      <div class="metric"><b>新风风口</b><span id="ventCount">0</span></div>
+      <div class="metric"><b>地暖回路</b><span id="loopCount">0</span></div>
+      <div class="metric"><b>水路管线</b><span id="pipeCount">0</span></div>
+    </div>
+  </section>
+
+  <nav class="topbar" aria-label="view controls">
+    <button class="icon-button" id="resetView" title="重置视角">⌂</button>
+    <select class="select" id="preset">
+      <option value="full">全部系统</option>
+      <option value="hvac">中央空调</option>
+      <option value="freshAir">新风</option>
+      <option value="heating">地暖</option>
+      <option value="water">生活用水</option>
+    </select>
+    <button class="icon-button" id="toggleLabels" title="标签">▣</button>
+    <button class="icon-button" id="toggleFlow" title="气流">≈</button>
+  </nav>
+
+  <nav class="toolbar" aria-label="system modules">
+    <button data-layer="hvac" class="active">中央空调</button>
+    <button data-layer="freshAir" class="active">新风模块</button>
+    <button data-layer="heating" class="active">地暖模块</button>
+    <button data-layer="water" class="active">生活用水</button>
+  </nav>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "./node_modules/three/build/three.module.js"
+      }
+    }
+  </script>
+  <script type="module">
+    import * as THREE from "three";
+    import { OrbitControls } from "./node_modules/three/examples/jsm/controls/OrbitControls.js";
+
+    const spatialMeta = {
+      schema: "spatial-meta/v1",
+      units: "m",
+      coordinateSystem: "Y_UP",
+      rooms: [
+        { id: "living", name: "客餐厅", origin: [-4.2, 0, -1.8], size: [4.9, 3.7], color: 0xf4f1e8, heating: true },
+        { id: "bedroom", name: "卧室", origin: [1.0, 0, -1.8], size: [3.7, 3.4], color: 0xeaf2f7, heating: true },
+        { id: "entry", name: "玄关", origin: [-4.2, 0, 2.1], size: [1.55, 1.45], color: 0xeeeeea, heating: false },
+        { id: "kitchen", name: "厨房", origin: [-2.45, 0, 2.1], size: [2.2, 1.95], color: 0xf2eef8, heating: false },
+        { id: "bath", name: "卫生间", origin: [0.0, 0, 2.05], size: [1.65, 2.0], color: 0xe8f1f6, heating: false },
+        { id: "balcony", name: "设备阳台", origin: [2.0, 0, 2.1], size: [2.7, 1.95], color: 0xeaf5ed, heating: false }
+      ],
+      systems: [
+        {
+          id: "vrf",
+          layer: "hvac",
+          type: "vrf_slim_duct",
+          units: [
+            { id: "indoor_0121", model: "MMD-UP0121SPHY-E", room: "living", pos: [-3.0, 2.42, 1.55], size: [0.7, 0.21, 0.45], coolingKw: 3.6, heatingKw: 4.0 },
+            { id: "indoor_0271", model: "MMD-UP0271SPHY-E", room: "bedroom", pos: [3.2, 2.42, 1.42], size: [1.1, 0.21, 0.45], coolingKw: 8.0, heatingKw: 9.0 }
+          ],
+          ducts: [
+            { id: "duct_ac_living_supply", from: [-3.0, 2.42, 1.32], to: [-3.0, 2.42, -0.95], radius: 0.075, flow: "supply" },
+            { id: "duct_ac_living_branch", from: [-3.0, 2.42, -0.95], to: [-1.05, 2.42, -0.95], radius: 0.065, flow: "supply" },
+            { id: "duct_ac_living_return", from: [-2.6, 2.35, 1.75], to: [-1.1, 2.35, 1.75], radius: 0.06, flow: "return" },
+            { id: "duct_ac_bed_supply", from: [3.2, 2.42, 1.16], to: [3.2, 2.42, -1.0], radius: 0.075, flow: "supply" },
+            { id: "duct_ac_bed_branch", from: [3.2, 2.42, -1.0], to: [1.55, 2.42, -1.0], radius: 0.06, flow: "supply" },
+            { id: "duct_ac_bed_return", from: [2.6, 2.35, 1.62], to: [1.35, 2.35, 1.62], radius: 0.055, flow: "return" }
+          ]
+        },
+        {
+          id: "fresh_air",
+          layer: "freshAir",
+          type: "fresh_air_system",
+          unit: { id: "fresh_air_unit", pos: [3.75, 2.16, 3.48], size: [0.72, 0.46, 0.38] },
+          ducts: [
+            { id: "fresh_outdoor_intake", from: [4.12, 2.16, 3.48], to: [4.78, 2.16, 3.48], radius: 0.065, flow: "fresh" },
+            { id: "fresh_main", from: [3.38, 2.16, 3.48], to: [0.58, 2.16, 3.48], radius: 0.065, flow: "fresh" },
+            { id: "fresh_corridor", from: [0.58, 2.16, 3.48], to: [0.58, 2.16, 0.2], radius: 0.055, flow: "fresh" },
+            { id: "fresh_living", from: [0.58, 2.16, 0.2], to: [-2.7, 2.16, 0.2], radius: 0.05, flow: "fresh" },
+            { id: "fresh_bed", from: [0.58, 2.16, 0.2], to: [2.8, 2.16, -0.3], radius: 0.05, flow: "fresh" },
+            { id: "exhaust_bath", from: [0.85, 2.08, 3.25], to: [4.78, 2.08, 3.25], radius: 0.05, flow: "exhaust" },
+            { id: "exhaust_kitchen", from: [-1.55, 2.08, 3.35], to: [-4.78, 2.08, 3.35], radius: 0.05, flow: "exhaust" }
+          ],
+          vents: [
+            { id: "vent_living", pos: [-2.7, 2.0, 0.2], dir: [0, -1, 0], flow: "fresh" },
+            { id: "vent_bed", pos: [2.8, 2.0, -0.3], dir: [0, -1, 0], flow: "fresh" },
+            { id: "vent_bath", pos: [0.85, 2.0, 3.25], dir: [0, -1, 0], flow: "exhaust" },
+            { id: "vent_kitchen", pos: [-1.55, 2.0, 3.35], dir: [0, -1, 0], flow: "exhaust" }
+          ]
+        },
+        {
+          id: "floor_heating",
+          layer: "heating",
+          type: "hydronic_floor_heating",
+          loops: [
+            { id: "heat_living_a", room: "living", color: 0xd64a8d, origin: [-4.0, 0.035, -1.55], size: [2.3, 3.05], spacing: 0.26 },
+            { id: "heat_living_b", room: "living", color: 0x9a63d9, origin: [-1.62, 0.035, -1.55], size: [2.15, 3.05], spacing: 0.26 },
+            { id: "heat_bed", room: "bedroom", color: 0x315fd8, origin: [1.25, 0.035, -1.55], size: [3.25, 2.95], spacing: 0.25 }
+          ],
+          manifold: { id: "manifold_001", pos: [-0.52, 0.38, 2.55], size: [0.62, 0.22, 0.18] }
+        },
+        {
+          id: "domestic_water",
+          layer: "water",
+          type: "domestic_hot_cold_water",
+          pipes: [
+            { id: "cold_riser", from: [1.47, 0.18, 3.75], to: [1.47, 1.45, 3.75], radius: 0.025, color: 0x1678d2 },
+            { id: "hot_riser", from: [1.28, 0.25, 3.75], to: [1.28, 1.25, 3.75], radius: 0.025, color: 0xd94b42 },
+            { id: "cold_to_bath", from: [1.47, 0.18, 3.35], to: [0.55, 0.18, 3.35], radius: 0.02, color: 0x1678d2 },
+            { id: "hot_to_bath", from: [1.28, 0.25, 3.1], to: [0.45, 0.25, 3.1], radius: 0.02, color: 0xd94b42 },
+            { id: "cold_to_kitchen", from: [0.55, 0.18, 3.35], to: [-1.9, 0.18, 3.35], radius: 0.02, color: 0x1678d2 },
+            { id: "hot_to_kitchen", from: [0.45, 0.25, 3.1], to: [-1.9, 0.25, 3.1], radius: 0.02, color: 0xd94b42 },
+            { id: "cold_to_balcony", from: [1.47, 0.18, 3.75], to: [3.35, 0.18, 3.75], radius: 0.018, color: 0x1678d2 },
+            { id: "drain_branch", from: [0.9, 0.1, 3.8], to: [-2.0, 0.1, 3.8], radius: 0.03, color: 0x777b83 }
+          ]
+        }
+      ]
+    };
+
+    const app = document.querySelector("#app");
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xd8dde5);
+
+    const camera = new THREE.PerspectiveCamera(48, window.innerWidth / window.innerHeight, 0.1, 200);
+    camera.position.set(5.6, 5.1, 7.0);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    app.appendChild(renderer.domElement);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.target.set(0, 0.9, 0.9);
+    controls.enableDamping = true;
+
+    scene.add(new THREE.HemisphereLight(0xffffff, 0xa4abb5, 2.2));
+    const sun = new THREE.DirectionalLight(0xffffff, 2.2);
+    sun.position.set(4, 8, 5);
+    sun.castShadow = true;
+    scene.add(sun);
+
+    const root = new THREE.Group();
+    const labelRoot = new THREE.Group();
+    const flowRoot = new THREE.Group();
+    const layers = new Map();
+    const flowParticles = [];
+    scene.add(root, labelRoot, flowRoot);
+
+    const mats = {
+      floorLine: new THREE.LineBasicMaterial({ color: 0xffffff, linewidth: 2 }),
+      wall: new THREE.MeshStandardMaterial({ color: 0xf2f3f5, roughness: 0.78, transparent: true, opacity: 0.78 }),
+      glass: new THREE.MeshStandardMaterial({ color: 0xb9d7d3, roughness: 0.3, metalness: 0.02, transparent: true, opacity: 0.32 }),
+      black: new THREE.MeshStandardMaterial({ color: 0x111318, roughness: 0.45 }),
+      ductBlue: new THREE.MeshStandardMaterial({ color: 0x73bdea, roughness: 0.35 }),
+      ductFresh: new THREE.MeshStandardMaterial({ color: 0x95d8ef, roughness: 0.32 }),
+      exhaust: new THREE.MeshStandardMaterial({ color: 0xea6a5e, roughness: 0.35 }),
+      equipment: new THREE.MeshStandardMaterial({ color: 0x2e333a, roughness: 0.52 }),
+      equipmentLight: new THREE.MeshStandardMaterial({ color: 0xc7d2d8, roughness: 0.48 }),
+      manifold: new THREE.MeshStandardMaterial({ color: 0xd6dee7, roughness: 0.5 })
+    };
+
+    function layerGroup(name) {
+      if (!layers.has(name)) {
+        const group = new THREE.Group();
+        group.name = name;
+        layers.set(name, group);
+        root.add(group);
+      }
+      return layers.get(name);
+    }
+
+    function makeBox(size, pos, material) {
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(size[0], size[1], size[2]), material);
+      mesh.position.set(pos[0], pos[1], pos[2]);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      return mesh;
+    }
+
+    function makeCylinderBetween(from, to, radius, material, radialSegments = 16) {
+      const start = new THREE.Vector3(...from);
+      const end = new THREE.Vector3(...to);
+      const mid = start.clone().add(end).multiplyScalar(0.5);
+      const direction = end.clone().sub(start);
+      const length = direction.length();
+      const mesh = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, length, radialSegments), material);
+      mesh.position.copy(mid);
+      mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.normalize());
+      mesh.castShadow = true;
+      return mesh;
+    }
+
+    function makeRectPath(origin, size, y, inset = 0) {
+      const [x, , z] = origin;
+      const [w, h] = size;
+      const a = x + inset;
+      const b = x + w - inset;
+      const c = z + inset;
+      const d = z + h - inset;
+      return [
+        new THREE.Vector3(a, y, c),
+        new THREE.Vector3(b, y, c),
+        new THREE.Vector3(b, y, d),
+        new THREE.Vector3(a, y, d),
+        new THREE.Vector3(a, y, c)
+      ];
+    }
+
+    function buildRoomShell() {
+      const shell = new THREE.Group();
+      const slabShape = new THREE.Shape();
+      slabShape.moveTo(-4.8, -2.7);
+      slabShape.lineTo(4.8, -2.7);
+      slabShape.lineTo(4.8, 4.3);
+      slabShape.lineTo(-4.8, 4.3);
+      slabShape.lineTo(-4.8, -2.7);
+      const slab = new THREE.Mesh(
+        new THREE.ExtrudeGeometry(slabShape, { depth: 0.12, bevelEnabled: false }),
+        new THREE.MeshStandardMaterial({ color: 0xf7f7f3, roughness: 0.7 })
+      );
+      slab.rotation.x = Math.PI / 2;
+      slab.position.y = -0.12;
+      slab.receiveShadow = true;
+      shell.add(slab);
+
+      spatialMeta.rooms.forEach((room) => {
+        const floor = makeBox([room.size[0], 0.025, room.size[1]], [room.origin[0] + room.size[0] / 2, 0.005, room.origin[2] + room.size[1] / 2], new THREE.MeshStandardMaterial({ color: room.color, roughness: 0.82 }));
+        shell.add(floor);
+
+        const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(makeRectPath(room.origin, room.size, 0.035)), mats.floorLine);
+        shell.add(line);
+      });
+
+      const wallData = [
+        { size: [9.8, 2.8, 0.12], pos: [0, 1.4, -2.7] },
+        { size: [9.8, 2.8, 0.12], pos: [0, 1.4, 4.3] },
+        { size: [0.12, 2.8, 7.0], pos: [-4.8, 1.4, 0.8] },
+        { size: [0.12, 2.8, 7.0], pos: [4.8, 1.4, 0.8] },
+        { size: [0.1, 2.8, 3.6], pos: [0.8, 1.4, -0.9] },
+        { size: [0.1, 2.8, 2.2], pos: [-2.55, 1.4, 3.15] },
+        { size: [0.1, 2.8, 2.0], pos: [-0.05, 1.4, 3.1] },
+        { size: [0.1, 2.8, 2.0], pos: [1.82, 1.4, 3.1] },
+        { size: [4.9, 2.8, 0.1], pos: [-1.75, 1.4, 1.98] },
+        { size: [4.7, 2.8, 0.1], pos: [2.35, 1.4, 1.9] }
+      ];
+      wallData.forEach((w) => shell.add(makeBox(w.size, w.pos, mats.wall)));
+
+      const windowFrames = [
+        { pos: [-4.72, 1.35, -0.25], size: [0.12, 1.9, 2.4], rot: 0 },
+        { pos: [4.72, 1.35, 3.0], size: [0.12, 1.75, 1.35], rot: 0 },
+        { pos: [3.25, 1.35, 4.2], size: [2.7, 1.9, 0.12], rot: 0 }
+      ];
+      windowFrames.forEach((windowFrame) => {
+        shell.add(makeBox(windowFrame.size, windowFrame.pos, mats.glass));
+      });
+
+      const louver = new THREE.Group();
+      louver.add(makeBox([0.14, 2.6, 0.1], [0, 1.3, 0], mats.black));
+      for (let i = 0; i < 16; i += 1) {
+        louver.add(makeBox([1.24, 0.045, 0.08], [0, 0.18 + i * 0.15, 0.02], mats.black));
+      }
+      louver.position.set(4.72, 0, 2.9);
+      shell.add(louver);
+
+      const soffitMat = new THREE.MeshStandardMaterial({ color: 0xe7e9ec, roughness: 0.64, transparent: true, opacity: 0.86 });
+      [
+        { size: [5.2, 0.08, 0.5], pos: [-2.25, 2.55, 1.72] },
+        { size: [3.9, 0.08, 0.5], pos: [2.8, 2.55, 1.65] },
+        { size: [4.4, 0.08, 0.45], pos: [2.55, 2.5, 3.65] }
+      ].forEach((s) => shell.add(makeBox(s.size, s.pos, soffitMat)));
+
+      const fixtureMat = new THREE.MeshStandardMaterial({ color: 0xf7f7f7, roughness: 0.55 });
+      const cabinetMat = new THREE.MeshStandardMaterial({ color: 0xb9c0c7, roughness: 0.58 });
+      const wetFixtureData = [
+        { size: [1.55, 0.55, 0.45], pos: [-1.55, 0.28, 3.68], mat: cabinetMat },
+        { size: [0.55, 0.18, 0.42], pos: [-1.95, 0.66, 3.68], mat: fixtureMat },
+        { size: [0.55, 0.42, 0.75], pos: [0.38, 0.25, 3.55], mat: fixtureMat },
+        { size: [0.72, 0.16, 0.46], pos: [1.08, 0.62, 3.18], mat: fixtureMat },
+        { size: [0.5, 1.05, 0.42], pos: [3.75, 0.55, 3.58], mat: cabinetMat }
+      ];
+      wetFixtureData.forEach((item) => shell.add(makeBox(item.size, item.pos, item.mat)));
+
+      scene.add(shell);
+    }
+
+    function makeLabel(text, position, color = "#2455df") {
+      const canvas = document.createElement("canvas");
+      canvas.width = 512;
+      canvas.height = 160;
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = color;
+      ctx.strokeStyle = "rgba(255,255,255,0.85)";
+      ctx.lineWidth = 8;
+      ctx.roundRect(10, 10, 492, 140, 14);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = "white";
+      ctx.font = "bold 34px Microsoft YaHei, sans-serif";
+      const lines = text.split("\n");
+      lines.forEach((line, index) => ctx.fillText(line, 32, 58 + index * 42));
+      const texture = new THREE.CanvasTexture(canvas);
+      const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, transparent: true }));
+      sprite.scale.set(1.55, 0.48, 1);
+      sprite.position.set(position[0], position[1], position[2]);
+      labelRoot.add(sprite);
+      return sprite;
+    }
+
+    function roundedRectSupport() {
+      if (!CanvasRenderingContext2D.prototype.roundRect) {
+        CanvasRenderingContext2D.prototype.roundRect = function roundRect(x, y, w, h, r) {
+          this.beginPath();
+          this.moveTo(x + r, y);
+          this.lineTo(x + w - r, y);
+          this.quadraticCurveTo(x + w, y, x + w, y + r);
+          this.lineTo(x + w, y + h - r);
+          this.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+          this.lineTo(x + r, y + h);
+          this.quadraticCurveTo(x, y + h, x, y + h - r);
+          this.lineTo(x, y + r);
+          this.quadraticCurveTo(x, y, x + r, y);
+          this.closePath();
+          return this;
+        };
+      }
+    }
+
+    function buildVrf(system) {
+      const group = layerGroup(system.layer);
+      system.units.forEach((unit) => {
+        const unitGroup = new THREE.Group();
+        unitGroup.add(makeBox(unit.size, unit.pos, mats.equipment));
+        unitGroup.add(makeBox([unit.size[0] * 0.75, unit.size[1] * 0.62, unit.size[2] * 0.22], [unit.pos[0], unit.pos[1], unit.pos[2] + unit.size[2] * 0.62], mats.equipmentLight));
+        group.add(unitGroup);
+        makeLabel(`${unit.model}\n${Math.round(unit.size[0] * 1000)}*${Math.round(unit.size[2] * 1000)}*${Math.round(unit.size[1] * 1000)}`, [unit.pos[0], unit.pos[1] + 0.62, unit.pos[2] - 0.22]);
+      });
+
+      system.ducts.forEach((duct) => {
+        group.add(makeCylinderBetween(duct.from, duct.to, duct.radius, mats.ductBlue, 18));
+        addFlow(duct.from, duct.to, duct.flow === "supply" ? 0x2f80ed : 0xe24b4b);
+      });
+
+      [
+        { pos: [-1.05, 2.18, -0.95], size: [0.62, 0.04, 0.16], type: "supply" },
+        { pos: [-1.1, 2.12, 1.75], size: [0.58, 0.04, 0.22], type: "return" },
+        { pos: [1.55, 2.18, -1.0], size: [0.62, 0.04, 0.16], type: "supply" },
+        { pos: [1.35, 2.12, 1.62], size: [0.58, 0.04, 0.22], type: "return" }
+      ].forEach((grille) => {
+        const grilleGroup = new THREE.Group();
+        grilleGroup.add(makeBox(grille.size, grille.pos, grille.type === "supply" ? mats.ductBlue : mats.equipmentLight));
+        for (let i = 0; i < 5; i += 1) {
+          grilleGroup.add(makeBox([grille.size[0] * 0.86, 0.012, 0.008], [grille.pos[0], grille.pos[1] + 0.026, grille.pos[2] - 0.055 + i * 0.028], mats.black));
+        }
+        group.add(grilleGroup);
+      });
+    }
+
+    function buildFreshAir(system) {
+      const group = layerGroup(system.layer);
+      group.add(makeBox(system.unit.size, system.unit.pos, mats.equipment));
+      makeLabel("新风主机\n送风 / 排风", [system.unit.pos[0], system.unit.pos[1] + 0.55, system.unit.pos[2]], "#168fb2");
+      system.ducts.forEach((duct) => {
+        group.add(makeCylinderBetween(duct.from, duct.to, duct.radius, duct.flow === "exhaust" ? mats.exhaust : mats.ductFresh, 18));
+        addFlow(duct.from, duct.to, duct.flow === "exhaust" ? 0xe24b4b : 0x1cb7d2);
+      });
+      system.vents.forEach((vent) => {
+        const ventMesh = makeBox([0.38, 0.04, 0.24], vent.pos, vent.flow === "exhaust" ? mats.exhaust : mats.ductFresh);
+        group.add(ventMesh);
+        const end = [
+          vent.pos[0] + vent.dir[0] * 0.78,
+          vent.pos[1] + vent.dir[1] * 0.78,
+          vent.pos[2] + vent.dir[2] * 0.78
+        ];
+        addFlow(vent.pos, end, vent.flow === "exhaust" ? 0xe24b4b : 0x1cb7d2, 26, 0.035);
+      });
+    }
+
+    function serpentinePoints(loop) {
+      const points = [];
+      const x0 = loop.origin[0] + 0.18;
+      const z0 = loop.origin[2] + 0.18;
+      const width = loop.size[0] - 0.36;
+      const height = loop.size[1] - 0.36;
+      const rows = Math.max(4, Math.floor(height / loop.spacing));
+      for (let i = 0; i <= rows; i += 1) {
+        const z = z0 + (height / rows) * i;
+        const xStart = i % 2 === 0 ? x0 : x0 + width;
+        const xEnd = i % 2 === 0 ? x0 + width : x0;
+        points.push(new THREE.Vector3(xStart, loop.origin[1], z));
+        points.push(new THREE.Vector3(xEnd, loop.origin[1], z));
+      }
+      return points;
+    }
+
+    function buildFloorHeating(system) {
+      const group = layerGroup(system.layer);
+      system.loops.forEach((loop) => {
+        const curve = new THREE.CatmullRomCurve3(serpentinePoints(loop), false, "catmullrom", 0.02);
+        const mesh = new THREE.Mesh(
+          new THREE.TubeGeometry(curve, 180, 0.018, 8, false),
+          new THREE.MeshStandardMaterial({ color: loop.color, roughness: 0.45 })
+        );
+        group.add(mesh);
+      });
+      group.add(makeBox(system.manifold.size, system.manifold.pos, mats.manifold));
+      makeLabel("地暖分集水器\n3 个回路", [system.manifold.pos[0], 0.95, system.manifold.pos[2]], "#3d6acb");
+    }
+
+    function buildWater(system) {
+      const group = layerGroup(system.layer);
+      system.pipes.forEach((pipe) => {
+        const material = new THREE.MeshStandardMaterial({ color: pipe.color, roughness: 0.35 });
+        group.add(makeCylinderBetween(pipe.from, pipe.to, pipe.radius, material, 14));
+      });
+      group.add(makeBox([0.34, 1.18, 0.42], [1.35, 0.68, 3.78], new THREE.MeshStandardMaterial({ color: 0xd8dde4, roughness: 0.5 })));
+      makeLabel("生活冷热水\n管井至厨卫阳台", [0.25, 1.3, 3.55], "#2196c7");
+    }
+
+    function addFlow(from, to, color, count = 42, size = 0.045) {
+      const start = new THREE.Vector3(...from);
+      const end = new THREE.Vector3(...to);
+      const segment = { start, end, color, particles: [] };
+      const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.82 });
+      for (let i = 0; i < count; i += 1) {
+        const particle = new THREE.Mesh(new THREE.SphereGeometry(size, 8, 8), mat);
+        particle.userData.t = i / count;
+        particle.userData.speed = 0.0018 + Math.random() * 0.0018;
+        flowRoot.add(particle);
+        segment.particles.push(particle);
+      }
+      flowParticles.push(segment);
+    }
+
+    function animateFlow() {
+      flowParticles.forEach((segment) => {
+        segment.particles.forEach((particle) => {
+          particle.userData.t = (particle.userData.t + particle.userData.speed) % 1;
+          particle.position.lerpVectors(segment.start, segment.end, particle.userData.t);
+          particle.position.y += Math.sin((particle.userData.t + performance.now() * 0.0008) * Math.PI * 2) * 0.025;
+        });
+      });
+    }
+
+    function buildSceneFromMeta(meta) {
+      roundedRectSupport();
+      buildRoomShell();
+      meta.systems.forEach((system) => {
+        if (system.type === "vrf_slim_duct") buildVrf(system);
+        if (system.type === "fresh_air_system") buildFreshAir(system);
+        if (system.type === "hydronic_floor_heating") buildFloorHeating(system);
+        if (system.type === "domestic_hot_cold_water") buildWater(system);
+      });
+
+      document.querySelector("#vrfCount").textContent = meta.systems.find((s) => s.id === "vrf").units.length;
+      document.querySelector("#ventCount").textContent = meta.systems.find((s) => s.id === "fresh_air").vents.length;
+      document.querySelector("#loopCount").textContent = meta.systems.find((s) => s.id === "floor_heating").loops.length;
+      document.querySelector("#pipeCount").textContent = meta.systems.find((s) => s.id === "domestic_water").pipes.length;
+    }
+
+    function setLayerVisible(layer, visible) {
+      const group = layers.get(layer);
+      if (group) group.visible = visible;
+      document.querySelector(`[data-layer="${layer}"]`)?.classList.toggle("active", visible);
+    }
+
+    function applyPreset(value) {
+      const all = ["hvac", "freshAir", "heating", "water"];
+      all.forEach((layer) => setLayerVisible(layer, value === "full" || layer === value));
+    }
+
+    document.querySelectorAll("[data-layer]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const layer = button.dataset.layer;
+        const group = layers.get(layer);
+        setLayerVisible(layer, !(group?.visible ?? true));
+        document.querySelector("#preset").value = "full";
+      });
+    });
+
+    document.querySelector("#preset").addEventListener("change", (event) => applyPreset(event.target.value));
+    document.querySelector("#toggleLabels").addEventListener("click", () => {
+      labelRoot.visible = !labelRoot.visible;
+      document.querySelector("#toggleLabels").classList.toggle("active", labelRoot.visible);
+    });
+    document.querySelector("#toggleFlow").addEventListener("click", () => {
+      flowRoot.visible = !flowRoot.visible;
+      document.querySelector("#toggleFlow").classList.toggle("active", flowRoot.visible);
+    });
+    document.querySelector("#resetView").addEventListener("click", () => {
+      camera.position.set(5.6, 5.1, 7.0);
+      controls.target.set(0, 0.9, 0.9);
+      controls.update();
+    });
+
+    function resize() {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    window.addEventListener("resize", resize);
+    buildSceneFromMeta(spatialMeta);
+
+    function animate() {
+      controls.update();
+      animateFlow();
+      renderer.render(scene, camera);
+      requestAnimationFrame(animate);
+    }
+
+    animate();
+  </script>
+</body>
+</html>

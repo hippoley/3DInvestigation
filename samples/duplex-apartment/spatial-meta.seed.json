@@ -1,0 +1,28 @@
+{
+  "schema": "spatial-meta/v1",
+  "sourceProject": "duplex-apartment",
+  "units": "unknown-until-ifc-extraction",
+  "coordinateSystem": "unknown-until-ifc-extraction",
+  "building": {
+    "type": "duplex-apartment",
+    "levels": [],
+    "spaces": []
+  },
+  "architecture": {
+    "walls": [],
+    "slabs": [],
+    "doors": [],
+    "windows": [],
+    "stairs": []
+  },
+  "systems": {
+    "mechanical": [],
+    "electrical": [],
+    "plumbing": []
+  },
+  "notes": [
+    "Populate this file from COBie sheets first, then replace or enrich geometry from true IFC binaries once Git LFS access is restored.",
+    "Keep semantic identifiers stable so web, Unity, Godot, and simulation adapters can consume the same model."
+  ]
+}
+
