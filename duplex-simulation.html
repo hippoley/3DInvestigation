@@ -50,6 +50,15 @@
       pointer-events: none;
     }
 
+    #semanticOverlay {
+      position: fixed;
+      inset: 0;
+      z-index: 2;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
     .panel {
       position: fixed;
       z-index: 3;
@@ -135,6 +144,27 @@
 
     .dot.warn {
       background: var(--amber);
+    }
+
+    .legend {
+      display: grid;
+      gap: 5px;
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .legend span {
+      display: inline-flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .legend i {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--blue);
     }
 
     .toolbar {
@@ -293,6 +323,24 @@
       font-weight: 600;
     }
 
+    .detail {
+      margin-top: 8px;
+      padding: 9px;
+      border: 1px solid rgba(20, 27, 39, 0.08);
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.72);
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.42;
+    }
+
+    .detail strong {
+      display: block;
+      margin-bottom: 3px;
+      color: var(--ink);
+      font-size: 12px;
+    }
+
     .loading {
       position: fixed;
       left: 50%;
@@ -341,6 +389,7 @@
 </head>
 <body>
   <canvas id="viewer"></canvas>
+  <canvas id="semanticOverlay"></canvas>
   <canvas id="navCubeCanvas"></canvas>
 
   <section class="panel hud" aria-label="simulation status">
@@ -348,7 +397,7 @@
     <p class="sub">几何来自真实 IFC 转换的 XKT；语义来自 `spatial-meta/v1`。当前是 BIM 级还原，不是家装施工级复刻。</p>
     <div class="status-row"><span class="dot ok"></span><span id="archStatus">Architecture: loading</span></div>
     <div class="status-row"><span class="dot ok"></span><span id="mepStatus">MEP: loading</span></div>
-    <div class="status-row"><span class="dot warn"></span><span>Plumbing/Electrical: schema loaded, geometry available in IFC, pending viewer conversion</span></div>
+    <div class="status-row"><span class="dot warn"></span><span>Electrical/Plumbing/Rooms: IFC 语义点位已叠加，XKT 几何层待转换</span></div>
     <div class="metrics">
       <div class="metric"><b>楼层记录</b><span id="levels">0</span></div>
       <div class="metric"><b>空间记录</b><span id="spaces">0</span></div>
@@ -357,12 +406,14 @@
       <div class="metric"><b>端口</b><span id="portCount">0</span></div>
       <div class="metric"><b>连接</b><span id="linkCount">0</span></div>
     </div>
+    <div class="legend" id="overlayLegend"></div>
   </section>
 
   <nav class="panel topbar" aria-label="view tools">
     <button class="icon-btn" id="homeBtn" title="重置视角">⌂</button>
     <button class="icon-btn" id="xrayBtn" title="半透明">◫</button>
     <button class="icon-btn" id="edgesBtn" title="边线">▧</button>
+    <button class="icon-btn active" id="overlayBtn" title="语义点位">•</button>
   </nav>
 
   <section class="panel schema" aria-label="schema summary">
@@ -374,6 +425,10 @@
     <div class="chips" id="systemChips"></div>
     <input class="field" id="objectSearch" type="search" placeholder="搜索构件、房间、管线、设备" />
     <ul class="object-list" id="objectList"></ul>
+    <div class="detail" id="objectDetail">
+      <strong>对象详情</strong>
+      选择列表里的对象后，这里会显示来源、分类、坐标和是否已经进入 XKT 几何层。
+    </div>
   </section>
 
   <nav class="panel toolbar" aria-label="model layers">
@@ -434,6 +489,8 @@
     });
 
     const xktLoader = new XKTLoaderPlugin(viewer);
+    const overlayCanvas = document.querySelector("#semanticOverlay");
+    const overlayCtx = overlayCanvas.getContext("2d");
     const loadedModels = {};
     const loadedKinds = new Set();
     let viewerPayload = null;
@@ -441,6 +498,20 @@
     let selectedObjectId = null;
     let edgesEnabled = true;
     let xrayEnabled = false;
+    let overlayEnabled = true;
+
+    const categoryColors = {
+      electrical_power: "#e0a11b",
+      fire_safety: "#d94b4b",
+      fixture: "#38a169",
+      hvac_air: "#1399b7",
+      hydronic_heat: "#b64fc8",
+      mep_other: "#718096",
+      plumbing_cold_water: "#2d73d9",
+      plumbing_drainage: "#805ad5",
+      plumbing_hot_water: "#d94b4b",
+      plumbing_other: "#5f6978"
+    };
 
     function setText(selector, value) {
       const node = document.querySelector(selector);
@@ -490,7 +561,10 @@
 
       renderRooms(meta);
       renderSystemChips(meta);
+      renderOverlayLegend(meta);
       renderObjectList();
+      resizeOverlay();
+      drawSemanticOverlay();
     }
 
     function renderRooms(meta) {
@@ -520,9 +594,24 @@
           activeSystemCategory = category;
           renderSystemChips(viewerPayload);
           renderObjectList();
+          document.querySelector("#objectDetail").innerHTML = `
+            <strong>对象详情</strong>
+            当前系统分类：${escapeText(category)}。选择列表里的对象后，这里会显示来源、分类、坐标和是否已经进入 XKT 几何层。
+          `;
+          drawSemanticOverlay();
         });
         chips.appendChild(button);
       });
+    }
+
+    function renderOverlayLegend(meta) {
+      const legend = document.querySelector("#overlayLegend");
+      const counts = meta.systemClassification.counts;
+      const preferred = ["hvac_air", "hydronic_heat", "plumbing_cold_water", "plumbing_hot_water", "plumbing_drainage", "electrical_power"];
+      legend.innerHTML = preferred
+        .filter((category) => counts[category])
+        .map((category) => `<span><i style="background:${categoryColors[category]}"></i>${escapeText(category)} · ${counts[category]}</span>`)
+        .join("");
     }
 
     function renderObjectList() {
@@ -536,6 +625,15 @@
       }).slice(0, 32);
 
       list.innerHTML = "";
+      if (objects.length === 0) {
+        const row = document.createElement("li");
+        const button = document.createElement("button");
+        button.type = "button";
+        button.innerHTML = "<strong>没有匹配对象</strong><span>换一个系统分类或搜索词</span>";
+        row.appendChild(button);
+        list.appendChild(row);
+        return;
+      }
       objects.forEach((item) => {
         const row = document.createElement("li");
         const button = document.createElement("button");
@@ -550,6 +648,60 @@
       });
     }
 
+    function getSemanticObjects() {
+      if (!viewerPayload) return [];
+      const defaultVisible = new Set([
+        "electrical_power",
+        "fire_safety",
+        "fixture",
+        "hvac_air",
+        "hydronic_heat",
+        "plumbing_cold_water",
+        "plumbing_drainage",
+        "plumbing_hot_water"
+      ]);
+      return viewerPayload.objectIndex.filter((item) => {
+        if (item.domain !== "systems" || !Array.isArray(item.location)) return false;
+        if (item.location.every((value) => Math.abs(Number(value) || 0) < 0.0001)) return false;
+        if (activeSystemCategory === "all" && !defaultVisible.has(item.bucket)) return false;
+        return activeSystemCategory === "all" || item.bucket === activeSystemCategory;
+      }).slice(0, 900);
+    }
+
+    function resizeOverlay() {
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      const ratio = window.devicePixelRatio || 1;
+      overlayCanvas.width = Math.floor(width * ratio);
+      overlayCanvas.height = Math.floor(height * ratio);
+      overlayCanvas.style.width = `${width}px`;
+      overlayCanvas.style.height = `${height}px`;
+      overlayCtx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    }
+
+    function drawSemanticOverlay() {
+      if (!overlayCtx) return;
+      overlayCtx.clearRect(0, 0, overlayCanvas.clientWidth, overlayCanvas.clientHeight);
+      if (!overlayEnabled || !viewerPayload) return;
+
+      const points = getSemanticObjects();
+      points.forEach((item) => {
+        const pos = viewer.camera.projectWorldPos(item.location);
+        if (!pos || pos[0] < -20 || pos[1] < -20 || pos[0] > overlayCanvas.clientWidth + 20 || pos[1] > overlayCanvas.clientHeight + 20) return;
+        const color = categoryColors[item.bucket] || "#2d73d9";
+        overlayCtx.beginPath();
+        overlayCtx.fillStyle = color;
+        overlayCtx.globalAlpha = 0.74;
+        overlayCtx.arc(pos[0], pos[1], item.ifcClass === "IfcFlowSegment" ? 3.5 : 5, 0, Math.PI * 2);
+        overlayCtx.fill();
+        overlayCtx.globalAlpha = 0.22;
+        overlayCtx.beginPath();
+        overlayCtx.arc(pos[0], pos[1], item.ifcClass === "IfcFlowSegment" ? 8 : 11, 0, Math.PI * 2);
+        overlayCtx.fill();
+      });
+      overlayCtx.globalAlpha = 1;
+    }
+
     function findSceneObjectId(rawId) {
       if (!rawId) return null;
       const sceneObjects = viewer.scene.objects;
@@ -559,7 +711,19 @@
 
     function focusObject(item) {
       const objectId = findSceneObjectId(item.id);
-      if (!objectId) return;
+      const detail = document.querySelector("#objectDetail");
+      const location = Array.isArray(item.location) ? item.location.map((value) => Number(value).toFixed(2)).join(", ") : "n/a";
+      detail.innerHTML = `
+        <strong>${escapeText(item.name || item.ifcClass || item.id)}</strong>
+        ${escapeText(item.domain)} · ${escapeText(item.bucket)} · ${escapeText(item.source)}<br>
+        IFC: ${escapeText(item.ifcClass)}<br>
+        坐标: ${escapeText(location)}<br>
+        XKT: ${objectId ? "已匹配，可聚焦" : "未匹配，仅语义点位"}
+      `;
+      if (!objectId) {
+        drawSemanticOverlay();
+        return;
+      }
       if (selectedObjectId) {
         viewer.scene.setObjectsSelected([selectedObjectId], false);
       }
@@ -570,6 +734,7 @@
         duration: 0.55,
         fitFOV: 28
       });
+      drawSemanticOverlay();
     }
 
     function loadModel(kind) {
@@ -662,7 +827,23 @@
     document.querySelector("#homeBtn").addEventListener("click", fitAll);
     document.querySelector("#xrayBtn").addEventListener("click", () => applyXray(!xrayEnabled));
     document.querySelector("#edgesBtn").addEventListener("click", () => applyEdges(!edgesEnabled));
-    document.querySelector("#objectSearch").addEventListener("input", renderObjectList);
+    document.querySelector("#overlayBtn").addEventListener("click", () => {
+      overlayEnabled = !overlayEnabled;
+      document.querySelector("#overlayBtn").classList.toggle("active", overlayEnabled);
+      drawSemanticOverlay();
+    });
+    document.querySelector("#objectSearch").addEventListener("input", () => {
+      renderObjectList();
+      document.querySelector("#objectDetail").innerHTML = `
+        <strong>对象详情</strong>
+        搜索结果已更新。选择列表里的对象后，这里会显示来源、分类、坐标和是否已经进入 XKT 几何层。
+      `;
+    });
+    window.addEventListener("resize", () => {
+      resizeOverlay();
+      drawSemanticOverlay();
+    });
+    viewer.scene.on("tick", drawSemanticOverlay);
     document.querySelector("#edgesBtn").classList.add("active");
 
     await loadSpatialMeta();

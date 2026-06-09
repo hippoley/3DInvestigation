@@ -32,6 +32,8 @@ It combines:
 - layer controls for Architecture and MEP
 - canonical room and system-category inspection
 - searchable object index with focus-on-object support where the XKT layer is loaded
+- semantic point overlays for Electrical, Plumbing, HVAC, hydronic, fixture, and
+  fire-safety objects that have IFC placement coordinates
 - camera focus controls
 - x-ray and edge display controls
 
@@ -51,6 +53,11 @@ layers:
 
 Those files are included in `spatial-meta.json` and can be converted in the next
 viewer pass.
+
+Until those XKT layers exist, the viewer projects their IFC placement coordinates
+as colored semantic points over the 1:1 model. This is useful for checking system
+presence and approximate distribution, but it is not a substitute for pipe/duct
+centerline geometry or shop-drawing routing.
 
 ## Schema Source
 
@@ -72,6 +79,9 @@ Current schema-side counts:
 - 36 COBie systems
 - 48 COBie documents
 - 3218 searchable architecture/system objects
+- semantic overlay points are drawn from system objects with usable locations;
+  unclassified `*_other` systems are hidden by default and can be inspected by
+  selecting their category
 
 ## Current Status
 
