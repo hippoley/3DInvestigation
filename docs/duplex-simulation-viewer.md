@@ -29,6 +29,7 @@ It combines:
 - schema-level data from `spatial-meta/v1`
 - front-end playback data from `spatial-viewer-payload/v1`
 - object/system counts from IFC and COBie extraction
+- floor layer controls generated from canonical BIM levels
 - layer controls for Architecture and MEP
 - canonical room and system-category inspection
 - searchable object index with focus-on-object support where the XKT layer is loaded
@@ -82,6 +83,19 @@ Current schema-side counts:
 - semantic overlay points are drawn from system objects with usable locations;
   unclassified `*_other` systems are hidden by default and can be inspected by
   selecting their category
+
+## Layering
+
+The viewer supports two layer axes:
+
+- discipline layers: Architecture and MEP XKT geometry can be toggled from the
+  bottom toolbar
+- floor layers: canonical levels are converted into vertical ranges, then used
+  to hide/show XKT objects and semantic overlay points by height
+
+The current floor filter uses each object's XKT AABB center height. This is good
+enough for inspection, but construction-grade slicing should eventually use
+space containment, level assignment, and dedicated section planes.
 
 ## Current Status
 

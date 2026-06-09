@@ -419,6 +419,8 @@
   <section class="panel schema" aria-label="schema summary">
     <h2>Schema 结构</h2>
     <ul class="schema-list" id="schemaList"></ul>
+    <div class="mini-title">楼层分层</div>
+    <div class="chips" id="levelChips"></div>
     <div class="mini-title">规范化房间</div>
     <ul class="schema-list" id="roomList"></ul>
     <div class="mini-title">系统分类</div>
@@ -494,6 +496,8 @@
     const loadedModels = {};
     const loadedKinds = new Set();
     let viewerPayload = null;
+    let levelLayers = [];
+    let activeLevelId = "all";
     let activeSystemCategory = "all";
     let selectedObjectId = null;
     let edgesEnabled = true;
@@ -560,11 +564,75 @@
       });
 
       renderRooms(meta);
+      buildLevelLayers(meta);
+      renderLevelChips(meta);
       renderSystemChips(meta);
       renderOverlayLegend(meta);
       renderObjectList();
       resizeOverlay();
       drawSemanticOverlay();
+    }
+
+    function buildLevelLayers(meta) {
+      const sorted = meta.canonicalLevels
+        .filter((level) => Number.isFinite(level.elevation))
+        .sort((a, b) => a.elevation - b.elevation);
+      levelLayers = sorted.map((level, index) => {
+        const previous = sorted[index - 1];
+        const next = sorted[index + 1];
+        const min = previous ? (previous.elevation + level.elevation) / 2 : -Infinity;
+        const max = next ? (level.elevation + next.elevation) / 2 : Infinity;
+        return {
+          id: level.id,
+          name: level.name,
+          elevation: level.elevation,
+          min,
+          max
+        };
+      });
+    }
+
+    function findLevelLayer(levelId) {
+      return levelLayers.find((level) => level.id === levelId) || null;
+    }
+
+    function isLocationInActiveLevel(location) {
+      if (activeLevelId === "all") return true;
+      const layer = findLevelLayer(activeLevelId);
+      if (!layer || !Array.isArray(location)) return true;
+      const z = Number(location[2]);
+      return Number.isFinite(z) && z >= layer.min && z < layer.max;
+    }
+
+    function renderLevelChips(meta) {
+      const chips = document.querySelector("#levelChips");
+      chips.innerHTML = "";
+      const entries = [
+        { id: "all", name: "全部楼层" },
+        ...levelLayers.map((level) => ({
+          id: level.id,
+          name: `${level.name} ${Number(level.elevation).toFixed(2)}m`
+        }))
+      ];
+      entries.forEach((level) => {
+        const button = document.createElement("button");
+        button.className = "chip";
+        button.dataset.level = level.id;
+        button.textContent = level.name;
+        button.classList.toggle("active", level.id === activeLevelId);
+        button.addEventListener("click", () => {
+          activeLevelId = level.id;
+          renderLevelChips(meta);
+          renderObjectList();
+          applyLayerVisibility();
+          document.querySelector("#objectDetail").innerHTML = `
+            <strong>对象详情</strong>
+            当前楼层：${escapeText(level.name)}。几何模型和语义点位已按该楼层过滤。
+          `;
+          drawSemanticOverlay();
+        });
+        chips.appendChild(button);
+      });
     }
 
     function renderRooms(meta) {
@@ -620,8 +688,9 @@
       const list = document.querySelector("#objectList");
       const objects = viewerPayload.objectIndex.filter((item) => {
         const categoryMatch = activeSystemCategory === "all" || item.bucket === activeSystemCategory;
+        const levelMatch = !Array.isArray(item.location) || isLocationInActiveLevel(item.location);
         const text = `${item.name || ""} ${item.ifcClass || ""} ${item.bucket || ""} ${item.source || ""} ${item.id || ""}`.toLowerCase();
-        return categoryMatch && (!query || text.includes(query));
+        return categoryMatch && levelMatch && (!query || text.includes(query));
       }).slice(0, 32);
 
       list.innerHTML = "";
@@ -663,6 +732,7 @@
       return viewerPayload.objectIndex.filter((item) => {
         if (item.domain !== "systems" || !Array.isArray(item.location)) return false;
         if (item.location.every((value) => Math.abs(Number(value) || 0) < 0.0001)) return false;
+        if (!isLocationInActiveLevel(item.location)) return false;
         if (activeSystemCategory === "all" && !defaultVisible.has(item.bucket)) return false;
         return activeSystemCategory === "all" || item.bucket === activeSystemCategory;
       }).slice(0, 900);
@@ -755,6 +825,7 @@
         loadedKinds.add(kind);
         setText(cfg.status, `${kind}: loaded`);
         if (loadedKinds.size === Object.keys(modelPaths).length) {
+          applyLayerVisibility();
           fitAll();
           applyXray(true);
           document.querySelector("#loading").classList.add("hidden");
@@ -785,19 +856,49 @@
       });
     }
 
+    function getModelObjectIds(kind) {
+      const model = loadedModels[kind];
+      if (!model) return [];
+      const prefix = `${model.id}#`;
+      return Object.keys(viewer.scene.objects).filter((id) => id === model.id || id.startsWith(prefix));
+    }
+
     function setModelVisible(kind, visible) {
       const model = loadedModels[kind];
       if (!model) return;
-      model.visible = visible;
       document.querySelector(`[data-model="${kind}"]`)?.classList.toggle("active", visible);
+      applyLayerVisibility();
+    }
+
+    function objectIsInActiveLevel(object) {
+      if (activeLevelId === "all") return true;
+      const layer = findLevelLayer(activeLevelId);
+      if (!layer || !object?.aabb) return true;
+      const z = (object.aabb[1] + object.aabb[4]) / 2;
+      return z >= layer.min && z < layer.max;
+    }
+
+    function applyLayerVisibility() {
+      const scene = viewer.scene;
+      Object.entries(loadedModels).forEach(([kind, model]) => {
+        const modelButton = document.querySelector(`[data-model="${kind}"]`);
+        const modelEnabled = modelButton?.classList.contains("active") ?? true;
+        getModelObjectIds(kind).forEach((id) => {
+          const object = scene.objects[id];
+          const visible = modelEnabled && objectIsInActiveLevel(object);
+          if (object) object.visible = visible;
+        });
+      });
+      drawSemanticOverlay();
     }
 
     function applyXray(enabled) {
       xrayEnabled = enabled;
       const scene = viewer.scene;
       Object.values(loadedModels).forEach((model) => {
-        if (!model || !model.objectIds) return;
-        scene.setObjectsXRayed(model.objectIds, enabled);
+        if (!model) return;
+        const ids = Object.keys(scene.objects).filter((id) => id === model.id || id.startsWith(`${model.id}#`));
+        if (ids.length) scene.setObjectsXRayed(ids, enabled);
       });
       document.querySelector("#xrayBtn").classList.toggle("active", enabled);
     }
@@ -806,8 +907,9 @@
       edgesEnabled = enabled;
       const scene = viewer.scene;
       Object.values(loadedModels).forEach((model) => {
-        if (!model || !model.objectIds) return;
-        scene.setObjectsEdges(model.objectIds, enabled);
+        if (!model) return;
+        const ids = Object.keys(scene.objects).filter((id) => id === model.id || id.startsWith(`${model.id}#`));
+        if (ids.length) scene.setObjectsEdges(ids, enabled);
       });
       document.querySelector("#edgesBtn").classList.toggle("active", enabled);
     }
