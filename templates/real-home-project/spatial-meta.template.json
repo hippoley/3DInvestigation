@@ -1,0 +1,27 @@
+{
+  "schema": "spatial-meta/v1",
+  "projectId": "RH-001",
+  "units": "m",
+  "coordinateSystem": "Y_UP",
+  "evidence": [],
+  "levels": [],
+  "spaces": [],
+  "architecture": {
+    "walls": [],
+    "doors": [],
+    "windows": [],
+    "slabs": [],
+    "ceilings": []
+  },
+  "systems": {
+    "hvac": [],
+    "freshAir": [],
+    "floorHeating": [],
+    "plumbing": [],
+    "electrical": []
+  },
+  "equipment": [],
+  "siteEvidence": [],
+  "uncertainties": []
+}
+

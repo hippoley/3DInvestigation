@@ -1,0 +1,12 @@
+photo_id,stage,room,system,required_view,file_path,status,proves,notes
+P-001,S0_existing,all,architecture,panoramic empty room,raw/photos/S0_existing/all-empty-room-001.jpg,missing,Existing site condition,
+P-002,S3_rough-in,living,hvac,indoor unit before ceiling close,raw/photos/S3_rough-in/living-hvac-indoor-unit-001.jpg,missing,Unit position and access,
+P-003,S3_rough-in,living,hvac,supply and return duct before ceiling close,raw/photos/S3_rough-in/living-hvac-duct-001.jpg,missing,Duct route and vent branch,
+P-004,S3_rough-in,bedroom,hvac,refrigerant and condensate pipe,raw/photos/S3_rough-in/bedroom-hvac-pipes-001.jpg,missing,Pipe route and slope,
+P-005,S3_rough-in,kitchen,plumbing,cold hot drainage rough-in,raw/photos/S3_rough-in/kitchen-plumbing-001.jpg,missing,Kitchen water points,
+P-006,S3_rough-in,bathroom,plumbing,fixture points and drainage,raw/photos/S3_rough-in/bathroom-plumbing-001.jpg,missing,Fixture and drain positions,
+P-007,S3_rough-in,all,floor-heating,manifold close shot,raw/photos/S3_rough-in/floor-heating-manifold-001.jpg,missing,Manifold ports and loop labels,
+P-008,S3_rough-in,living,floor-heating,loop layout before covering,raw/photos/S3_rough-in/living-floor-heating-loop-001.jpg,missing,Pipe spacing and loop direction,
+P-009,S3_rough-in,all,electrical,panel and circuit labels,raw/photos/S3_rough-in/electrical-panel-001.jpg,missing,Circuit mapping,
+P-010,S5_handover,all,as-built,final walkthrough,raw/photos/S5_handover/final-walkthrough-001.jpg,missing,Final state,
+

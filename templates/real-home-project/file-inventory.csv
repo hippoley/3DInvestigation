@@ -1,0 +1,12 @@
+file_id,category,stage,discipline,file_path,format,source,author,date,version,status,proves,notes
+F-001,drawing,S0_existing,architecture,raw/drawings/original-floor-plan.dwg,dwg,,,,,missing,Original room/wall layout,
+F-002,drawing,S1_design,interior,raw/drawings/interior-construction.dwg,dwg,,,,,missing,Renovation layout,
+F-003,drawing,S1_design,interior,raw/drawings/ceiling-plan.dwg,dwg,,,,,missing,Ceiling and soffit zones,
+F-004,drawing,S2_deepening,hvac,raw/drawings/hvac-vrf-routing.dwg,dwg,,,,,missing,Indoor units ducts vents refrigerant condensate,
+F-005,drawing,S2_deepening,fresh-air,raw/drawings/fresh-air-routing.dwg,dwg,,,,,missing,Fresh air and exhaust paths,
+F-006,drawing,S2_deepening,floor-heating,raw/drawings/floor-heating-loops.dwg,dwg,,,,,missing,Manifold loops spacing,
+F-007,drawing,S2_deepening,plumbing,raw/drawings/water-drainage-routing.dwg,dwg,,,,,missing,Cold hot drainage routes,
+F-008,drawing,S2_deepening,electrical,raw/drawings/electrical-layout.dwg,dwg,,,,,missing,Panel circuits switches sockets controls,
+F-009,schedule,S1_design,equipment,raw/equipment/equipment-schedule.xlsx,xlsx,,,,,missing,Brand model dimensions,
+F-010,record,S5_handover,as-built,raw/as-built/as-built-change-record.pdf,pdf,,,,,missing,Final differences from design,
+

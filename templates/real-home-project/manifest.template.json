@@ -1,0 +1,64 @@
+{
+  "schema": "real-home-project/v1",
+  "project": {
+    "id": "RH-001",
+    "name": "Sample Real Home",
+    "location": {
+      "city": "",
+      "country": "",
+      "timezone": ""
+    },
+    "propertyType": "apartment",
+    "floors": 1,
+    "grossAreaM2": null,
+    "status": "data-collection"
+  },
+  "participants": [
+    {
+      "role": "owner",
+      "name": "",
+      "contact": "",
+      "dataProvided": []
+    },
+    {
+      "role": "interior-designer",
+      "name": "",
+      "contact": "",
+      "dataProvided": []
+    },
+    {
+      "role": "hvac-contractor",
+      "name": "",
+      "contact": "",
+      "dataProvided": []
+    },
+    {
+      "role": "plumbing-contractor",
+      "name": "",
+      "contact": "",
+      "dataProvided": []
+    }
+  ],
+  "dataCoverage": {
+    "architecture": "missing",
+    "interior": "missing",
+    "structure": "missing",
+    "hvac": "missing",
+    "freshAir": "missing",
+    "floorHeating": "missing",
+    "plumbing": "missing",
+    "electrical": "missing",
+    "equipment": "missing",
+    "sitePhotos": "missing",
+    "asBuilt": "missing"
+  },
+  "sourceFiles": [],
+  "equipment": [],
+  "siteEvidence": [],
+  "knownGaps": [],
+  "spatialMeta": {
+    "target": "derived/spatial-meta.json",
+    "status": "not-started"
+  }
+}
+
