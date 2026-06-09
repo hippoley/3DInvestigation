@@ -97,6 +97,21 @@ The current floor filter uses each object's XKT AABB center height. This is good
 enough for inspection, but construction-grade slicing should eventually use
 space containment, level assignment, and dedicated section planes.
 
+## Mouse Interaction
+
+The viewer uses a BIM-style orbit interaction profile:
+
+- left drag: orbit around the current pointer/pivot
+- right drag: pan
+- wheel: dolly/zoom toward the pointer
+- single click: select a geometry object
+- double click: select and fly to the object
+- double click empty space: fit the whole model
+
+Camera control is tuned for lower wheel speed, softer orbit speed, and light
+rotation/pan/dolly inertia so the model feels less jumpy while still remaining
+precise.
+
 ## Current Status
 
 This is a BIM-level 1:1 restoration simulation, not a construction-grade private

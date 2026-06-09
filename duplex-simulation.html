@@ -52,6 +52,8 @@
       width: 100%;
       height: 100%;
       background: linear-gradient(180deg, #edf1f5 0%, #f8f9fb 55%, #e2e6eb 100%);
+      touch-action: none;
+      user-select: none;
     }
 
     #navCubeCanvas {
@@ -71,6 +73,19 @@
       width: 100%;
       height: 100%;
       pointer-events: none;
+    }
+
+    .camera-pivot-marker {
+      position: fixed;
+      z-index: 4;
+      width: 14px;
+      height: 14px;
+      margin: -7px 0 0 -7px;
+      pointer-events: none;
+      border: 2px solid rgba(255, 255, 255, 0.92);
+      border-radius: 50%;
+      background: rgba(35, 104, 209, 0.76);
+      box-shadow: 0 4px 14px rgba(35, 104, 209, 0.24);
     }
 
     .panel {
@@ -537,8 +552,27 @@
     viewer.camera.eye = [-18, 13, 24];
     viewer.camera.look = [3, 3, 3];
     viewer.camera.up = [0, 1, 0];
-    viewer.cameraControl.navMode = "orbit";
-    viewer.cameraControl.followPointer = true;
+    const cameraControl = viewer.cameraControl;
+    cameraControl.navMode = "orbit";
+    cameraControl.followPointer = true;
+    cameraControl.doublePickFlyTo = true;
+    cameraControl.panRightClick = true;
+    cameraControl.dragRotationRate = 285;
+    cameraControl.mouseWheelDollyRate = 58;
+    cameraControl.rotationInertia = 0.18;
+    cameraControl.panInertia = 0.32;
+    cameraControl.dollyInertia = 0.12;
+    cameraControl.keyboardPanRate = 4.0;
+    cameraControl.keyboardDollyRate = 8.0;
+    cameraControl.keyboardRotationRate = 70;
+    cameraControl.doubleClickTimeFrame = 300;
+
+    const pivotElement = document.createElement("div");
+    pivotElement.className = "camera-pivot-marker";
+    document.body.appendChild(pivotElement);
+    cameraControl.pivotElement = pivotElement;
+
+    viewer.scene.canvas.canvas.addEventListener("contextmenu", (event) => event.preventDefault());
 
     new NavCubePlugin(viewer, {
       canvasId: "navCubeCanvas",
@@ -559,6 +593,7 @@
     let activeLevelId = "all";
     let activeSystemCategory = "all";
     let selectedObjectId = null;
+    let hoveredObjectId = null;
     let edgesEnabled = true;
     let xrayEnabled = false;
     let overlayEnabled = true;
@@ -579,6 +614,10 @@
     function setText(selector, value) {
       const node = document.querySelector(selector);
       if (node) node.textContent = value;
+    }
+
+    function setCanvasCursor(value) {
+      viewer.scene.canvas.canvas.style.cursor = value;
     }
 
     function escapeText(value) {
@@ -865,6 +904,57 @@
       });
       drawSemanticOverlay();
     }
+
+    function setSelectedObject(objectId, flyTo = false) {
+      if (selectedObjectId && viewer.scene.objects[selectedObjectId]) {
+        viewer.scene.setObjectsSelected([selectedObjectId], false);
+      }
+      selectedObjectId = objectId;
+      if (!objectId || !viewer.scene.objects[objectId]) return;
+      viewer.scene.setObjectsSelected([objectId], true);
+      const entity = viewer.scene.objects[objectId];
+      document.querySelector("#objectDetail").innerHTML = `
+        <strong>${escapeText(entity.name || entity.id)}</strong>
+        XKT 几何对象<br>
+        ID: ${escapeText(entity.id)}<br>
+        状态: 已选中，可双击聚焦
+      `;
+      if (flyTo) {
+        viewer.cameraFlight.flyTo({
+          aabb: entity.aabb,
+          duration: 0.45,
+          fitFOV: 32
+        });
+      }
+    }
+
+    cameraControl.on("hoverEnter", (event) => {
+      hoveredObjectId = event.entity?.id || null;
+      if (hoveredObjectId) setCanvasCursor("pointer");
+    });
+
+    cameraControl.on("hoverOut", () => {
+      hoveredObjectId = null;
+      setCanvasCursor("");
+    });
+
+    cameraControl.on("picked", (event) => {
+      setSelectedObject(event.entity?.id || null, false);
+    });
+
+    cameraControl.on("pickedNothing", () => {
+      setSelectedObject(null, false);
+      document.querySelector("#objectDetail").innerHTML = `
+        <strong>对象详情</strong>
+        选择列表或点击模型构件后，这里会显示对象来源、分类和几何状态。
+      `;
+    });
+
+    cameraControl.on("doublePicked", (event) => {
+      setSelectedObject(event.entity?.id || null, true);
+    });
+
+    cameraControl.on("doublePickedNothing", fitAll);
 
     function loadModel(kind) {
       const cfg = modelPaths[kind];
