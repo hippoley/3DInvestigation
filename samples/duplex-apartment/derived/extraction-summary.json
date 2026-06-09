@@ -1,0 +1,712 @@
+{
+  "sourceProject": "duplex-apartment",
+  "ifc": {
+    "Duplex_A_20110907.ifc": {
+      "entityTypes": 103,
+      "topEntityTypes": [
+        [
+          "IfcCartesianPoint",
+          8520
+        ],
+        [
+          "IfcPropertySingleValue",
+          5213
+        ],
+        [
+          "IfcPolyLoop",
+          4546
+        ],
+        [
+          "IfcFace",
+          4486
+        ],
+        [
+          "IfcFaceOuterBound",
+          4486
+        ],
+        [
+          "IfcRelDefinesByProperties",
+          1480
+        ],
+        [
+          "IfcPropertySet",
+          1459
+        ],
+        [
+          "IfcAxis2Placement3D",
+          1279
+        ],
+        [
+          "IfcPolyline",
+          864
+        ],
+        [
+          "IfcShapeRepresentation",
+          483
+        ],
+        [
+          "IfcExtrudedAreaSolid",
+          421
+        ],
+        [
+          "IfcAxis2Placement2D",
+          397
+        ],
+        [
+          "IfcCompositeCurveSegment",
+          322
+        ],
+        [
+          "IfcLocalPlacement",
+          295
+        ],
+        [
+          "IfcRectangleProfileDef",
+          293
+        ],
+        [
+          "IfcProductDefinitionShape",
+          286
+        ],
+        [
+          "IfcPresentationStyleAssignment",
+          267
+        ],
+        [
+          "IfcStyledItem",
+          267
+        ],
+        [
+          "IfcRelSpaceBoundary",
+          265
+        ],
+        [
+          "IfcConnectionSurfaceGeometry",
+          265
+        ],
+        [
+          "IfcConnectedFaceSet",
+          235
+        ],
+        [
+          "IfcArbitraryOpenProfileDef",
+          184
+        ],
+        [
+          "IfcSurfaceOfLinearExtrusion",
+          184
+        ],
+        [
+          "IfcCartesianTransformationOperator3D",
+          167
+        ],
+        [
+          "IfcMappedItem",
+          167
+        ],
+        [
+          "IfcDirection",
+          134
+        ],
+        [
+          "IfcArbitraryClosedProfileDef",
+          102
+        ],
+        [
+          "IfcCircle",
+          96
+        ],
+        [
+          "IfcTrimmedCurve",
+          96
+        ],
+        [
+          "IfcRelAssociatesMaterial",
+          92
+        ]
+      ],
+      "keyCounts": {
+        "IfcProject": 1,
+        "IfcSite": 1,
+        "IfcBuilding": 1,
+        "IfcBuildingStorey": 4,
+        "IfcSpace": 21,
+        "IfcProduct": 295,
+        "IfcFlowSegment": 0,
+        "IfcFlowFitting": 0,
+        "IfcFlowTerminal": 0,
+        "IfcDistributionPort": 0
+      }
+    },
+    "Duplex_Electrical_20121207.ifc": {
+      "entityTypes": 85,
+      "topEntityTypes": [
+        [
+          "IfcPolyLoop",
+          6803
+        ],
+        [
+          "IfcFace",
+          6795
+        ],
+        [
+          "IfcFaceOuterBound",
+          6795
+        ],
+        [
+          "IfcCartesianPoint",
+          4957
+        ],
+        [
+          "IfcPropertySingleValue",
+          2366
+        ],
+        [
+          "IfcRelDefinesByProperties",
+          784
+        ],
+        [
+          "IfcPropertySet",
+          783
+        ],
+        [
+          "IfcAxis2Placement3D",
+          176
+        ],
+        [
+          "IfcShapeRepresentation",
+          141
+        ],
+        [
+          "IfcMappedItem",
+          117
+        ],
+        [
+          "IfcLocalPlacement",
+          109
+        ],
+        [
+          "IfcProductDefinitionShape",
+          104
+        ],
+        [
+          "IfcFlowTerminal",
+          82
+        ],
+        [
+          "IfcAxis2Placement2D",
+          40
+        ],
+        [
+          "IfcStyledItem",
+          36
+        ],
+        [
+          "IfcClosedShell",
+          33
+        ],
+        [
+          "IfcFacetedBrep",
+          33
+        ],
+        [
+          "IfcPolyline",
+          31
+        ],
+        [
+          "IfcExtrudedAreaSolid",
+          24
+        ],
+        [
+          "IfcRepresentationMap",
+          23
+        ],
+        [
+          "IfcCircle",
+          18
+        ],
+        [
+          "IfcClassificationReference",
+          16
+        ],
+        [
+          "IfcRelAssociatesClassification",
+          16
+        ],
+        [
+          "IfcRelDefinesByType",
+          16
+        ],
+        [
+          "IfcRelAssociatesMaterial",
+          15
+        ],
+        [
+          "IfcRectangleProfileDef",
+          14
+        ],
+        [
+          "IfcMaterialList",
+          14
+        ],
+        [
+          "IfcPresentationStyleAssignment",
+          12
+        ],
+        [
+          "IfcDirection",
+          11
+        ],
+        [
+          "IfcTrimmedCurve",
+          9
+        ]
+      ],
+      "keyCounts": {
+        "IfcProject": 1,
+        "IfcSite": 1,
+        "IfcBuilding": 1,
+        "IfcBuildingStorey": 3,
+        "IfcSpace": 1,
+        "IfcProduct": 109,
+        "IfcFlowSegment": 0,
+        "IfcFlowFitting": 0,
+        "IfcFlowTerminal": 82,
+        "IfcDistributionPort": 0
+      }
+    },
+    "Duplex_MEP_20110907.ifc": {
+      "entityTypes": 87,
+      "topEntityTypes": [
+        [
+          "IfcPolyLoop",
+          64330
+        ],
+        [
+          "IfcFace",
+          64260
+        ],
+        [
+          "IfcFaceOuterBound",
+          64260
+        ],
+        [
+          "IfcCartesianPoint",
+          63434
+        ],
+        [
+          "IfcPropertySingleValue",
+          28129
+        ],
+        [
+          "IfcRelDefinesByProperties",
+          6480
+        ],
+        [
+          "IfcPropertySet",
+          6438
+        ],
+        [
+          "IfcAxis2Placement3D",
+          3132
+        ],
+        [
+          "IfcShapeRepresentation",
+          1504
+        ],
+        [
+          "IfcLocalPlacement",
+          973
+        ],
+        [
+          "IfcProductDefinitionShape",
+          968
+        ],
+        [
+          "IfcCartesianTransformationOperator3D",
+          942
+        ],
+        [
+          "IfcMappedItem",
+          942
+        ],
+        [
+          "IfcConnectedFaceSet",
+          682
+        ],
+        [
+          "IfcRepresentationMap",
+          520
+        ],
+        [
+          "IfcRelDefinesByType",
+          513
+        ],
+        [
+          "IfcFaceBasedSurfaceModel",
+          492
+        ],
+        [
+          "IfcFlowSegment",
+          427
+        ],
+        [
+          "IfcPipeSegmentType",
+          407
+        ],
+        [
+          "IfcPolyline",
+          370
+        ],
+        [
+          "IfcFlowFitting",
+          358
+        ],
+        [
+          "IfcConnectionSurfaceGeometry",
+          314
+        ],
+        [
+          "IfcArbitraryOpenProfileDef",
+          264
+        ],
+        [
+          "IfcSurfaceOfLinearExtrusion",
+          264
+        ],
+        [
+          "IfcDirection",
+          106
+        ],
+        [
+          "IfcFlowTerminal",
+          105
+        ],
+        [
+          "IfcFaceBound",
+          70
+        ],
+        [
+          "IfcExtrudedAreaSolid",
+          62
+        ],
+        [
+          "IfcAxis2Placement2D",
+          60
+        ],
+        [
+          "IfcPipeFittingType",
+          59
+        ]
+      ],
+      "keyCounts": {
+        "IfcProject": 1,
+        "IfcSite": 1,
+        "IfcBuilding": 1,
+        "IfcBuildingStorey": 3,
+        "IfcSpace": 42,
+        "IfcProduct": 973,
+        "IfcFlowSegment": 427,
+        "IfcFlowFitting": 358,
+        "IfcFlowTerminal": 105,
+        "IfcDistributionPort": 0
+      }
+    },
+    "Duplex_M_20111024_ROOMS_AND_SPACES.ifc": {
+      "entityTypes": 76,
+      "topEntityTypes": [
+        [
+          "IfcPolyLoop",
+          31792
+        ],
+        [
+          "IfcFaceOuterBound",
+          31758
+        ],
+        [
+          "IfcFace",
+          31758
+        ],
+        [
+          "IfcCartesianPoint",
+          31600
+        ],
+        [
+          "IfcPropertySingleValue",
+          14677
+        ],
+        [
+          "IfcRelDefinesByProperties",
+          3458
+        ],
+        [
+          "IfcPropertySet",
+          3421
+        ],
+        [
+          "IfcAxis2Placement3D",
+          1644
+        ],
+        [
+          "IfcShapeRepresentation",
+          579
+        ],
+        [
+          "IfcLocalPlacement",
+          529
+        ],
+        [
+          "IfcProductDefinitionShape",
+          524
+        ],
+        [
+          "IfcConnectedFaceSet",
+          400
+        ],
+        [
+          "IfcPolyline",
+          309
+        ],
+        [
+          "IfcFaceBasedSurfaceModel",
+          303
+        ],
+        [
+          "IfcConnectionSurfaceGeometry",
+          294
+        ],
+        [
+          "IfcFlowSegment",
+          246
+        ],
+        [
+          "IfcCartesianTransformationOperator3D",
+          243
+        ],
+        [
+          "IfcMappedItem",
+          243
+        ],
+        [
+          "IfcArbitraryOpenProfileDef",
+          224
+        ],
+        [
+          "IfcSurfaceOfLinearExtrusion",
+          224
+        ],
+        [
+          "IfcFlowFitting",
+          207
+        ],
+        [
+          "IfcDirection",
+          70
+        ],
+        [
+          "IfcPlane",
+          70
+        ],
+        [
+          "IfcCurveBoundedPlane",
+          70
+        ],
+        [
+          "IfcRelDefinesByType",
+          55
+        ],
+        [
+          "IfcRepresentationMap",
+          53
+        ],
+        [
+          "IfcPipeFittingType",
+          38
+        ],
+        [
+          "IfcQuantityArea",
+          37
+        ],
+        [
+          "IfcElementQuantity",
+          37
+        ],
+        [
+          "IfcSpace",
+          37
+        ]
+      ],
+      "keyCounts": {
+        "IfcProject": 1,
+        "IfcSite": 1,
+        "IfcBuilding": 1,
+        "IfcBuildingStorey": 3,
+        "IfcSpace": 37,
+        "IfcProduct": 529,
+        "IfcFlowSegment": 246,
+        "IfcFlowFitting": 207,
+        "IfcFlowTerminal": 0,
+        "IfcDistributionPort": 0
+      }
+    },
+    "Duplex_Plumbing_20121113.ifc": {
+      "entityTypes": 85,
+      "topEntityTypes": [
+        [
+          "IfcCartesianPoint",
+          166620
+        ],
+        [
+          "IfcPolyLoop",
+          122541
+        ],
+        [
+          "IfcFaceOuterBound",
+          122531
+        ],
+        [
+          "IfcFace",
+          122531
+        ],
+        [
+          "IfcPropertySingleValue",
+          16049
+        ],
+        [
+          "IfcRelDefinesByProperties",
+          4506
+        ],
+        [
+          "IfcPropertySet",
+          4505
+        ],
+        [
+          "IfcRelConnectsPortToElement",
+          970
+        ],
+        [
+          "IfcDistributionPort",
+          970
+        ],
+        [
+          "IfcAxis2Placement3D",
+          885
+        ],
+        [
+          "IfcShapeRepresentation",
+          574
+        ],
+        [
+          "IfcLocalPlacement",
+          504
+        ],
+        [
+          "IfcProductDefinitionShape",
+          499
+        ],
+        [
+          "IfcRelConnectsPorts",
+          485
+        ],
+        [
+          "IfcAxis2Placement2D",
+          298
+        ],
+        [
+          "IfcMappedItem",
+          271
+        ],
+        [
+          "IfcExtrudedAreaSolid",
+          234
+        ],
+        [
+          "IfcCircleProfileDef",
+          233
+        ],
+        [
+          "IfcFlowSegment",
+          231
+        ],
+        [
+          "IfcFlowFitting",
+          227
+        ],
+        [
+          "IfcClosedShell",
+          192
+        ],
+        [
+          "IfcFacetedBrep",
+          192
+        ],
+        [
+          "IfcDirection",
+          153
+        ],
+        [
+          "IfcRelDefinesByType",
+          73
+        ],
+        [
+          "IfcRepresentationMap",
+          71
+        ],
+        [
+          "IfcClassificationReference",
+          69
+        ],
+        [
+          "IfcRelAssociatesClassification",
+          69
+        ],
+        [
+          "IfcTrimmedCurve",
+          63
+        ],
+        [
+          "IfcPipeFittingType",
+          54
+        ],
+        [
+          "IfcConnectedFaceSet",
+          48
+        ]
+      ],
+      "keyCounts": {
+        "IfcProject": 1,
+        "IfcSite": 1,
+        "IfcBuilding": 1,
+        "IfcBuildingStorey": 3,
+        "IfcSpace": 1,
+        "IfcProduct": 1474,
+        "IfcFlowSegment": 231,
+        "IfcFlowFitting": 227,
+        "IfcFlowTerminal": 16,
+        "IfcDistributionPort": 970
+      }
+    }
+  },
+  "cobie": {
+    "2012-03-23-Duplex-Design.xlsx": {
+      "facility": 1,
+      "floors": 4,
+      "spaces": 22,
+      "types": 43,
+      "components": 232,
+      "systems": 36,
+      "coordinates": 42,
+      "documents": 0
+    },
+    "2012-03-23-Duplex-Handover.xlsx": {
+      "facility": 1,
+      "floors": 4,
+      "spaces": 22,
+      "types": 43,
+      "components": 232,
+      "systems": 36,
+      "coordinates": 42,
+      "documents": 48
+    }
+  }
+}
