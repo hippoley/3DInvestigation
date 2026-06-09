@@ -10,6 +10,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@xeokit/xeokit-sdk": "^2.6.111",
     "playwright": "^1.52.0",
     "three": "^0.165.0"
   }

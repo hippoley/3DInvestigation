@@ -1,0 +1,511 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Duplex Apartment 1:1 全屋还原仿真</title>
+  <style>
+    :root {
+      --panel: rgba(248, 250, 252, 0.94);
+      --line: rgba(20, 27, 39, 0.16);
+      --ink: #172033;
+      --muted: #5f6978;
+      --blue: #2d73d9;
+      --cyan: #1399b7;
+      --red: #d94b4b;
+      --green: #2f8f62;
+      --amber: #b98512;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      color: var(--ink);
+      background: #d9dde4;
+      font-family: Inter, "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+    }
+
+    #viewer {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(#d9dde4, #f7f8fa);
+    }
+
+    #navCubeCanvas {
+      position: fixed;
+      right: 18px;
+      bottom: 86px;
+      z-index: 2;
+      width: 150px;
+      height: 150px;
+      pointer-events: none;
+    }
+
+    .panel {
+      position: fixed;
+      z-index: 3;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: 0 12px 32px rgba(21, 30, 46, 0.16);
+      backdrop-filter: blur(12px);
+    }
+
+    .hud {
+      top: 18px;
+      left: 18px;
+      width: min(360px, calc(100vw - 36px));
+      max-height: calc(100vh - 36px);
+      overflow: auto;
+      padding: 12px;
+    }
+
+    .hud h1 {
+      margin: 0 0 8px;
+      font-size: 16px;
+      line-height: 1.32;
+      letter-spacing: 0;
+    }
+
+    .sub {
+      margin: 0 0 10px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .metric {
+      min-height: 56px;
+      padding: 8px;
+      border: 1px solid rgba(20, 27, 39, 0.1);
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.76);
+    }
+
+    .metric b {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.2;
+    }
+
+    .metric span {
+      display: block;
+      margin-top: 5px;
+      font-size: 17px;
+      font-weight: 800;
+    }
+
+    .status-row {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 8px;
+      align-items: center;
+      min-height: 26px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--muted);
+    }
+
+    .dot.ok {
+      background: var(--green);
+    }
+
+    .dot.warn {
+      background: var(--amber);
+    }
+
+    .toolbar {
+      left: 50%;
+      bottom: 18px;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(110px, 1fr));
+      gap: 8px;
+      width: min(560px, calc(100vw - 28px));
+      padding: 8px;
+      transform: translateX(-50%);
+    }
+
+    button {
+      min-height: 38px;
+      border: 1px solid rgba(45, 115, 217, 0.16);
+      border-radius: 6px;
+      color: var(--ink);
+      background: #fff;
+      font: 700 13px/1.2 Inter, "Microsoft YaHei", system-ui, sans-serif;
+      cursor: pointer;
+    }
+
+    button:hover,
+    button.active {
+      color: #0c57b7;
+      border-color: rgba(45, 115, 217, 0.42);
+      background: #eaf3ff;
+    }
+
+    .topbar {
+      top: 18px;
+      left: 50%;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      padding: 8px;
+      transform: translateX(-50%);
+    }
+
+    .icon-btn {
+      width: 38px;
+      min-width: 38px;
+      padding: 0;
+      font-size: 15px;
+    }
+
+    .schema {
+      right: 18px;
+      top: 18px;
+      width: min(360px, calc(100vw - 36px));
+      max-height: calc(100vh - 112px);
+      overflow: auto;
+      padding: 12px;
+    }
+
+    .schema h2 {
+      margin: 0 0 8px;
+      font-size: 14px;
+      letter-spacing: 0;
+    }
+
+    .schema-list {
+      display: grid;
+      gap: 6px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .schema-list li {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 7px 8px;
+      border: 1px solid rgba(20, 27, 39, 0.08);
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.72);
+      font-size: 12px;
+    }
+
+    .schema-list strong {
+      color: var(--ink);
+      font-weight: 750;
+    }
+
+    .schema-list span {
+      color: var(--muted);
+      text-align: right;
+    }
+
+    .loading {
+      position: fixed;
+      left: 50%;
+      top: 50%;
+      z-index: 5;
+      width: min(360px, calc(100vw - 36px));
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: 0 12px 32px rgba(21, 30, 46, 0.18);
+      transform: translate(-50%, -50%);
+      text-align: center;
+      font-weight: 700;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    @media (max-width: 900px) {
+      .schema {
+        display: none;
+      }
+
+      .hud {
+        width: min(320px, calc(100vw - 36px));
+      }
+    }
+
+    @media (max-width: 680px) {
+      .hud {
+        display: none;
+      }
+
+      .topbar {
+        top: 10px;
+      }
+
+      .toolbar {
+        bottom: 10px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="viewer"></canvas>
+  <canvas id="navCubeCanvas"></canvas>
+
+  <section class="panel hud" aria-label="simulation status">
+    <h1>Duplex Apartment 1:1 全屋还原</h1>
+    <p class="sub">几何来自真实 IFC 转换的 XKT；语义来自 `spatial-meta/v1`。当前是 BIM 级还原，不是家装施工级复刻。</p>
+    <div class="status-row"><span class="dot ok"></span><span id="archStatus">Architecture: loading</span></div>
+    <div class="status-row"><span class="dot ok"></span><span id="mepStatus">MEP: loading</span></div>
+    <div class="status-row"><span class="dot warn"></span><span>Plumbing/Electrical: schema loaded, geometry available in IFC, pending viewer conversion</span></div>
+    <div class="metrics">
+      <div class="metric"><b>楼层记录</b><span id="levels">0</span></div>
+      <div class="metric"><b>空间记录</b><span id="spaces">0</span></div>
+      <div class="metric"><b>建筑构件</b><span id="archCount">0</span></div>
+      <div class="metric"><b>机电对象</b><span id="systemCount">0</span></div>
+      <div class="metric"><b>端口</b><span id="portCount">0</span></div>
+      <div class="metric"><b>连接</b><span id="linkCount">0</span></div>
+    </div>
+  </section>
+
+  <nav class="panel topbar" aria-label="view tools">
+    <button class="icon-btn" id="homeBtn" title="重置视角">⌂</button>
+    <button class="icon-btn" id="xrayBtn" title="半透明">◫</button>
+    <button class="icon-btn" id="edgesBtn" title="边线">▧</button>
+  </nav>
+
+  <section class="panel schema" aria-label="schema summary">
+    <h2>Schema 结构</h2>
+    <ul class="schema-list" id="schemaList"></ul>
+  </section>
+
+  <nav class="panel toolbar" aria-label="model layers">
+    <button data-model="architecture" class="active">建筑户型</button>
+    <button data-model="mep" class="active">MEP 模型</button>
+    <button data-focus="architecture">聚焦户型</button>
+    <button data-focus="mep">聚焦机电</button>
+  </nav>
+
+  <div class="loading" id="loading">正在加载 1:1 BIM 模型…</div>
+
+  <script type="module">
+    import {
+      Viewer,
+      XKTLoaderPlugin,
+      NavCubePlugin,
+      math
+    } from "./node_modules/@xeokit/xeokit-sdk/dist/xeokit-sdk.es.js";
+
+    const modelPaths = {
+      architecture: {
+        id: "duplex-architecture",
+        xkt: "./samples/duplex-apartment/converted/xeokit/Duplex_A_20110907/model.xkt",
+        meta: "./samples/duplex-apartment/converted/xeokit/Duplex_A_20110907/model.json",
+        status: "#archStatus"
+      },
+      mep: {
+        id: "duplex-mep",
+        xkt: "./samples/duplex-apartment/converted/xeokit/Duplex_MEP_20110907/model.xkt",
+        meta: "./samples/duplex-apartment/converted/xeokit/Duplex_MEP_20110907/model.json",
+        status: "#mepStatus"
+      }
+    };
+
+    const viewer = new Viewer({
+      canvasId: "viewer",
+      transparent: true,
+      dtxEnabled: true,
+      saoEnabled: true
+    });
+
+    viewer.scene.sao.enabled = true;
+    viewer.scene.sao.numSamples = 16;
+    viewer.scene.sao.intensity = 0.18;
+    viewer.camera.eye = [-18, 13, 24];
+    viewer.camera.look = [3, 3, 3];
+    viewer.camera.up = [0, 1, 0];
+    viewer.cameraControl.navMode = "orbit";
+    viewer.cameraControl.followPointer = true;
+
+    new NavCubePlugin(viewer, {
+      canvasId: "navCubeCanvas",
+      visible: true,
+      size: 150,
+      alignment: "bottomRight",
+      bottomMargin: 78,
+      rightMargin: 18
+    });
+
+    const xktLoader = new XKTLoaderPlugin(viewer);
+    const loadedModels = {};
+    const loadedKinds = new Set();
+    let edgesEnabled = true;
+    let xrayEnabled = false;
+
+    function setText(selector, value) {
+      const node = document.querySelector(selector);
+      if (node) node.textContent = value;
+    }
+
+    async function loadSpatialMeta() {
+      const response = await fetch("./samples/duplex-apartment/derived/spatial-meta.json");
+      const meta = await response.json();
+      const architectureCount = Object.values(meta.architecture).reduce((sum, list) => sum + list.length, 0);
+      const systemsCount = Object.values(meta.systems).reduce((sum, list) => sum + list.length, 0);
+      const linkCount = meta.connections.portToElement.length + meta.connections.portToPort.length;
+      setText("#levels", meta.levels.length);
+      setText("#spaces", meta.spaces.length);
+      setText("#archCount", architectureCount);
+      setText("#systemCount", systemsCount);
+      setText("#portCount", meta.connections.ports.length);
+      setText("#linkCount", linkCount);
+
+      const rows = [
+        ["schema", meta.schema],
+        ["sourceProject", meta.sourceProject],
+        ["IFC files", meta.evidence.ifcFiles.length],
+        ["COBie files", meta.evidence.cobieFiles.length],
+        ["Architecture buckets", Object.keys(meta.architecture).length],
+        ["System buckets", Object.keys(meta.systems).length],
+        ["COBie components", meta.cobie["2012-03-23-Duplex-Handover.xlsx"].components.length],
+        ["COBie systems", meta.cobie["2012-03-23-Duplex-Handover.xlsx"].systems.length],
+        ["Documents", meta.cobie["2012-03-23-Duplex-Handover.xlsx"].documents.length]
+      ];
+
+      const list = document.querySelector("#schemaList");
+      list.innerHTML = "";
+      rows.forEach(([label, value]) => {
+        const item = document.createElement("li");
+        item.innerHTML = `<strong>${label}</strong><span>${value}</span>`;
+        list.appendChild(item);
+      });
+    }
+
+    function loadModel(kind) {
+      const cfg = modelPaths[kind];
+      setText(cfg.status, `${kind}: loading`);
+      const model = xktLoader.load({
+        id: cfg.id,
+        src: cfg.xkt,
+        metaModelSrc: cfg.meta,
+        edges: edgesEnabled,
+        saoEnabled: true,
+        dtxEnabled: true,
+        globalizeObjectIds: true
+      });
+
+      loadedModels[kind] = model;
+      model.on("loaded", () => {
+        loadedKinds.add(kind);
+        setText(cfg.status, `${kind}: loaded`);
+        if (loadedKinds.size === Object.keys(modelPaths).length) {
+          fitAll();
+          applyXray(true);
+          document.querySelector("#loading").classList.add("hidden");
+        }
+      });
+      model.on("error", (event) => {
+        setText(cfg.status, `${kind}: ${event}`);
+      });
+    }
+
+    function fitAll() {
+      const aabb = viewer.scene.getAABB();
+      if (!aabb || !Number.isFinite(aabb[0])) return;
+      viewer.cameraFlight.flyTo({
+        aabb,
+        duration: 0.6,
+        fitFOV: 48
+      });
+    }
+
+    function fitModel(kind) {
+      const model = loadedModels[kind];
+      if (!model) return;
+      viewer.cameraFlight.flyTo({
+        aabb: model.aabb,
+        duration: 0.6,
+        fitFOV: 45
+      });
+    }
+
+    function setModelVisible(kind, visible) {
+      const model = loadedModels[kind];
+      if (!model) return;
+      model.visible = visible;
+      document.querySelector(`[data-model="${kind}"]`)?.classList.toggle("active", visible);
+    }
+
+    function applyXray(enabled) {
+      xrayEnabled = enabled;
+      const scene = viewer.scene;
+      Object.values(loadedModels).forEach((model) => {
+        if (!model || !model.objectIds) return;
+        scene.setObjectsXRayed(model.objectIds, enabled);
+      });
+      document.querySelector("#xrayBtn").classList.toggle("active", enabled);
+    }
+
+    function applyEdges(enabled) {
+      edgesEnabled = enabled;
+      const scene = viewer.scene;
+      Object.values(loadedModels).forEach((model) => {
+        if (!model || !model.objectIds) return;
+        scene.setObjectsEdges(model.objectIds, enabled);
+      });
+      document.querySelector("#edgesBtn").classList.toggle("active", enabled);
+    }
+
+    document.querySelectorAll("[data-model]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const kind = button.dataset.model;
+        const model = loadedModels[kind];
+        setModelVisible(kind, !(model?.visible ?? true));
+      });
+    });
+
+    document.querySelectorAll("[data-focus]").forEach((button) => {
+      button.addEventListener("click", () => fitModel(button.dataset.focus));
+    });
+
+    document.querySelector("#homeBtn").addEventListener("click", fitAll);
+    document.querySelector("#xrayBtn").addEventListener("click", () => applyXray(!xrayEnabled));
+    document.querySelector("#edgesBtn").addEventListener("click", () => applyEdges(!edgesEnabled));
+    document.querySelector("#edgesBtn").classList.add("active");
+
+    await loadSpatialMeta();
+    loadModel("architecture");
+    loadModel("mep");
+
+    window.duplexSimulation = {
+      viewer,
+      loadedModels,
+      math
+    };
+  </script>
+</body>
+</html>
