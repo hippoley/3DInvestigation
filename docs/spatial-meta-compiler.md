@@ -17,6 +17,7 @@ Outputs:
 
 - `samples/duplex-apartment/derived/spatial-meta.json`
 - `samples/duplex-apartment/derived/extraction-summary.json`
+- `samples/duplex-apartment/derived/viewer-payload.json`
 
 ## What It Extracts
 
@@ -67,7 +68,7 @@ Latest extraction:
 | Source IFC files | 5 |
 | Level records | 16 |
 | Space records | 102 |
-| Architecture records | 237 |
+| Architecture records | 238 |
 | Electrical system records | 99 |
 | MEP system records | 926 |
 | Rooms/Spaces MEP records | 487 |
@@ -99,6 +100,22 @@ records at this stage. This preserves evidence and avoids accidental cross-file
 merges. A later normalization pass should create canonical levels/spaces and
 map each discipline-specific space to the canonical room.
 
+## Viewer Payload
+
+The compiler also emits `spatial-viewer-payload/v1` for front-end playback:
+
+- canonical levels: 4
+- canonical spaces: 22
+- architecture records: 238
+- system records: 2980
+- system categories: HVAC air, hydronic heat, cold water, hot water, drainage,
+  electrical power, fixtures, fire safety, and unclassified MEP/plumbing
+- searchable object index: 3218 architecture and system objects
+
+This file is intentionally smaller and easier for a renderer to consume than the
+full `spatial-meta.json`. The full meta file remains the source of truth for
+evidence, source discipline records, ports, links, COBie, and uncertainty notes.
+
 ## Current Limits
 
 This first compiler pass does not yet export:
@@ -106,9 +123,8 @@ This first compiler pass does not yet export:
 - triangle meshes
 - pipe or duct centerlines
 - simplified collision geometry
-- canonical merged room graph
-- semantic labels such as `fresh_air_supply`, `hot_water`, `drainage`, or
-  `refrigerant`
+- construction-grade pipe/duct routing geometry
+- full COBie-to-IFC binding for every object
 - evidence confidence scores
 
 It does extract enough object identity, class, placement, source, type name, and
@@ -118,9 +134,8 @@ connection data to build those layers next.
 
 Recommended next steps:
 
-1. Canonicalize levels and rooms across discipline files.
-2. Add MEP classification rules from type names, IFC classes, and COBie systems.
-3. Extract path-like geometry for `IfcFlowSegment`.
-4. Bind COBie components/systems/documents to IFC object IDs.
-5. Generate a smaller front-end payload for Three.js.
-
+1. Convert Electrical, Plumbing, and Rooms/Spaces IFC files into viewer layers.
+2. Extract path-like geometry for `IfcFlowSegment`.
+3. Bind COBie components/systems/documents to IFC object IDs.
+4. Add evidence confidence scores per object and route.
+5. Generate downstream builders for Three.js, Unity, Godot, and OpenUSD.

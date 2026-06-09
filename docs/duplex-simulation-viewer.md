@@ -27,8 +27,11 @@ It combines:
 
 - real BIM geometry loaded from XKT
 - schema-level data from `spatial-meta/v1`
+- front-end playback data from `spatial-viewer-payload/v1`
 - object/system counts from IFC and COBie extraction
 - layer controls for Architecture and MEP
+- canonical room and system-category inspection
+- searchable object index with focus-on-object support where the XKT layer is loaded
 - camera focus controls
 - x-ray and edge display controls
 
@@ -54,13 +57,13 @@ viewer pass.
 The viewer reads:
 
 ```text
-samples/duplex-apartment/derived/spatial-meta.json
+samples/duplex-apartment/derived/viewer-payload.json
 ```
 
 Current schema-side counts:
 
-- 16 level records
-- 102 space records
+- 4 canonical levels from 16 source level records
+- 22 canonical spaces from 102 source space records
 - 238 architecture records
 - 2980 system records
 - 970 ports
@@ -68,6 +71,7 @@ Current schema-side counts:
 - 232 COBie components
 - 36 COBie systems
 - 48 COBie documents
+- 3218 searchable architecture/system objects
 
 ## Current Status
 
@@ -84,8 +88,7 @@ It is suitable for:
 It still needs:
 
 - individual XKT conversion for Electrical, Plumbing, and Rooms/Spaces layers
-- room canonicalization across discipline models
-- MEP semantic classification
+- richer MEP semantic classification from manufacturer/model naming and COBie systems
 - pipe/duct centerline extraction
 - evidence and uncertainty overlays
-
+- construction-document overlays for shop drawings, as-built photos, and site changes

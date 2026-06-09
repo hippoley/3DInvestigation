@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any
@@ -50,6 +51,17 @@ MEP_CLASSES = [
     "IfcDistributionPort",
 ]
 
+SYSTEM_KEYWORDS = [
+    ("plumbing_drainage", ["drain", "waste", "sewer", "siphonic"]),
+    ("plumbing_hot_water", ["hot water", "domestic hot", "heater"]),
+    ("plumbing_cold_water", ["cold water", "domestic cold", "water"]),
+    ("hvac_air", ["duct", "air", "supply", "return", "exhaust", "diffuser", "fan"]),
+    ("hydronic_heat", ["radiator", "hydronic", "heating", "pump"]),
+    ("electrical_power", ["receptacle", "outlet", "panel", "switch", "electrical", "power"]),
+    ("fire_safety", ["smoke", "fire", "alarm"]),
+    ("fixture", ["toilet", "lavatory", "shower", "bathtub", "sink", "basin"]),
+]
+
 
 def safe_name(entity: Any) -> str | None:
     value = getattr(entity, "Name", None)
@@ -64,6 +76,13 @@ def safe_description(entity: Any) -> str | None:
 def safe_global_id(entity: Any) -> str | None:
     value = getattr(entity, "GlobalId", None)
     return str(value) if value not in (None, "") else None
+
+
+def normalize_label(value: Any) -> str:
+    text = str(value or "").strip().lower()
+    text = re.sub(r"-(m|p|e)$", "", text)
+    text = re.sub(r"[^a-z0-9]+", "-", text)
+    return text.strip("-") or "unnamed"
 
 
 def get_location(entity: Any) -> list[float] | None:
@@ -128,6 +147,24 @@ def base_object(entity: Any, source: str) -> dict[str, Any]:
         data["location"] = location
     data.update(type_info(entity))
     return data
+
+
+def classify_system(item: dict[str, Any]) -> str:
+    haystack = " ".join(
+        str(item.get(key, ""))
+        for key in ["name", "description", "typeName", "predefinedType", "ifcClass", "source"]
+    ).lower()
+    for label, keywords in SYSTEM_KEYWORDS:
+        if any(keyword in haystack for keyword in keywords):
+            return label
+    source = item.get("source")
+    if source == "electrical":
+        return "electrical_other"
+    if source == "plumbing":
+        return "plumbing_other"
+    if source in ("mep", "rooms_spaces"):
+        return "mep_other"
+    return "unclassified"
 
 
 def containment_map(model: Any) -> dict[str, dict[str, Any]]:
@@ -291,6 +328,133 @@ def summarize_ifc(model: Any) -> dict[str, Any]:
     }
 
 
+def canonicalize_levels(levels: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    grouped: dict[str, dict[str, Any]] = {}
+    for level in levels:
+        key = normalize_label(level.get("name") or level.get("elevation") or level.get("id"))
+        item = grouped.setdefault(
+            key,
+            {
+                "id": f"level:{key}",
+                "name": level.get("name") or key,
+                "elevation": level.get("elevation"),
+                "sourceRefs": [],
+            },
+        )
+        item["sourceRefs"].append({"source": level.get("source"), "id": level.get("id")})
+        if item.get("elevation") is None and level.get("elevation") is not None:
+            item["elevation"] = level.get("elevation")
+    return sorted(grouped.values(), key=lambda item: (item.get("elevation") is None, item.get("elevation") or 0, item["name"]))
+
+
+def canonicalize_spaces(spaces: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    grouped: dict[str, dict[str, Any]] = {}
+    for space in spaces:
+        base_name = space.get("name") or space.get("longName") or space.get("id")
+        key = normalize_label(base_name)
+        item = grouped.setdefault(
+            key,
+            {
+                "id": f"space:{key}",
+                "name": base_name,
+                "longName": space.get("longName"),
+                "area": space.get("area"),
+                "sourceRefs": [],
+                "locations": [],
+            },
+        )
+        item["sourceRefs"].append({"source": space.get("source"), "id": space.get("id")})
+        if space.get("location"):
+            item["locations"].append(space["location"])
+        if item.get("area") is None and space.get("area") is not None:
+            item["area"] = space.get("area")
+    return sorted(grouped.values(), key=lambda item: item["id"])
+
+
+def build_system_classification(systems: dict[str, list[dict[str, Any]]]) -> dict[str, Any]:
+    buckets: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for source, items in systems.items():
+        for item in items:
+            category = classify_system(item)
+            item["systemCategory"] = category
+            buckets[category].append(
+                {
+                    "id": item.get("id"),
+                    "source": source,
+                    "ifcClass": item.get("ifcClass"),
+                    "name": item.get("name"),
+                    "typeName": item.get("typeName"),
+                    "location": item.get("location"),
+                }
+            )
+    return {
+        "counts": {key: len(value) for key, value in sorted(buckets.items())},
+        "samples": {key: value[:25] for key, value in sorted(buckets.items())},
+    }
+
+
+def build_viewer_payload(spatial_meta: dict[str, Any]) -> dict[str, Any]:
+    canonical_levels = canonicalize_levels(spatial_meta["levels"])
+    canonical_spaces = canonicalize_spaces(spatial_meta["spaces"])
+    architecture_counts = {key: len(value) for key, value in sorted(spatial_meta["architecture"].items())}
+    system_counts = {key: len(value) for key, value in sorted(spatial_meta["systems"].items())}
+    system_classification = build_system_classification(spatial_meta["systems"])
+
+    object_index = []
+    for bucket, items in spatial_meta["architecture"].items():
+        for item in items[:1000]:
+            object_index.append(
+                {
+                    "id": item.get("id"),
+                    "domain": "architecture",
+                    "bucket": bucket,
+                    "ifcClass": item.get("ifcClass"),
+                    "name": item.get("name"),
+                    "source": item.get("source"),
+                    "location": item.get("location"),
+                }
+            )
+    for source, items in spatial_meta["systems"].items():
+        for item in items[:1500]:
+            object_index.append(
+                {
+                    "id": item.get("id"),
+                    "domain": "systems",
+                    "bucket": item.get("systemCategory") or classify_system(item),
+                    "ifcClass": item.get("ifcClass"),
+                    "name": item.get("name"),
+                    "source": source,
+                    "location": item.get("location"),
+                }
+            )
+
+    cobie_handover = spatial_meta["cobie"]["2012-03-23-Duplex-Handover.xlsx"]
+    return {
+        "schema": "spatial-viewer-payload/v1",
+        "sourceProject": spatial_meta["sourceProject"],
+        "canonicalLevels": canonical_levels,
+        "canonicalSpaces": canonical_spaces,
+        "counts": {
+            "sourceLevels": len(spatial_meta["levels"]),
+            "sourceSpaces": len(spatial_meta["spaces"]),
+            "canonicalLevels": len(canonical_levels),
+            "canonicalSpaces": len(canonical_spaces),
+            "architecture": sum(architecture_counts.values()),
+            "systems": sum(system_counts.values()),
+            "ports": len(spatial_meta["connections"]["ports"]),
+            "links": len(spatial_meta["connections"]["portToElement"]) + len(spatial_meta["connections"]["portToPort"]),
+            "cobieComponents": len(cobie_handover["components"]),
+            "cobieSystems": len(cobie_handover["systems"]),
+            "documents": len(cobie_handover["documents"]),
+        },
+        "architectureCounts": architecture_counts,
+        "sourceSystemCounts": system_counts,
+        "systemClassification": system_classification,
+        "objectIndex": object_index,
+        "uncertainties": spatial_meta["uncertainties"],
+    }
+
+
 def compile_sample(sample_dir: Path) -> tuple[dict[str, Any], dict[str, Any]]:
     raw_dir = sample_dir / "raw"
     derived_dir = sample_dir / "derived"
@@ -370,17 +534,21 @@ def main() -> None:
     parser.add_argument("--sample-dir", default="samples/duplex-apartment", type=Path)
     parser.add_argument("--output", default=None, type=Path)
     parser.add_argument("--summary-output", default=None, type=Path)
+    parser.add_argument("--viewer-output", default=None, type=Path)
     args = parser.parse_args()
 
     sample_dir = args.sample_dir
     output = args.output or sample_dir / "derived" / "spatial-meta.json"
     summary_output = args.summary_output or sample_dir / "derived" / "extraction-summary.json"
+    viewer_output = args.viewer_output or sample_dir / "derived" / "viewer-payload.json"
 
     spatial_meta, summary = compile_sample(sample_dir)
+    viewer_payload = build_viewer_payload(spatial_meta)
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(spatial_meta, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
     summary_output.write_text(json.dumps(summary, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
-    print(json.dumps({"output": str(output), "summary": str(summary_output)}, ensure_ascii=False))
+    viewer_output.write_text(json.dumps(viewer_payload, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
+    print(json.dumps({"output": str(output), "summary": str(summary_output), "viewer": str(viewer_output)}, ensure_ascii=False))
 
 
 if __name__ == "__main__":

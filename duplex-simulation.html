@@ -226,6 +226,73 @@
       text-align: right;
     }
 
+    .field {
+      width: 100%;
+      min-height: 34px;
+      margin: 0 0 8px;
+      padding: 7px 9px;
+      border: 1px solid rgba(20, 27, 39, 0.14);
+      border-radius: 6px;
+      color: var(--ink);
+      background: rgba(255, 255, 255, 0.84);
+      font: 600 12px/1.2 Inter, "Microsoft YaHei", system-ui, sans-serif;
+    }
+
+    .mini-title {
+      margin: 12px 0 7px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+
+    .chip {
+      min-height: 28px;
+      padding: 5px 8px;
+      border-color: rgba(20, 27, 39, 0.1);
+      font-size: 12px;
+      font-weight: 750;
+    }
+
+    .object-list {
+      display: grid;
+      gap: 6px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .object-list button {
+      width: 100%;
+      min-height: 46px;
+      padding: 7px 8px;
+      text-align: left;
+      border-color: rgba(20, 27, 39, 0.08);
+      background: rgba(255, 255, 255, 0.72);
+      font-weight: 650;
+    }
+
+    .object-list strong,
+    .object-list span {
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .object-list span {
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 600;
+    }
+
     .loading {
       position: fixed;
       left: 50%;
@@ -301,6 +368,12 @@
   <section class="panel schema" aria-label="schema summary">
     <h2>Schema 结构</h2>
     <ul class="schema-list" id="schemaList"></ul>
+    <div class="mini-title">规范化房间</div>
+    <ul class="schema-list" id="roomList"></ul>
+    <div class="mini-title">系统分类</div>
+    <div class="chips" id="systemChips"></div>
+    <input class="field" id="objectSearch" type="search" placeholder="搜索构件、房间、管线、设备" />
+    <ul class="object-list" id="objectList"></ul>
   </section>
 
   <nav class="panel toolbar" aria-label="model layers">
@@ -363,6 +436,9 @@
     const xktLoader = new XKTLoaderPlugin(viewer);
     const loadedModels = {};
     const loadedKinds = new Set();
+    let viewerPayload = null;
+    let activeSystemCategory = "all";
+    let selectedObjectId = null;
     let edgesEnabled = true;
     let xrayEnabled = false;
 
@@ -371,37 +447,128 @@
       if (node) node.textContent = value;
     }
 
+    function escapeText(value) {
+      return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        "\"": "&quot;",
+        "'": "&#039;"
+      }[char]));
+    }
+
     async function loadSpatialMeta() {
-      const response = await fetch("./samples/duplex-apartment/derived/spatial-meta.json");
+      const response = await fetch("./samples/duplex-apartment/derived/viewer-payload.json");
       const meta = await response.json();
-      const architectureCount = Object.values(meta.architecture).reduce((sum, list) => sum + list.length, 0);
-      const systemsCount = Object.values(meta.systems).reduce((sum, list) => sum + list.length, 0);
-      const linkCount = meta.connections.portToElement.length + meta.connections.portToPort.length;
-      setText("#levels", meta.levels.length);
-      setText("#spaces", meta.spaces.length);
-      setText("#archCount", architectureCount);
-      setText("#systemCount", systemsCount);
-      setText("#portCount", meta.connections.ports.length);
-      setText("#linkCount", linkCount);
+      viewerPayload = meta;
+      setText("#levels", `${meta.counts.canonicalLevels} / ${meta.counts.sourceLevels}`);
+      setText("#spaces", `${meta.counts.canonicalSpaces} / ${meta.counts.sourceSpaces}`);
+      setText("#archCount", meta.counts.architecture);
+      setText("#systemCount", meta.counts.systems);
+      setText("#portCount", meta.counts.ports);
+      setText("#linkCount", meta.counts.links);
 
       const rows = [
         ["schema", meta.schema],
         ["sourceProject", meta.sourceProject],
-        ["IFC files", meta.evidence.ifcFiles.length],
-        ["COBie files", meta.evidence.cobieFiles.length],
-        ["Architecture buckets", Object.keys(meta.architecture).length],
-        ["System buckets", Object.keys(meta.systems).length],
-        ["COBie components", meta.cobie["2012-03-23-Duplex-Handover.xlsx"].components.length],
-        ["COBie systems", meta.cobie["2012-03-23-Duplex-Handover.xlsx"].systems.length],
-        ["Documents", meta.cobie["2012-03-23-Duplex-Handover.xlsx"].documents.length]
+        ["canonical levels", meta.counts.canonicalLevels],
+        ["canonical rooms", meta.counts.canonicalSpaces],
+        ["source level refs", meta.counts.sourceLevels],
+        ["source room refs", meta.counts.sourceSpaces],
+        ["COBie components", meta.counts.cobieComponents],
+        ["COBie systems", meta.counts.cobieSystems],
+        ["Documents", meta.counts.documents]
       ];
 
       const list = document.querySelector("#schemaList");
       list.innerHTML = "";
       rows.forEach(([label, value]) => {
         const item = document.createElement("li");
-        item.innerHTML = `<strong>${label}</strong><span>${value}</span>`;
+        item.innerHTML = `<strong>${escapeText(label)}</strong><span>${escapeText(value)}</span>`;
         list.appendChild(item);
+      });
+
+      renderRooms(meta);
+      renderSystemChips(meta);
+      renderObjectList();
+    }
+
+    function renderRooms(meta) {
+      const list = document.querySelector("#roomList");
+      list.innerHTML = "";
+      meta.canonicalSpaces.slice(0, 8).forEach((space) => {
+        const area = Number.isFinite(space.area) ? `${space.area.toFixed(1)} m²` : "area n/a";
+        const refs = `${space.sourceRefs.length} refs`;
+        const item = document.createElement("li");
+        item.innerHTML = `<strong>${escapeText(space.name)}</strong><span>${escapeText(area)} · ${escapeText(refs)}</span>`;
+        list.appendChild(item);
+      });
+    }
+
+    function renderSystemChips(meta) {
+      const chips = document.querySelector("#systemChips");
+      chips.innerHTML = "";
+      const counts = meta.systemClassification.counts;
+      const entries = [["all", meta.counts.systems], ...Object.entries(counts)];
+      entries.forEach(([category, count]) => {
+        const button = document.createElement("button");
+        button.className = "chip";
+        button.dataset.category = category;
+        button.textContent = `${category} ${count}`;
+        button.classList.toggle("active", category === activeSystemCategory);
+        button.addEventListener("click", () => {
+          activeSystemCategory = category;
+          renderSystemChips(viewerPayload);
+          renderObjectList();
+        });
+        chips.appendChild(button);
+      });
+    }
+
+    function renderObjectList() {
+      if (!viewerPayload) return;
+      const query = document.querySelector("#objectSearch").value.trim().toLowerCase();
+      const list = document.querySelector("#objectList");
+      const objects = viewerPayload.objectIndex.filter((item) => {
+        const categoryMatch = activeSystemCategory === "all" || item.bucket === activeSystemCategory;
+        const text = `${item.name || ""} ${item.ifcClass || ""} ${item.bucket || ""} ${item.source || ""} ${item.id || ""}`.toLowerCase();
+        return categoryMatch && (!query || text.includes(query));
+      }).slice(0, 32);
+
+      list.innerHTML = "";
+      objects.forEach((item) => {
+        const row = document.createElement("li");
+        const button = document.createElement("button");
+        button.type = "button";
+        button.innerHTML = `
+          <strong>${escapeText(item.name || item.ifcClass || item.id)}</strong>
+          <span>${escapeText(item.domain)} · ${escapeText(item.bucket)} · ${escapeText(item.source)}</span>
+        `;
+        button.addEventListener("click", () => focusObject(item));
+        row.appendChild(button);
+        list.appendChild(row);
+      });
+    }
+
+    function findSceneObjectId(rawId) {
+      if (!rawId) return null;
+      const sceneObjects = viewer.scene.objects;
+      if (sceneObjects[rawId]) return rawId;
+      return Object.keys(sceneObjects).find((id) => id.endsWith(`#${rawId}`) || id.includes(rawId)) || null;
+    }
+
+    function focusObject(item) {
+      const objectId = findSceneObjectId(item.id);
+      if (!objectId) return;
+      if (selectedObjectId) {
+        viewer.scene.setObjectsSelected([selectedObjectId], false);
+      }
+      selectedObjectId = objectId;
+      viewer.scene.setObjectsSelected([objectId], true);
+      viewer.cameraFlight.flyTo({
+        aabb: viewer.scene.objects[objectId].aabb,
+        duration: 0.55,
+        fitFOV: 28
       });
     }
 
@@ -495,6 +662,7 @@
     document.querySelector("#homeBtn").addEventListener("click", fitAll);
     document.querySelector("#xrayBtn").addEventListener("click", () => applyXray(!xrayEnabled));
     document.querySelector("#edgesBtn").addEventListener("click", () => applyEdges(!edgesEnabled));
+    document.querySelector("#objectSearch").addEventListener("input", renderObjectList);
     document.querySelector("#edgesBtn").classList.add("active");
 
     await loadSpatialMeta();
@@ -504,6 +672,7 @@
     window.duplexSimulation = {
       viewer,
       loadedModels,
+      viewerPayload,
       math
     };
   </script>
