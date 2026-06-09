@@ -30,14 +30,9 @@ That makes it a useful public baseline for:
 
 ## Current Local Status
 
-The local `raw/` folder contains the downloadable non-LFS files, the architecture
-IFC binary, and Git LFS pointers for the remaining discipline IFC models.
-
-The architecture IFC was recovered from a public mirror and matches the upstream
-expected byte size. The Electrical, MEP, Rooms/Spaces, and Plumbing IFC binaries
-are still blocked by the upstream repository's GitHub LFS budget or connection
-reset responses. Their pointer files are kept intentionally because they record
-the exact SHA-256 object IDs and expected byte sizes.
+The local `raw/` folder contains the downloadable non-LFS files and all five
+discipline IFC binaries. Each IFC file was verified against the SHA-256 object ID
+and byte size recorded by the upstream Git LFS pointer.
 
 Run this to retry downloads:
 
@@ -57,13 +52,15 @@ Available locally:
 - `2020-11-11-DuplexMec.jpg`
 - `2020-11-11-DuplexPlu.jpg`
 - `Duplex_A_20110907.ifc`
-- IFC LFS pointers for Electrical, MEP, Rooms/Spaces, Plumbing
+- `Duplex_Electrical_20121207.ifc`
+- `Duplex_MEP_20110907.ifc`
+- `Duplex_M_20111024_ROOMS_AND_SPACES.ifc`
+- `Duplex_Plumbing_20121113.ifc`
 - 47 product and equipment PDFs in `raw/document/`
 - xeokit converted viewer assets for Architecture and MEP in `converted/xeokit/`
 
 Still needed for full extraction:
 
-- true Electrical, MEP, Rooms/Spaces, and Plumbing IFC binaries from Git LFS or another public mirror
 - any native authoring files, if available elsewhere
 
 ## Intended Compiler Flow

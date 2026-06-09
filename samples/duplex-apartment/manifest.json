@@ -93,7 +93,7 @@
     {
       "name": "Duplex_A_20110907.ifc",
       "kind": "ifc-architecture",
-      "status": "downloaded-from-public-mirror",
+      "status": "downloaded-and-verified",
       "lfsOidSha256": "b347a2c8aa8fff6db896a4417a9c50c22ac0ccd7c5cfc22b99b8d29336c606ed",
       "expectedBytes": 2380763,
       "localBytes": 2380763,
@@ -102,30 +102,38 @@
     {
       "name": "Duplex_Electrical_20121207.ifc",
       "kind": "ifc-electrical",
-      "status": "lfs-pointer-only",
+      "status": "downloaded-and-verified",
       "lfsOidSha256": "d47b014ed5b3428496683ee75e4664013f6df8237ea571b8d13f877cea0b7a94",
-      "expectedBytes": 1602758
+      "expectedBytes": 1602758,
+      "localBytes": 1602758,
+      "downloadUrl": "https://media.githubusercontent.com/media/buildingsmart-community/Community-Sample-Test-Files/main/IFC%202.3.0.1%20%28IFC%202x3%29/Duplex%20Apartment/Duplex_Electrical_20121207.ifc"
     },
     {
       "name": "Duplex_MEP_20110907.ifc",
       "kind": "ifc-mep",
-      "status": "lfs-pointer-only",
+      "status": "downloaded-and-verified",
       "lfsOidSha256": "13976a8e223f177a6d7123679e4b02e750cd90c13f7bb20c593be125d9407119",
-      "expectedBytes": 17871432
+      "expectedBytes": 17871432,
+      "localBytes": 17871432,
+      "downloadUrl": "https://media.githubusercontent.com/media/buildingsmart-community/Community-Sample-Test-Files/main/IFC%202.3.0.1%20%28IFC%202x3%29/Duplex%20Apartment/Duplex_MEP_20110907.ifc"
     },
     {
       "name": "Duplex_M_20111024_ROOMS_AND_SPACES.ifc",
       "kind": "ifc-rooms-and-spaces",
-      "status": "lfs-pointer-only",
+      "status": "downloaded-and-verified",
       "lfsOidSha256": "3cd577ecff9daf91632789a408070251a431b198de7be47f64e01c7fda1be92b",
-      "expectedBytes": 8781887
+      "expectedBytes": 8781887,
+      "localBytes": 8781887,
+      "downloadUrl": "https://media.githubusercontent.com/media/buildingsmart-community/Community-Sample-Test-Files/main/IFC%202.3.0.1%20%28IFC%202x3%29/Duplex%20Apartment/Duplex_M_20111024_ROOMS_AND_SPACES.ifc"
     },
     {
       "name": "Duplex_Plumbing_20121113.ifc",
       "kind": "ifc-plumbing",
-      "status": "lfs-pointer-only",
+      "status": "downloaded-and-verified",
       "lfsOidSha256": "abfaf5c0979b6b4b05182aec7ada8945374bdb414db76c763724d549b41b212b",
-      "expectedBytes": 31556138
+      "expectedBytes": 31556138,
+      "localBytes": 31556138,
+      "downloadUrl": "https://media.githubusercontent.com/media/buildingsmart-community/Community-Sample-Test-Files/main/IFC%202.3.0.1%20%28IFC%202x3%29/Duplex%20Apartment/Duplex_Plumbing_20121113.ifc"
     }
   ],
   "documentFolder": {
@@ -165,8 +173,6 @@
     }
   ],
   "knownGaps": [
-    "The true Electrical, MEP, Rooms/Spaces, and Plumbing IFC binaries are not available locally yet because the upstream GitHub LFS endpoint returned unavailable/budget-blocked or connection-reset responses.",
-    "The Architecture IFC binary is available locally from a public mirror and matches the upstream expected byte size.",
     "This public sample contains MEP, electrical, and plumbing models, but it is not a full private residential construction package with HVAC shop drawings, floor heating design, domestic water installation drawings, and site photos.",
     "The xeokit converted models are useful for viewer validation but are not substitutes for the original IFC source files."
   ],

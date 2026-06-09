@@ -7,6 +7,7 @@ $ErrorActionPreference = "Stop"
 $repo = "buildingsmart-community/Community-Sample-Test-Files"
 $basePath = "IFC 2.3.0.1 (IFC 2x3)/Duplex Apartment"
 $rawBase = "https://raw.githubusercontent.com/$repo/main/$($basePath -replace ' ', '%20' -replace '\(', '%28' -replace '\)', '%29')"
+$mediaBase = "https://media.githubusercontent.com/media/$repo/main/$($basePath -replace ' ', '%20' -replace '\(', '%28' -replace '\)', '%29')"
 $lfsBatchUrl = "https://github.com/$repo.git/info/lfs/objects/batch"
 
 $files = @(
@@ -51,12 +52,53 @@ function Get-LfsPointer {
   return @{ oid = $oid; size = $size }
 }
 
+function Invoke-MediaFallback {
+  param(
+    [string]$FileName,
+    [string]$Path,
+    [int64]$ExpectedSize
+  )
+
+  $url = "$mediaBase/$([uri]::EscapeDataString($FileName))"
+  for ($i = 0; $i -lt 8; $i += 1) {
+    $currentSize = 0
+    if (Test-Path $Path) {
+      $currentSize = (Get-Item -LiteralPath $Path).Length
+    }
+    if ($currentSize -eq $ExpectedSize) {
+      return $true
+    }
+
+    Write-Host "Media fallback $FileName attempt=$($i + 1) current=$currentSize expected=$ExpectedSize"
+    & curl.exe --ssl-no-revoke -L -C - --connect-timeout 20 --max-time 180 -sS -o $Path $url
+  }
+
+  if ((Test-Path $Path) -and ((Get-Item -LiteralPath $Path).Length -eq $ExpectedSize)) {
+    return $true
+  }
+
+  return $false
+}
+
 foreach ($file in $files) {
   $encodedFile = [uri]::EscapeDataString($file)
   $url = "$rawBase/$encodedFile"
   $target = Join-Path $OutputDir $file
+  if (Test-Path $target) {
+    $existingPointer = Get-LfsPointer -Path $target
+    if ($null -eq $existingPointer) {
+      Write-Host "Skipping existing $file"
+      continue
+    }
+  }
+
   Write-Host "Downloading pointer/raw $file"
-  Invoke-CurlDownload -Url $url -Path $target
+  try {
+    Invoke-CurlDownload -Url $url -Path $target
+  } catch {
+    Write-Warning "Raw download failed for ${file}: $($_.Exception.Message)"
+    continue
+  }
 
   $pointer = Get-LfsPointer -Path $target
   if ($null -eq $pointer) {
@@ -84,19 +126,28 @@ foreach ($file in $files) {
     -o $respPath `
     $lfsBatchUrl
   if ($LASTEXITCODE -ne 0) {
-    Write-Warning "LFS batch failed for ${file}; keeping pointer file"
+    Write-Warning "LFS batch failed for ${file}; trying media fallback"
+    if (-not (Invoke-MediaFallback -FileName $file -Path $target -ExpectedSize $pointer.size)) {
+      Write-Warning "Media fallback failed for ${file}; keeping pointer file"
+    }
     continue
   }
 
   $response = Get-Content -LiteralPath $respPath -Raw | ConvertFrom-Json
   if ($response.message) {
-    Write-Warning "LFS download unavailable for ${file}: $($response.message)"
+    Write-Warning "LFS download unavailable for ${file}: $($response.message); trying media fallback"
+    if (-not (Invoke-MediaFallback -FileName $file -Path $target -ExpectedSize $pointer.size)) {
+      Write-Warning "Media fallback failed for ${file}; keeping pointer file"
+    }
     continue
   }
 
   $downloadUrl = $response.objects[0].actions.download.href
   if (-not $downloadUrl) {
-    Write-Warning "No LFS download URL for $file"
+    Write-Warning "No LFS download URL for ${file}; trying media fallback"
+    if (-not (Invoke-MediaFallback -FileName $file -Path $target -ExpectedSize $pointer.size)) {
+      Write-Warning "Media fallback failed for ${file}; keeping pointer file"
+    }
     continue
   }
 
