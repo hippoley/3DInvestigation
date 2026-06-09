@@ -6,15 +6,18 @@
   <title>Duplex Apartment 1:1 全屋还原仿真</title>
   <style>
     :root {
-      --panel: rgba(248, 250, 252, 0.94);
-      --line: rgba(20, 27, 39, 0.16);
-      --ink: #172033;
-      --muted: #5f6978;
-      --blue: #2d73d9;
-      --cyan: #1399b7;
-      --red: #d94b4b;
-      --green: #2f8f62;
-      --amber: #b98512;
+      --panel: rgba(255, 255, 255, 0.82);
+      --panel-strong: rgba(255, 255, 255, 0.94);
+      --line: rgba(36, 48, 69, 0.1);
+      --ink: #182033;
+      --muted: #687386;
+      --soft: rgba(245, 247, 250, 0.78);
+      --blue: #2368d1;
+      --cyan: #0897a9;
+      --red: #c84b54;
+      --green: #198b61;
+      --amber: #c88613;
+      --violet: #8158d9;
     }
 
     * {
@@ -28,8 +31,19 @@
       margin: 0;
       overflow: hidden;
       color: var(--ink);
-      background: #d9dde4;
+      background: #e6e9ee;
       font-family: Inter, "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+    }
+
+    body::before {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+      content: "";
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.5), rgba(222, 227, 235, 0.34)),
+        radial-gradient(ellipse at center, rgba(255, 255, 255, 0), rgba(42, 51, 68, 0.08));
     }
 
     #viewer {
@@ -37,7 +51,7 @@
       inset: 0;
       width: 100%;
       height: 100%;
-      background: linear-gradient(#d9dde4, #f7f8fa);
+      background: linear-gradient(180deg, #edf1f5 0%, #f8f9fb 55%, #e2e6eb 100%);
     }
 
     #navCubeCanvas {
@@ -65,59 +79,71 @@
       border: 1px solid var(--line);
       border-radius: 8px;
       background: var(--panel);
-      box-shadow: 0 12px 32px rgba(21, 30, 46, 0.16);
-      backdrop-filter: blur(12px);
+      box-shadow: 0 18px 46px rgba(34, 43, 58, 0.13), 0 2px 8px rgba(34, 43, 58, 0.06);
+      backdrop-filter: blur(18px) saturate(1.14);
+    }
+
+    .panel::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .panel::-webkit-scrollbar-thumb {
+      border: 2px solid transparent;
+      border-radius: 8px;
+      background: rgba(98, 110, 130, 0.28);
+      background-clip: content-box;
     }
 
     .hud {
-      top: 18px;
-      left: 18px;
-      width: min(360px, calc(100vw - 36px));
+      top: 20px;
+      left: 20px;
+      width: min(348px, calc(100vw - 36px));
       max-height: calc(100vh - 36px);
       overflow: auto;
-      padding: 12px;
+      padding: 14px;
     }
 
     .hud h1 {
-      margin: 0 0 8px;
-      font-size: 16px;
+      margin: 0 0 7px;
+      font-size: 17px;
       line-height: 1.32;
       letter-spacing: 0;
     }
 
     .sub {
-      margin: 0 0 10px;
+      margin: 0 0 12px;
       color: var(--muted);
       font-size: 12px;
-      line-height: 1.45;
+      line-height: 1.55;
     }
 
     .metrics {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 8px;
-      margin-top: 10px;
+      gap: 7px;
+      margin-top: 12px;
     }
 
     .metric {
-      min-height: 56px;
-      padding: 8px;
-      border: 1px solid rgba(20, 27, 39, 0.1);
+      min-height: 58px;
+      padding: 9px;
+      border: 1px solid rgba(36, 48, 69, 0.08);
       border-radius: 6px;
-      background: rgba(255, 255, 255, 0.76);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(246, 248, 251, 0.8));
     }
 
     .metric b {
       display: block;
       color: var(--muted);
-      font-size: 12px;
+      font-size: 11px;
       line-height: 1.2;
+      font-weight: 720;
     }
 
     .metric span {
       display: block;
-      margin-top: 5px;
-      font-size: 17px;
+      margin-top: 6px;
+      font-size: 19px;
       font-weight: 800;
     }
 
@@ -126,9 +152,10 @@
       grid-template-columns: auto 1fr;
       gap: 8px;
       align-items: center;
-      min-height: 26px;
+      min-height: 24px;
       color: var(--muted);
       font-size: 12px;
+      line-height: 1.35;
     }
 
     .dot {
@@ -136,6 +163,7 @@
       height: 8px;
       border-radius: 50%;
       background: var(--muted);
+      box-shadow: 0 0 0 3px rgba(104, 115, 134, 0.08);
     }
 
     .dot.ok {
@@ -148,8 +176,9 @@
 
     .legend {
       display: grid;
-      gap: 5px;
-      margin-top: 10px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 6px 10px;
+      margin-top: 12px;
       color: var(--muted);
       font-size: 11px;
     }
@@ -165,44 +194,54 @@
       height: 9px;
       border-radius: 50%;
       background: var(--blue);
+      box-shadow: 0 0 0 3px rgba(35, 104, 209, 0.08);
     }
 
     .toolbar {
       left: 50%;
-      bottom: 18px;
+      bottom: 20px;
       display: grid;
       grid-template-columns: repeat(4, minmax(110px, 1fr));
       gap: 8px;
-      width: min(560px, calc(100vw - 28px));
-      padding: 8px;
+      width: min(592px, calc(100vw - 28px));
+      padding: 7px;
       transform: translateX(-50%);
+      background: rgba(255, 255, 255, 0.88);
     }
 
     button {
-      min-height: 38px;
-      border: 1px solid rgba(45, 115, 217, 0.16);
+      min-height: 37px;
+      border: 1px solid rgba(36, 48, 69, 0.1);
       border-radius: 6px;
       color: var(--ink);
-      background: #fff;
+      background: rgba(255, 255, 255, 0.84);
       font: 700 13px/1.2 Inter, "Microsoft YaHei", system-ui, sans-serif;
       cursor: pointer;
+      transition: border-color 160ms ease, background 160ms ease, color 160ms ease, box-shadow 160ms ease;
     }
 
-    button:hover,
-    button.active {
+    button:hover {
       color: #0c57b7;
-      border-color: rgba(45, 115, 217, 0.42);
-      background: #eaf3ff;
+      border-color: rgba(35, 104, 209, 0.34);
+      background: rgba(246, 250, 255, 0.96);
+    }
+
+    button.active {
+      color: #0a4ba2;
+      border-color: rgba(35, 104, 209, 0.38);
+      background: linear-gradient(180deg, rgba(235, 244, 255, 0.98), rgba(221, 235, 255, 0.9));
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.72);
     }
 
     .topbar {
-      top: 18px;
+      top: 20px;
       left: 50%;
       display: flex;
       gap: 8px;
       align-items: center;
-      padding: 8px;
+      padding: 7px;
       transform: translateX(-50%);
+      background: rgba(255, 255, 255, 0.9);
     }
 
     .icon-btn {
@@ -213,23 +252,30 @@
     }
 
     .schema {
-      right: 18px;
-      top: 18px;
-      width: min(360px, calc(100vw - 36px));
-      max-height: calc(100vh - 112px);
+      right: 20px;
+      top: 20px;
+      width: min(374px, calc(100vw - 36px));
+      max-height: calc(100vh - 108px);
       overflow: auto;
-      padding: 12px;
+      padding: 14px;
     }
 
     .schema h2 {
-      margin: 0 0 8px;
-      font-size: 14px;
+      position: sticky;
+      top: -14px;
+      z-index: 1;
+      margin: -14px -14px 10px;
+      padding: 14px 14px 10px;
+      border-bottom: 1px solid rgba(36, 48, 69, 0.07);
+      background: rgba(255, 255, 255, 0.84);
+      backdrop-filter: blur(14px);
+      font-size: 15px;
       letter-spacing: 0;
     }
 
     .schema-list {
       display: grid;
-      gap: 6px;
+      gap: 7px;
       margin: 0;
       padding: 0;
       list-style: none;
@@ -239,10 +285,10 @@
       display: flex;
       justify-content: space-between;
       gap: 10px;
-      padding: 7px 8px;
-      border: 1px solid rgba(20, 27, 39, 0.08);
+      padding: 8px 9px;
+      border: 1px solid rgba(36, 48, 69, 0.07);
       border-radius: 6px;
-      background: rgba(255, 255, 255, 0.72);
+      background: var(--soft);
       font-size: 12px;
     }
 
@@ -260,19 +306,26 @@
       width: 100%;
       min-height: 34px;
       margin: 0 0 8px;
-      padding: 7px 9px;
-      border: 1px solid rgba(20, 27, 39, 0.14);
+      padding: 8px 10px;
+      border: 1px solid rgba(36, 48, 69, 0.12);
       border-radius: 6px;
       color: var(--ink);
-      background: rgba(255, 255, 255, 0.84);
+      background: rgba(255, 255, 255, 0.88);
       font: 600 12px/1.2 Inter, "Microsoft YaHei", system-ui, sans-serif;
+      outline: none;
+    }
+
+    .field:focus {
+      border-color: rgba(35, 104, 209, 0.42);
+      box-shadow: 0 0 0 3px rgba(35, 104, 209, 0.08);
     }
 
     .mini-title {
-      margin: 12px 0 7px;
+      margin: 14px 0 8px;
       color: var(--muted);
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 800;
+      text-transform: uppercase;
     }
 
     .chips {
@@ -284,9 +337,9 @@
 
     .chip {
       min-height: 28px;
-      padding: 5px 8px;
-      border-color: rgba(20, 27, 39, 0.1);
-      font-size: 12px;
+      padding: 5px 9px;
+      border-color: rgba(36, 48, 69, 0.09);
+      font-size: 11px;
       font-weight: 750;
     }
 
@@ -300,12 +353,18 @@
 
     .object-list button {
       width: 100%;
-      min-height: 46px;
-      padding: 7px 8px;
+      min-height: 48px;
+      padding: 8px 9px;
       text-align: left;
-      border-color: rgba(20, 27, 39, 0.08);
-      background: rgba(255, 255, 255, 0.72);
+      border-color: rgba(36, 48, 69, 0.07);
+      background: var(--soft);
       font-weight: 650;
+    }
+
+    .object-list button:hover {
+      color: var(--ink);
+      border-color: rgba(8, 151, 169, 0.26);
+      background: rgba(240, 250, 252, 0.9);
     }
 
     .object-list strong,
@@ -318,20 +377,20 @@
 
     .object-list span {
       margin-top: 3px;
-      color: var(--muted);
+      color: #627083;
       font-size: 11px;
       font-weight: 600;
     }
 
     .detail {
-      margin-top: 8px;
-      padding: 9px;
-      border: 1px solid rgba(20, 27, 39, 0.08);
+      margin-top: 9px;
+      padding: 10px;
+      border: 1px solid rgba(36, 48, 69, 0.07);
       border-radius: 6px;
-      background: rgba(255, 255, 255, 0.72);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(247, 249, 252, 0.82));
       color: var(--muted);
       font-size: 11px;
-      line-height: 1.42;
+      line-height: 1.5;
     }
 
     .detail strong {
@@ -417,13 +476,13 @@
   </nav>
 
   <section class="panel schema" aria-label="schema summary">
-    <h2>Schema 结构</h2>
+    <h2>空间说明书</h2>
     <ul class="schema-list" id="schemaList"></ul>
-    <div class="mini-title">楼层分层</div>
+    <div class="mini-title">楼层</div>
     <div class="chips" id="levelChips"></div>
-    <div class="mini-title">规范化房间</div>
+    <div class="mini-title">房间</div>
     <ul class="schema-list" id="roomList"></ul>
-    <div class="mini-title">系统分类</div>
+    <div class="mini-title">系统</div>
     <div class="chips" id="systemChips"></div>
     <input class="field" id="objectSearch" type="search" placeholder="搜索构件、房间、管线、设备" />
     <ul class="object-list" id="objectList"></ul>
@@ -434,10 +493,10 @@
   </section>
 
   <nav class="panel toolbar" aria-label="model layers">
-    <button data-model="architecture" class="active">建筑户型</button>
-    <button data-model="mep" class="active">MEP 模型</button>
-    <button data-focus="architecture">聚焦户型</button>
-    <button data-focus="mep">聚焦机电</button>
+    <button data-model="architecture" class="active">户型</button>
+    <button data-model="mep" class="active">机电</button>
+    <button data-focus="architecture">看户型</button>
+    <button data-focus="mep">看机电</button>
   </nav>
 
   <div class="loading" id="loading">正在加载 1:1 BIM 模型…</div>
@@ -544,15 +603,15 @@
       setText("#linkCount", meta.counts.links);
 
       const rows = [
-        ["schema", meta.schema],
-        ["sourceProject", meta.sourceProject],
-        ["canonical levels", meta.counts.canonicalLevels],
-        ["canonical rooms", meta.counts.canonicalSpaces],
-        ["source level refs", meta.counts.sourceLevels],
-        ["source room refs", meta.counts.sourceSpaces],
-        ["COBie components", meta.counts.cobieComponents],
-        ["COBie systems", meta.counts.cobieSystems],
-        ["Documents", meta.counts.documents]
+        ["说明书", meta.schema],
+        ["项目", meta.sourceProject],
+        ["楼层", meta.counts.canonicalLevels],
+        ["房间", meta.counts.canonicalSpaces],
+        ["楼层来源", meta.counts.sourceLevels],
+        ["房间来源", meta.counts.sourceSpaces],
+        ["COBie 构件", meta.counts.cobieComponents],
+        ["COBie 系统", meta.counts.cobieSystems],
+        ["资料文档", meta.counts.documents]
       ];
 
       const list = document.querySelector("#schemaList");
@@ -761,12 +820,12 @@
         const color = categoryColors[item.bucket] || "#2d73d9";
         overlayCtx.beginPath();
         overlayCtx.fillStyle = color;
-        overlayCtx.globalAlpha = 0.74;
-        overlayCtx.arc(pos[0], pos[1], item.ifcClass === "IfcFlowSegment" ? 3.5 : 5, 0, Math.PI * 2);
+        overlayCtx.globalAlpha = 0.72;
+        overlayCtx.arc(pos[0], pos[1], item.ifcClass === "IfcFlowSegment" ? 2.5 : 4, 0, Math.PI * 2);
         overlayCtx.fill();
-        overlayCtx.globalAlpha = 0.22;
+        overlayCtx.globalAlpha = 0.14;
         overlayCtx.beginPath();
-        overlayCtx.arc(pos[0], pos[1], item.ifcClass === "IfcFlowSegment" ? 8 : 11, 0, Math.PI * 2);
+        overlayCtx.arc(pos[0], pos[1], item.ifcClass === "IfcFlowSegment" ? 6 : 8.5, 0, Math.PI * 2);
         overlayCtx.fill();
       });
       overlayCtx.globalAlpha = 1;
