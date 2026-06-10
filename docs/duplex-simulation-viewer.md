@@ -112,6 +112,12 @@ Camera control is tuned for lower wheel speed, softer orbit speed, and light
 rotation/pan/dolly inertia so the model feels less jumpy while still remaining
 precise.
 
+The mouse wheel is handled with a game-style input buffer instead of xeokit's
+default per-event zoom. Wheel deltas accumulate into a short-lived velocity,
+then decay over a few animation frames. During that short interaction window,
+the viewer temporarily hides semantic overlay points and disables SAO/edge
+rendering, then restores the full visual treatment when movement settles.
+
 ## Performance
 
 The viewer avoids continuous UI work while the camera is idle:
@@ -122,6 +128,8 @@ The viewer avoids continuous UI work while the camera is idle:
 - overlay drawing is throttled while the camera is moving
 - SAO ambient occlusion is temporarily disabled during camera interaction and
   restored shortly after movement stops
+- edge rendering and semantic overlays are temporarily disabled during active
+  pointer/scroll interaction, then restored automatically
 - model object IDs are cached per XKT layer for layer visibility, x-ray, and
   edge toggles
 

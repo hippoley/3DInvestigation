@@ -73,6 +73,11 @@
       width: 100%;
       height: 100%;
       pointer-events: none;
+      transition: opacity 120ms ease;
+    }
+
+    #semanticOverlay.interaction-lite {
+      opacity: 0;
     }
 
     .camera-pivot-marker {
@@ -557,8 +562,9 @@
     cameraControl.followPointer = true;
     cameraControl.doublePickFlyTo = true;
     cameraControl.panRightClick = true;
+    cameraControl.zoomOnMouseWheel = false;
     cameraControl.dragRotationRate = 285;
-    cameraControl.mouseWheelDollyRate = 58;
+    cameraControl.mouseWheelDollyRate = 42;
     cameraControl.rotationInertia = 0.18;
     cameraControl.panInertia = 0.32;
     cameraControl.dollyInertia = 0.12;
@@ -573,6 +579,16 @@
     cameraControl.pivotElement = pivotElement;
 
     viewer.scene.canvas.canvas.addEventListener("contextmenu", (event) => event.preventDefault());
+    viewer.scene.canvas.canvas.addEventListener("pointerdown", () => {
+      pointerDragging = true;
+      markCameraInteracting();
+    });
+    window.addEventListener("pointerup", () => {
+      pointerDragging = false;
+    });
+    viewer.scene.canvas.canvas.addEventListener("pointermove", () => {
+      if (pointerDragging) markCameraInteracting();
+    });
 
     new NavCubePlugin(viewer, {
       canvasId: "navCubeCanvas",
@@ -602,6 +618,11 @@
     let lastOverlayDrawTime = 0;
     let lastCameraSignature = "";
     let interactionIdleTimer = null;
+    let interactionActive = false;
+    let pointerDragging = false;
+    let smoothWheelRAF = null;
+    let smoothWheelVelocity = 0;
+    let smoothWheelFrames = 0;
     const overlayFrameInterval = 66;
     let levelLayers = [];
     let activeLevelId = "all";
@@ -898,12 +919,22 @@
     }
 
     function markCameraInteracting() {
-      if (viewer.scene.sao.enabled) {
+      if (!interactionActive) {
+        interactionActive = true;
+        overlayCanvas.classList.add("interaction-lite");
         viewer.scene.sao.enabled = false;
+        if (edgesEnabled) {
+          setAllModelEdges(false);
+        }
       }
       window.clearTimeout(interactionIdleTimer);
       interactionIdleTimer = window.setTimeout(() => {
+        interactionActive = false;
+        overlayCanvas.classList.remove("interaction-lite");
         viewer.scene.sao.enabled = true;
+        if (edgesEnabled) {
+          setAllModelEdges(true);
+        }
         requestSemanticOverlayDraw(true);
       }, 180);
     }
@@ -911,7 +942,7 @@
     function drawSemanticOverlay() {
       if (!overlayCtx) return;
       overlayCtx.clearRect(0, 0, overlayCanvas.clientWidth, overlayCanvas.clientHeight);
-      if (!overlayEnabled || !viewerPayload) return;
+      if (!overlayEnabled || !viewerPayload || interactionActive) return;
 
       const points = getSemanticObjects();
       points.forEach((item) => {
@@ -1116,17 +1147,48 @@
       document.querySelector("#xrayBtn").classList.toggle("active", enabled);
     }
 
-    function applyEdges(enabled) {
-      edgesEnabled = enabled;
+    function setAllModelEdges(enabled) {
       const scene = viewer.scene;
       Object.keys(loadedModels).forEach((kind) => {
-        const model = loadedModels[kind];
-        if (!model) return;
         const ids = getModelObjectIds(kind);
         if (ids.length) scene.setObjectsEdges(ids, enabled);
       });
+    }
+
+    function applyEdges(enabled) {
+      edgesEnabled = enabled;
+      setAllModelEdges(enabled && !interactionActive);
       document.querySelector("#edgesBtn").classList.toggle("active", enabled);
     }
+
+    function runSmoothWheelZoom() {
+      smoothWheelRAF = requestAnimationFrame(() => {
+        markCameraInteracting();
+        smoothWheelFrames += 1;
+        const delta = smoothWheelVelocity * 0.2;
+        viewer.camera.zoom(delta);
+        smoothWheelVelocity *= 0.45;
+        requestSemanticOverlayDraw(false);
+        if (Math.abs(smoothWheelVelocity) > 0.04 && smoothWheelFrames < 8) {
+          runSmoothWheelZoom();
+        } else {
+          smoothWheelVelocity = 0;
+          smoothWheelFrames = 0;
+          smoothWheelRAF = null;
+        }
+      });
+    }
+
+    viewer.scene.canvas.canvas.addEventListener("wheel", (event) => {
+      event.preventDefault();
+      const normalized = Math.max(-1.8, Math.min(1.8, event.deltaY / 160));
+      smoothWheelVelocity += normalized * 1.35;
+      smoothWheelVelocity = Math.max(-8, Math.min(8, smoothWheelVelocity));
+      if (!smoothWheelRAF) {
+        smoothWheelFrames = 0;
+        runSmoothWheelZoom();
+      }
+    }, { passive: false });
 
     document.querySelectorAll("[data-model]").forEach((button) => {
       button.addEventListener("click", () => {
@@ -1163,7 +1225,6 @@
       const signature = `${camera.eye.join(",")}|${camera.look.join(",")}|${camera.up.join(",")}`;
       if (signature !== lastCameraSignature) {
         lastCameraSignature = signature;
-        markCameraInteracting();
         requestSemanticOverlayDraw(false);
       }
     });
