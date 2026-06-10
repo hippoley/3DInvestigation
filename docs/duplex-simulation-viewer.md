@@ -112,6 +112,19 @@ Camera control is tuned for lower wheel speed, softer orbit speed, and light
 rotation/pan/dolly inertia so the model feels less jumpy while still remaining
 precise.
 
+## Performance
+
+The viewer avoids continuous UI work while the camera is idle:
+
+- semantic overlay points are cached per floor/system filter
+- overlay drawing is scheduled with `requestAnimationFrame` instead of running
+  directly on every xeokit tick
+- overlay drawing is throttled while the camera is moving
+- SAO ambient occlusion is temporarily disabled during camera interaction and
+  restored shortly after movement stops
+- model object IDs are cached per XKT layer for layer visibility, x-ray, and
+  edge toggles
+
 ## Current Status
 
 This is a BIM-level 1:1 restoration simulation, not a construction-grade private

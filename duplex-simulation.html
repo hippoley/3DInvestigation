@@ -588,7 +588,21 @@
     const overlayCtx = overlayCanvas.getContext("2d");
     const loadedModels = {};
     const loadedKinds = new Set();
+    const modelObjectIdsCache = {};
+    const modelVisibility = {
+      architecture: true,
+      mep: true
+    };
     let viewerPayload = null;
+    let semanticObjectsCache = [];
+    let semanticObjectsDirty = true;
+    let overlayDrawRequested = false;
+    let overlayNeedsForceDraw = false;
+    let overlayDeferredTimer = null;
+    let lastOverlayDrawTime = 0;
+    let lastCameraSignature = "";
+    let interactionIdleTimer = null;
+    const overlayFrameInterval = 66;
     let levelLayers = [];
     let activeLevelId = "all";
     let activeSystemCategory = "all";
@@ -668,7 +682,8 @@
       renderOverlayLegend(meta);
       renderObjectList();
       resizeOverlay();
-      drawSemanticOverlay();
+      rebuildSemanticObjectsCache();
+      requestSemanticOverlayDraw(true);
     }
 
     function buildLevelLayers(meta) {
@@ -723,11 +738,12 @@
           renderLevelChips(meta);
           renderObjectList();
           applyLayerVisibility();
+          markSemanticObjectsDirty();
           document.querySelector("#objectDetail").innerHTML = `
             <strong>对象详情</strong>
             当前楼层：${escapeText(level.name)}。几何模型和语义点位已按该楼层过滤。
           `;
-          drawSemanticOverlay();
+          requestSemanticOverlayDraw(true);
         });
         chips.appendChild(button);
       });
@@ -764,7 +780,8 @@
             <strong>对象详情</strong>
             当前系统分类：${escapeText(category)}。选择列表里的对象后，这里会显示来源、分类、坐标和是否已经进入 XKT 几何层。
           `;
-          drawSemanticOverlay();
+          markSemanticObjectsDirty();
+          requestSemanticOverlayDraw(true);
         });
         chips.appendChild(button);
       });
@@ -815,8 +832,16 @@
       });
     }
 
-    function getSemanticObjects() {
-      if (!viewerPayload) return [];
+    function markSemanticObjectsDirty() {
+      semanticObjectsDirty = true;
+    }
+
+    function rebuildSemanticObjectsCache() {
+      if (!viewerPayload) {
+        semanticObjectsCache = [];
+        semanticObjectsDirty = false;
+        return;
+      }
       const defaultVisible = new Set([
         "electrical_power",
         "fire_safety",
@@ -827,13 +852,19 @@
         "plumbing_drainage",
         "plumbing_hot_water"
       ]);
-      return viewerPayload.objectIndex.filter((item) => {
+      semanticObjectsCache = viewerPayload.objectIndex.filter((item) => {
         if (item.domain !== "systems" || !Array.isArray(item.location)) return false;
         if (item.location.every((value) => Math.abs(Number(value) || 0) < 0.0001)) return false;
         if (!isLocationInActiveLevel(item.location)) return false;
         if (activeSystemCategory === "all" && !defaultVisible.has(item.bucket)) return false;
         return activeSystemCategory === "all" || item.bucket === activeSystemCategory;
       }).slice(0, 900);
+      semanticObjectsDirty = false;
+    }
+
+    function getSemanticObjects() {
+      if (semanticObjectsDirty) rebuildSemanticObjectsCache();
+      return semanticObjectsCache;
     }
 
     function resizeOverlay() {
@@ -845,6 +876,36 @@
       overlayCanvas.style.width = `${width}px`;
       overlayCanvas.style.height = `${height}px`;
       overlayCtx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    }
+
+    function requestSemanticOverlayDraw(force = false) {
+      overlayNeedsForceDraw = overlayNeedsForceDraw || force;
+      if (overlayDrawRequested || overlayDeferredTimer) return;
+      overlayDrawRequested = true;
+      requestAnimationFrame((time) => {
+        overlayDrawRequested = false;
+        if (!overlayNeedsForceDraw && time - lastOverlayDrawTime < overlayFrameInterval) {
+          overlayDeferredTimer = window.setTimeout(() => {
+            overlayDeferredTimer = null;
+            requestSemanticOverlayDraw(true);
+          }, overlayFrameInterval);
+          return;
+        }
+        overlayNeedsForceDraw = false;
+        lastOverlayDrawTime = time;
+        drawSemanticOverlay();
+      });
+    }
+
+    function markCameraInteracting() {
+      if (viewer.scene.sao.enabled) {
+        viewer.scene.sao.enabled = false;
+      }
+      window.clearTimeout(interactionIdleTimer);
+      interactionIdleTimer = window.setTimeout(() => {
+        viewer.scene.sao.enabled = true;
+        requestSemanticOverlayDraw(true);
+      }, 180);
     }
 
     function drawSemanticOverlay() {
@@ -889,7 +950,7 @@
         XKT: ${objectId ? "已匹配，可聚焦" : "未匹配，仅语义点位"}
       `;
       if (!objectId) {
-        drawSemanticOverlay();
+        requestSemanticOverlayDraw(true);
         return;
       }
       if (selectedObjectId) {
@@ -902,7 +963,7 @@
         duration: 0.55,
         fitFOV: 28
       });
-      drawSemanticOverlay();
+      requestSemanticOverlayDraw(true);
     }
 
     function setSelectedObject(objectId, flyTo = false) {
@@ -1006,15 +1067,18 @@
     }
 
     function getModelObjectIds(kind) {
+      if (modelObjectIdsCache[kind]) return modelObjectIdsCache[kind];
       const model = loadedModels[kind];
       if (!model) return [];
       const prefix = `${model.id}#`;
-      return Object.keys(viewer.scene.objects).filter((id) => id === model.id || id.startsWith(prefix));
+      modelObjectIdsCache[kind] = Object.keys(viewer.scene.objects).filter((id) => id === model.id || id.startsWith(prefix));
+      return modelObjectIdsCache[kind];
     }
 
     function setModelVisible(kind, visible) {
       const model = loadedModels[kind];
       if (!model) return;
+      modelVisibility[kind] = visible;
       document.querySelector(`[data-model="${kind}"]`)?.classList.toggle("active", visible);
       applyLayerVisibility();
     }
@@ -1030,23 +1094,23 @@
     function applyLayerVisibility() {
       const scene = viewer.scene;
       Object.entries(loadedModels).forEach(([kind, model]) => {
-        const modelButton = document.querySelector(`[data-model="${kind}"]`);
-        const modelEnabled = modelButton?.classList.contains("active") ?? true;
+        const modelEnabled = modelVisibility[kind] ?? true;
         getModelObjectIds(kind).forEach((id) => {
           const object = scene.objects[id];
           const visible = modelEnabled && objectIsInActiveLevel(object);
           if (object) object.visible = visible;
         });
       });
-      drawSemanticOverlay();
+      requestSemanticOverlayDraw(true);
     }
 
     function applyXray(enabled) {
       xrayEnabled = enabled;
       const scene = viewer.scene;
-      Object.values(loadedModels).forEach((model) => {
+      Object.keys(loadedModels).forEach((kind) => {
+        const model = loadedModels[kind];
         if (!model) return;
-        const ids = Object.keys(scene.objects).filter((id) => id === model.id || id.startsWith(`${model.id}#`));
+        const ids = getModelObjectIds(kind);
         if (ids.length) scene.setObjectsXRayed(ids, enabled);
       });
       document.querySelector("#xrayBtn").classList.toggle("active", enabled);
@@ -1055,9 +1119,10 @@
     function applyEdges(enabled) {
       edgesEnabled = enabled;
       const scene = viewer.scene;
-      Object.values(loadedModels).forEach((model) => {
+      Object.keys(loadedModels).forEach((kind) => {
+        const model = loadedModels[kind];
         if (!model) return;
-        const ids = Object.keys(scene.objects).filter((id) => id === model.id || id.startsWith(`${model.id}#`));
+        const ids = getModelObjectIds(kind);
         if (ids.length) scene.setObjectsEdges(ids, enabled);
       });
       document.querySelector("#edgesBtn").classList.toggle("active", enabled);
@@ -1066,8 +1131,7 @@
     document.querySelectorAll("[data-model]").forEach((button) => {
       button.addEventListener("click", () => {
         const kind = button.dataset.model;
-        const model = loadedModels[kind];
-        setModelVisible(kind, !(model?.visible ?? true));
+        setModelVisible(kind, !(modelVisibility[kind] ?? true));
       });
     });
 
@@ -1081,7 +1145,7 @@
     document.querySelector("#overlayBtn").addEventListener("click", () => {
       overlayEnabled = !overlayEnabled;
       document.querySelector("#overlayBtn").classList.toggle("active", overlayEnabled);
-      drawSemanticOverlay();
+      requestSemanticOverlayDraw(true);
     });
     document.querySelector("#objectSearch").addEventListener("input", () => {
       renderObjectList();
@@ -1092,9 +1156,17 @@
     });
     window.addEventListener("resize", () => {
       resizeOverlay();
-      drawSemanticOverlay();
+      requestSemanticOverlayDraw(true);
     });
-    viewer.scene.on("tick", drawSemanticOverlay);
+    viewer.scene.on("tick", () => {
+      const camera = viewer.camera;
+      const signature = `${camera.eye.join(",")}|${camera.look.join(",")}|${camera.up.join(",")}`;
+      if (signature !== lastCameraSignature) {
+        lastCameraSignature = signature;
+        markCameraInteracting();
+        requestSemanticOverlayDraw(false);
+      }
+    });
     document.querySelector("#edgesBtn").classList.add("active");
 
     await loadSpatialMeta();
