@@ -46,12 +46,6 @@
         radial-gradient(ellipse at center, rgba(255, 255, 255, 0), rgba(42, 51, 68, 0.08));
     }
 
-    body.render-mode::before {
-      background:
-        radial-gradient(ellipse at center, rgba(255, 246, 230, 0.08) 0%, rgba(36, 32, 28, 0.08) 55%, rgba(18, 16, 15, 0.34) 100%),
-        linear-gradient(180deg, rgba(255, 235, 205, 0.08), rgba(42, 36, 31, 0.2));
-    }
-
     #viewer {
       position: fixed;
       inset: 0;
@@ -60,44 +54,6 @@
       background: linear-gradient(180deg, #edf1f5 0%, #f8f9fb 55%, #e2e6eb 100%);
       touch-action: none;
       user-select: none;
-    }
-
-    #decorLayer {
-      position: fixed;
-      inset: 0;
-      z-index: 1;
-      width: 100%;
-      height: 100%;
-      pointer-events: none;
-      opacity: 0;
-      transition: opacity 180ms ease;
-    }
-
-    body.render-mode #viewer {
-      background:
-        radial-gradient(ellipse at center, #d9d0c3 0%, #b9b0a5 58%, #5b5651 100%);
-    }
-
-    body.render-mode #decorLayer {
-      opacity: 1;
-    }
-
-    #renderAtmosphere {
-      position: fixed;
-      inset: 0;
-      z-index: 2;
-      pointer-events: none;
-      opacity: 0;
-      transition: opacity 240ms ease;
-      mix-blend-mode: multiply;
-      background:
-        radial-gradient(ellipse at 45% 54%, rgba(255, 224, 174, 0.16) 0%, rgba(255, 224, 174, 0) 36%),
-        radial-gradient(ellipse at 50% 76%, rgba(46, 33, 23, 0.22) 0%, rgba(46, 33, 23, 0) 38%),
-        radial-gradient(ellipse at center, rgba(255, 255, 255, 0) 42%, rgba(21, 19, 18, 0.3) 100%);
-    }
-
-    body.render-mode #renderAtmosphere {
-      opacity: 1;
     }
 
     #navCubeCanvas {
@@ -145,12 +101,6 @@
       background: var(--panel);
       box-shadow: 0 18px 46px rgba(34, 43, 58, 0.13), 0 2px 8px rgba(34, 43, 58, 0.06);
       backdrop-filter: blur(18px) saturate(1.14);
-    }
-
-    body.render-mode .panel {
-      background: rgba(250, 247, 241, 0.78);
-      border-color: rgba(83, 68, 50, 0.12);
-      box-shadow: 0 18px 52px rgba(35, 28, 22, 0.16), 0 2px 10px rgba(35, 28, 22, 0.08);
     }
 
     .panel::-webkit-scrollbar {
@@ -518,8 +468,6 @@
 </head>
 <body>
   <canvas id="viewer"></canvas>
-  <canvas id="decorLayer"></canvas>
-  <div id="renderAtmosphere"></div>
   <canvas id="semanticOverlay"></canvas>
   <canvas id="navCubeCanvas"></canvas>
 
@@ -545,7 +493,6 @@
     <button class="icon-btn" id="xrayBtn" title="半透明">◫</button>
     <button class="icon-btn" id="edgesBtn" title="边线">▧</button>
     <button class="icon-btn active" id="overlayBtn" title="语义点位">•</button>
-    <button class="icon-btn" id="renderBtn" title="室内渲染">◐</button>
   </nav>
 
   <section class="panel schema" aria-label="schema summary">
@@ -579,11 +526,8 @@
       Viewer,
       XKTLoaderPlugin,
       NavCubePlugin,
-      AmbientLight,
-      DirLight,
       math
     } from "./node_modules/@xeokit/xeokit-sdk/dist/xeokit-sdk.es.js";
-    import * as THREE from "./node_modules/three/build/three.module.js";
 
     const modelPaths = {
       architecture: {
@@ -655,48 +599,7 @@
       rightMargin: 18
     });
 
-    viewer.scene.clearLights();
-    new AmbientLight(viewer.scene, {
-      id: "warmAmbient",
-      color: [1.0, 0.86, 0.68],
-      intensity: 0.72
-    });
-    new DirLight(viewer.scene, {
-      id: "softKey",
-      dir: [-0.45, -0.85, -0.28],
-      color: [1.0, 0.82, 0.58],
-      intensity: 0.92,
-      space: "view"
-    });
-    new DirLight(viewer.scene, {
-      id: "coolFill",
-      dir: [0.6, -0.35, 0.4],
-      color: [0.58, 0.68, 0.82],
-      intensity: 0.34,
-      space: "view"
-    });
     const xktLoader = new XKTLoaderPlugin(viewer);
-    const decorCanvas = document.querySelector("#decorLayer");
-    const decorRenderer = new THREE.WebGLRenderer({
-      canvas: decorCanvas,
-      alpha: true,
-      antialias: true,
-      powerPreference: "high-performance"
-    });
-    decorRenderer.setClearColor(0x000000, 0);
-    decorRenderer.outputColorSpace = THREE.SRGBColorSpace;
-    const decorScene = new THREE.Scene();
-    const decorCamera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-    decorCamera.matrixAutoUpdate = false;
-    const decorRoot = new THREE.Group();
-    decorScene.add(decorRoot);
-    decorScene.add(new THREE.HemisphereLight(0xffe8c8, 0x4c5660, 1.45));
-    const decorKeyLight = new THREE.DirectionalLight(0xffd19a, 1.6);
-    decorKeyLight.position.set(-8, 18, 12);
-    decorScene.add(decorKeyLight);
-    const decorFillLight = new THREE.DirectionalLight(0x8ea7c2, 0.65);
-    decorFillLight.position.set(10, 14, -8);
-    decorScene.add(decorFillLight);
     const overlayCanvas = document.querySelector("#semanticOverlay");
     const overlayCtx = overlayCanvas.getContext("2d");
     const loadedModels = {};
@@ -707,7 +610,6 @@
       mep: true
     };
     let viewerPayload = null;
-    let semanticObjectByEntityId = new Map();
     let semanticObjectsCache = [];
     let semanticObjectsDirty = true;
     let overlayDrawRequested = false;
@@ -730,8 +632,6 @@
     let edgesEnabled = true;
     let xrayEnabled = false;
     let overlayEnabled = true;
-    let renderModeEnabled = true;
-    let renderModeInitialized = false;
 
     const categoryColors = {
       electrical_power: "#e0a11b",
@@ -765,147 +665,10 @@
       }[char]));
     }
 
-    function buildRenderSemanticIndex(meta) {
-      semanticObjectByEntityId = new Map();
-      (meta.objectIndex || []).forEach((item) => {
-        if (!item.id) return;
-        const modelPrefix = item.domain === "architecture" ? "duplex-architecture" : "duplex-mep";
-        semanticObjectByEntityId.set(item.id, item);
-        semanticObjectByEntityId.set(`${modelPrefix}#${item.id}`, item);
-      });
-    }
-
-    const decorMaterials = {
-      bed: new THREE.MeshStandardMaterial({ color: 0xd7c8b6, roughness: 0.78, metalness: 0.02 }),
-      pillow: new THREE.MeshStandardMaterial({ color: 0xf3eee6, roughness: 0.86, metalness: 0 }),
-      sofa: new THREE.MeshStandardMaterial({ color: 0xb8aa9b, roughness: 0.82, metalness: 0.02 }),
-      table: new THREE.MeshStandardMaterial({ color: 0x9d7047, roughness: 0.66, metalness: 0.04 }),
-      cabinet: new THREE.MeshStandardMaterial({ color: 0x8b5b35, roughness: 0.62, metalness: 0.03 }),
-      accent: new THREE.MeshStandardMaterial({ color: 0x3f3832, roughness: 0.7, metalness: 0.06 })
-    };
-
-    function parseFurnitureSize(name, fallback) {
-      const match = String(name || "").match(/(\d{3,4})\s*x\s*(\d{3,4})(?:\s*x\s*(\d{3,4}))?\s*mm/i);
-      if (!match) return fallback;
-      const width = Number(match[1]) / 1000;
-      const depth = Number(match[2]) / 1000;
-      const height = match[3] ? Number(match[3]) / 1000 : fallback[1];
-      return [Math.max(width, 0.35), Math.max(height, 0.18), Math.max(depth, 0.35)];
-    }
-
-    function getDecorWorldPosition(item, heightOffset = 0) {
-      const location = item.location || [0, 0, 0];
-      return new THREE.Vector3(
-        Number(location[0]) || 0,
-        (Number(location[2]) || 0) + heightOffset,
-        Math.abs(Number(location[1]) || 0)
-      );
-    }
-
-    function addDecorBox(group, size, position, material) {
-      const mesh = new THREE.Mesh(new THREE.BoxGeometry(size[0], size[1], size[2]), material);
-      mesh.position.copy(position);
-      group.add(mesh);
-      return mesh;
-    }
-
-    function addBedDecor(item) {
-      const group = new THREE.Group();
-      const size = parseFurnitureSize(item.name, [1.6, 0.38, 2.05]);
-      const base = getDecorWorldPosition(item, size[1] / 2);
-      addDecorBox(group, size, base, decorMaterials.bed);
-      addDecorBox(group, [size[0], 0.55, 0.12], base.clone().add(new THREE.Vector3(0, 0.2, -size[2] / 2 + 0.08)), decorMaterials.cabinet);
-      addDecorBox(group, [size[0] * 0.38, 0.12, 0.38], base.clone().add(new THREE.Vector3(-size[0] * 0.23, size[1] / 2 + 0.08, -size[2] * 0.28)), decorMaterials.pillow);
-      addDecorBox(group, [size[0] * 0.38, 0.12, 0.38], base.clone().add(new THREE.Vector3(size[0] * 0.23, size[1] / 2 + 0.08, -size[2] * 0.28)), decorMaterials.pillow);
-      return group;
-    }
-
-    function addSofaDecor(item) {
-      const group = new THREE.Group();
-      const size = parseFurnitureSize(item.name, [1.85, 0.55, 0.9]);
-      const base = getDecorWorldPosition(item, size[1] / 2);
-      addDecorBox(group, size, base, decorMaterials.sofa);
-      addDecorBox(group, [size[0], 0.72, 0.16], base.clone().add(new THREE.Vector3(0, 0.2, size[2] / 2 - 0.08)), decorMaterials.sofa);
-      addDecorBox(group, [0.16, 0.55, size[2]], base.clone().add(new THREE.Vector3(-size[0] / 2 + 0.08, 0.08, 0)), decorMaterials.sofa);
-      addDecorBox(group, [0.16, 0.55, size[2]], base.clone().add(new THREE.Vector3(size[0] / 2 - 0.08, 0.08, 0)), decorMaterials.sofa);
-      return group;
-    }
-
-    function addTableDecor(item) {
-      const group = new THREE.Group();
-      const size = parseFurnitureSize(item.name, [0.9, 0.45, 0.9]);
-      const base = getDecorWorldPosition(item, size[1]);
-      addDecorBox(group, [size[0], 0.08, size[2]], base, decorMaterials.table);
-      const legY = base.y - size[1] / 2;
-      [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([x, z]) => {
-        addDecorBox(group, [0.06, size[1], 0.06], new THREE.Vector3(base.x + x * size[0] * 0.42, legY, base.z + z * size[2] * 0.42), decorMaterials.accent);
-      });
-      return group;
-    }
-
-    function addCabinetDecor(item) {
-      const size = parseFurnitureSize(item.name, [0.85, 1.6, 0.52]);
-      const group = new THREE.Group();
-      addDecorBox(group, size, getDecorWorldPosition(item, size[1] / 2), decorMaterials.cabinet);
-      addDecorBox(group, [size[0] * 0.92, 0.03, 0.04], getDecorWorldPosition(item, size[1] * 0.62), decorMaterials.accent);
-      return group;
-    }
-
-    function createDecorForItem(item) {
-      const name = String(item.name || "").toLowerCase();
-      if (name.includes("bed")) return addBedDecor(item);
-      if (name.includes("sofa")) return addSofaDecor(item);
-      if (name.includes("table")) return addTableDecor(item);
-      if (name.includes("cabinet")) return addCabinetDecor(item);
-      const group = new THREE.Group();
-      addDecorBox(group, [0.65, 0.5, 0.65], getDecorWorldPosition(item, 0.25), decorMaterials.sofa);
-      return group;
-    }
-
-    function disposeDecorObject(object) {
-      object.traverse((child) => {
-        if (!child.isMesh) return;
-        child.geometry?.dispose();
-      });
-    }
-
-    function rebuildDecorLayer() {
-      decorRoot.children.forEach(disposeDecorObject);
-      decorRoot.clear();
-      if (!viewerPayload || !renderModeEnabled) return;
-      viewerPayload.objectIndex
-        .filter((item) => item.domain === "architecture" && item.bucket === "FurnishingElement" && Array.isArray(item.location))
-        .filter((item) => isLocationInActiveLevel(item.location))
-        .slice(0, 80)
-        .forEach((item) => decorRoot.add(createDecorForItem(item)));
-    }
-
-    function resizeDecorLayer() {
-      const width = window.innerWidth;
-      const height = window.innerHeight;
-      const ratio = Math.min(window.devicePixelRatio || 1, 1.5);
-      decorRenderer.setPixelRatio(ratio);
-      decorRenderer.setSize(width, height, false);
-      decorCamera.aspect = width / height;
-      decorCamera.updateProjectionMatrix();
-    }
-
-    function renderDecorLayer() {
-      if (!renderModeEnabled || !decorRoot.children.length) return;
-      const viewMatrix = new THREE.Matrix4().fromArray(viewer.camera.viewMatrix);
-      decorCamera.projectionMatrix.fromArray(viewer.camera.projMatrix);
-      decorCamera.projectionMatrixInverse.copy(decorCamera.projectionMatrix).invert();
-      decorCamera.matrixWorld.copy(viewMatrix).invert();
-      decorCamera.matrixWorldInverse.copy(viewMatrix);
-      decorCamera.position.setFromMatrixPosition(decorCamera.matrixWorld);
-      decorRenderer.render(decorScene, decorCamera);
-    }
-
     async function loadSpatialMeta() {
       const response = await fetch("./samples/duplex-apartment/derived/viewer-payload.json");
       const meta = await response.json();
       viewerPayload = meta;
-      buildRenderSemanticIndex(meta);
       setText("#levels", `${meta.counts.canonicalLevels} / ${meta.counts.sourceLevels}`);
       setText("#spaces", `${meta.counts.canonicalSpaces} / ${meta.counts.sourceSpaces}`);
       setText("#archCount", meta.counts.architecture);
@@ -939,9 +702,7 @@
       renderSystemChips(meta);
       renderOverlayLegend(meta);
       renderObjectList();
-      resizeDecorLayer();
       resizeOverlay();
-      rebuildDecorLayer();
       rebuildSemanticObjectsCache();
       requestSemanticOverlayDraw(true);
     }
@@ -998,7 +759,6 @@
           renderLevelChips(meta);
           renderObjectList();
           applyLayerVisibility();
-          rebuildDecorLayer();
           markSemanticObjectsDirty();
           document.querySelector("#objectDetail").innerHTML = `
             <strong>对象详情</strong>
@@ -1306,13 +1066,9 @@
         loadedKinds.add(kind);
         setText(cfg.status, `${kind}: loaded`);
         if (loadedKinds.size === Object.keys(modelPaths).length) {
-          if (!renderModeInitialized) {
-            renderModeInitialized = true;
-            applyRenderMode(renderModeEnabled, true);
-          } else {
-            applyLayerVisibility();
-            if (renderModeEnabled) styleInteriorObjects(true);
-          }
+          applyLayerVisibility();
+          fitAll();
+          applyXray(true);
           document.querySelector("#loading").classList.add("hidden");
         }
       });
@@ -1405,111 +1161,6 @@
       document.querySelector("#edgesBtn").classList.toggle("active", enabled);
     }
 
-    function getEntitySemantic(entity) {
-      return semanticObjectByEntityId.get(entity.id) || semanticObjectByEntityId.get(String(entity.id || "").split("#").pop()) || null;
-    }
-
-    function getEntityTone(entity) {
-      const semantic = getEntitySemantic(entity);
-      const text = `${semantic?.bucket || ""} ${semantic?.ifcClass || ""} ${semantic?.name || ""} ${entity.id || ""}`.toLowerCase();
-      if (text.includes("window") || text.includes("glazing") || text.includes("curtain wall")) return [0.42, 0.52, 0.56];
-      if (text.includes("door")) return [0.58, 0.36, 0.2];
-      if (text.includes("sofa")) return [0.7, 0.62, 0.54];
-      if (text.includes("bed")) return [0.82, 0.76, 0.68];
-      if (text.includes("table")) return [0.66, 0.48, 0.3];
-      if (text.includes("cabinet") || text.includes("casework")) return [0.56, 0.36, 0.2];
-      if (text.includes("furnishing") || text.includes("chair") || text.includes("desk")) return [0.68, 0.5, 0.34];
-      if (text.includes("stair")) return [0.38, 0.34, 0.29];
-      if (text.includes("slab") || text.includes("floor")) return [0.7, 0.66, 0.6];
-      if (text.includes("roof")) return [0.46, 0.44, 0.41];
-      if (text.includes("wall")) return [0.86, 0.82, 0.75];
-      if (text.includes("opening")) return [0.48, 0.44, 0.38];
-      return [0.76, 0.68, 0.58];
-    }
-
-    function styleInteriorObjects(enabled) {
-      Object.keys(loadedModels).forEach((kind) => {
-        getModelObjectIds(kind).forEach((id) => {
-          const entity = viewer.scene.objects[id];
-          if (!entity) return;
-          if (!enabled) {
-            entity.colorize = null;
-            entity.opacity = 1;
-            return;
-          }
-          const semantic = getEntitySemantic(entity);
-          const text = `${semantic?.bucket || ""} ${semantic?.ifcClass || ""} ${semantic?.name || ""}`.toLowerCase();
-          entity.colorize = kind === "architecture" ? getEntityTone(entity) : [0.45, 0.44, 0.42];
-          entity.opacity = kind === "architecture" ? (text.includes("window") || text.includes("glazing") ? 0.62 : 1) : 0.42;
-        });
-      });
-    }
-
-    function flyToInteriorCamera() {
-      viewer.cameraFlight.flyTo({
-        eye: [4.8, 20.5, 25.5],
-        look: [4.8, 3.15, 8.6],
-        up: [0, 0, -1],
-        duration: 0.85,
-        projection: "perspective"
-      });
-    }
-
-    function setActiveLevel(levelId) {
-      activeLevelId = levelId;
-      if (viewerPayload) {
-        renderLevelChips(viewerPayload);
-        renderObjectList();
-      }
-      markSemanticObjectsDirty();
-      applyLayerVisibility();
-    }
-
-    function applyRenderMode(enabled, flyCamera = false) {
-      renderModeEnabled = enabled;
-      document.body.classList.toggle("render-mode", enabled);
-      document.querySelector("#renderBtn").classList.toggle("active", enabled);
-
-      if (enabled) {
-        overlayEnabled = false;
-        document.querySelector("#overlayBtn").classList.remove("active");
-        applyXray(false);
-        applyEdges(false);
-        modelVisibility.architecture = true;
-        modelVisibility.mep = false;
-        document.querySelector('[data-model="architecture"]')?.classList.add("active");
-        document.querySelector('[data-model="mep"]')?.classList.remove("active");
-        if (levelLayers.some((level) => level.id === "level:level-2")) {
-          activeLevelId = "level:level-2";
-        } else if (levelLayers.some((level) => level.id === "level:level-1")) {
-          activeLevelId = "level:level-1";
-        }
-        viewer.scene.sao.numSamples = 32;
-        viewer.scene.sao.intensity = 0.34;
-      } else {
-        overlayEnabled = true;
-        document.querySelector("#overlayBtn").classList.add("active");
-        modelVisibility.architecture = true;
-        modelVisibility.mep = true;
-        document.querySelector('[data-model="architecture"]')?.classList.add("active");
-        document.querySelector('[data-model="mep"]')?.classList.add("active");
-        activeLevelId = "all";
-        viewer.scene.sao.numSamples = 16;
-        viewer.scene.sao.intensity = 0.18;
-      }
-
-      if (viewerPayload) {
-        renderLevelChips(viewerPayload);
-        renderObjectList();
-      }
-      styleInteriorObjects(enabled);
-      rebuildDecorLayer();
-      markSemanticObjectsDirty();
-      applyLayerVisibility();
-      requestSemanticOverlayDraw(true);
-      if (enabled && flyCamera) flyToInteriorCamera();
-    }
-
     function runSmoothWheelZoom() {
       smoothWheelRAF = requestAnimationFrame(() => {
         markCameraInteracting();
@@ -1558,7 +1209,6 @@
       document.querySelector("#overlayBtn").classList.toggle("active", overlayEnabled);
       requestSemanticOverlayDraw(true);
     });
-    document.querySelector("#renderBtn").addEventListener("click", () => applyRenderMode(!renderModeEnabled, true));
     document.querySelector("#objectSearch").addEventListener("input", () => {
       renderObjectList();
       document.querySelector("#objectDetail").innerHTML = `
@@ -1567,7 +1217,6 @@
       `;
     });
     window.addEventListener("resize", () => {
-      resizeDecorLayer();
       resizeOverlay();
       requestSemanticOverlayDraw(true);
     });
@@ -1578,7 +1227,6 @@
         lastCameraSignature = signature;
         requestSemanticOverlayDraw(false);
       }
-      renderDecorLayer();
     });
     document.querySelector("#edgesBtn").classList.add("active");
 
