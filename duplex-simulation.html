@@ -6,12 +6,12 @@
   <title>Duplex Apartment 1:1 全屋还原仿真</title>
   <style>
     :root {
-      --panel: rgba(255, 255, 255, 0.82);
-      --panel-strong: rgba(255, 255, 255, 0.94);
-      --line: rgba(36, 48, 69, 0.1);
-      --ink: #182033;
-      --muted: #687386;
-      --soft: rgba(245, 247, 250, 0.78);
+      --panel: rgba(250, 251, 250, 0.86);
+      --panel-strong: rgba(255, 255, 255, 0.95);
+      --line: rgba(54, 66, 76, 0.12);
+      --ink: #1d2329;
+      --muted: #65707a;
+      --soft: rgba(246, 248, 249, 0.8);
       --blue: #2368d1;
       --cyan: #0897a9;
       --red: #c84b54;
@@ -31,7 +31,7 @@
       margin: 0;
       overflow: hidden;
       color: var(--ink);
-      background: #e6e9ee;
+      background: #d9dde0;
       font-family: Inter, "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
     }
 
@@ -42,8 +42,9 @@
       pointer-events: none;
       content: "";
       background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.5), rgba(222, 227, 235, 0.34)),
-        radial-gradient(ellipse at center, rgba(255, 255, 255, 0), rgba(42, 51, 68, 0.08));
+        radial-gradient(ellipse at 50% 42%, rgba(255, 255, 255, 0.48), rgba(255, 255, 255, 0) 46%),
+        radial-gradient(ellipse at center, rgba(255, 255, 255, 0), rgba(45, 55, 64, 0.12) 100%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.58), rgba(214, 219, 223, 0.2));
     }
 
     #viewer {
@@ -51,7 +52,8 @@
       inset: 0;
       width: 100%;
       height: 100%;
-      background: linear-gradient(180deg, #edf1f5 0%, #f8f9fb 55%, #e2e6eb 100%);
+      background:
+        radial-gradient(ellipse at 50% 48%, #f8f9f8 0%, #dde2e4 60%, #a9b0b4 100%);
       touch-action: none;
       user-select: none;
     }
@@ -74,6 +76,21 @@
       height: 100%;
       pointer-events: none;
       transition: opacity 120ms ease;
+    }
+
+    #pbrOverlay {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 180ms ease;
+    }
+
+    #pbrOverlay.active {
+      opacity: 1;
     }
 
     #semanticOverlay.interaction-lite {
@@ -99,8 +116,8 @@
       border: 1px solid var(--line);
       border-radius: 8px;
       background: var(--panel);
-      box-shadow: 0 18px 46px rgba(34, 43, 58, 0.13), 0 2px 8px rgba(34, 43, 58, 0.06);
-      backdrop-filter: blur(18px) saturate(1.14);
+      box-shadow: 0 18px 46px rgba(33, 42, 50, 0.13), 0 2px 8px rgba(33, 42, 50, 0.06);
+      backdrop-filter: blur(18px) saturate(1.12);
     }
 
     .panel::-webkit-scrollbar {
@@ -221,9 +238,9 @@
       left: 50%;
       bottom: 20px;
       display: grid;
-      grid-template-columns: repeat(4, minmax(110px, 1fr));
+      grid-template-columns: repeat(2, minmax(140px, 1fr));
       gap: 8px;
-      width: min(592px, calc(100vw - 28px));
+      width: min(420px, calc(100vw - 28px));
       padding: 7px;
       transform: translateX(-50%);
       background: rgba(255, 255, 255, 0.88);
@@ -269,6 +286,10 @@
       min-width: 38px;
       padding: 0;
       font-size: 15px;
+    }
+
+    .icon-btn[data-feature="preview"] {
+      color: #7a623f;
     }
 
     .schema {
@@ -440,6 +461,10 @@
       display: none;
     }
 
+    .mode-hidden {
+      display: none !important;
+    }
+
     @media (max-width: 900px) {
       .schema {
         display: none;
@@ -468,6 +493,7 @@
 </head>
 <body>
   <canvas id="viewer"></canvas>
+  <canvas id="pbrOverlay"></canvas>
   <canvas id="semanticOverlay"></canvas>
   <canvas id="navCubeCanvas"></canvas>
 
@@ -490,9 +516,11 @@
 
   <nav class="panel topbar" aria-label="view tools">
     <button class="icon-btn" id="homeBtn" title="重置视角">⌂</button>
+    <button class="icon-btn" id="autoRotateBtn" title="环绕展示">↻</button>
+    <button class="icon-btn" id="pbrBtn" data-feature="preview" title="PBR 预览层">◐</button>
     <button class="icon-btn" id="xrayBtn" title="半透明">◫</button>
     <button class="icon-btn" id="edgesBtn" title="边线">▧</button>
-    <button class="icon-btn active" id="overlayBtn" title="语义点位">•</button>
+    <button class="icon-btn hidden" id="overlayBtn" title="语义点位">•</button>
   </nav>
 
   <section class="panel schema" aria-label="schema summary">
@@ -512,11 +540,9 @@
     </div>
   </section>
 
-  <nav class="panel toolbar" aria-label="model layers">
-    <button data-model="architecture" class="active">户型</button>
-    <button data-model="mep" class="active">机电</button>
-    <button data-focus="architecture">看户型</button>
-    <button data-focus="mep">看机电</button>
+  <nav class="panel toolbar" aria-label="view modes">
+    <button data-view-mode="interior" class="active">家装设计</button>
+    <button data-view-mode="mep">管网风暖</button>
   </nav>
 
   <div class="loading" id="loading">正在加载 1:1 BIM 模型…</div>
@@ -526,8 +552,11 @@
       Viewer,
       XKTLoaderPlugin,
       NavCubePlugin,
+      AmbientLight,
+      DirLight,
       math
     } from "./node_modules/@xeokit/xeokit-sdk/dist/xeokit-sdk.es.js";
+    import * as THREE from "./node_modules/three/build/three.module.js";
 
     const modelPaths = {
       architecture: {
@@ -552,26 +581,26 @@
     });
 
     viewer.scene.sao.enabled = true;
-    viewer.scene.sao.numSamples = 16;
-    viewer.scene.sao.intensity = 0.18;
-    viewer.camera.eye = [-18, 13, 24];
-    viewer.camera.look = [3, 3, 3];
+    viewer.scene.sao.numSamples = 28;
+    viewer.scene.sao.intensity = 0.12;
+    viewer.camera.eye = [-16, 14, 23];
+    viewer.camera.look = [3.8, 2.4, 4.8];
     viewer.camera.up = [0, 1, 0];
     const cameraControl = viewer.cameraControl;
     cameraControl.navMode = "orbit";
-    cameraControl.followPointer = true;
+    cameraControl.followPointer = false;
     cameraControl.doublePickFlyTo = true;
     cameraControl.panRightClick = true;
     cameraControl.zoomOnMouseWheel = false;
-    cameraControl.dragRotationRate = 285;
-    cameraControl.mouseWheelDollyRate = 42;
-    cameraControl.rotationInertia = 0.18;
-    cameraControl.panInertia = 0.32;
-    cameraControl.dollyInertia = 0.12;
-    cameraControl.keyboardPanRate = 4.0;
-    cameraControl.keyboardDollyRate = 8.0;
-    cameraControl.keyboardRotationRate = 70;
-    cameraControl.doubleClickTimeFrame = 300;
+    cameraControl.dragRotationRate = 210;
+    cameraControl.mouseWheelDollyRate = 78;
+    cameraControl.rotationInertia = 0.16;
+    cameraControl.panInertia = 0.18;
+    cameraControl.dollyInertia = 0.04;
+    cameraControl.keyboardPanRate = 5.0;
+    cameraControl.keyboardDollyRate = 12.0;
+    cameraControl.keyboardRotationRate = 82;
+    cameraControl.doubleClickTimeFrame = 280;
 
     const pivotElement = document.createElement("div");
     pivotElement.className = "camera-pivot-marker";
@@ -599,9 +628,54 @@
       rightMargin: 18
     });
 
+    viewer.scene.clearLights();
+    new AmbientLight(viewer.scene, {
+      id: "hotelAmbient",
+      color: [1.0, 0.97, 0.91],
+      intensity: 0.68
+    });
+    new DirLight(viewer.scene, {
+      id: "hotelKey",
+      dir: [-0.42, -0.86, -0.22],
+      color: [1.0, 0.92, 0.8],
+      intensity: 0.58,
+      space: "view"
+    });
+    new DirLight(viewer.scene, {
+      id: "hotelFill",
+      dir: [0.62, -0.28, 0.52],
+      color: [0.78, 0.84, 0.9],
+      intensity: 0.28,
+      space: "view"
+    });
+
     const xktLoader = new XKTLoaderPlugin(viewer);
     const overlayCanvas = document.querySelector("#semanticOverlay");
     const overlayCtx = overlayCanvas.getContext("2d");
+    const pbrCanvas = document.querySelector("#pbrOverlay");
+    const pbrRenderer = new THREE.WebGLRenderer({
+      canvas: pbrCanvas,
+      alpha: true,
+      antialias: true
+    });
+    pbrRenderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+    pbrRenderer.setClearColor(0x000000, 0);
+    pbrRenderer.outputColorSpace = THREE.SRGBColorSpace;
+    pbrRenderer.toneMapping = THREE.ACESFilmicToneMapping;
+    pbrRenderer.toneMappingExposure = 0.9;
+    const pbrScene = new THREE.Scene();
+    const pbrCamera = new THREE.PerspectiveCamera(55, 1, 0.01, 1000);
+    const pbrRig = new THREE.Group();
+    pbrScene.add(pbrRig);
+    pbrScene.add(new THREE.HemisphereLight(0xfff7ec, 0x6f7f8a, 1.8));
+    const pbrKeyLight = new THREE.DirectionalLight(0xffe1b8, 1.2);
+    pbrKeyLight.position.set(-3, 5, 4);
+    pbrScene.add(pbrKeyLight);
+    const pbrAccentLight = new THREE.PointLight(0xffc873, 0.85, 8);
+    pbrAccentLight.position.set(1.2, 2.2, -1.8);
+    pbrScene.add(pbrAccentLight);
+    let pbrPreviewBuilt = false;
+    let pbrEnabled = false;
     const loadedModels = {};
     const loadedKinds = new Set();
     const modelObjectIdsCache = {};
@@ -610,6 +684,7 @@
       mep: true
     };
     let viewerPayload = null;
+    let semanticObjectByEntityId = new Map();
     let semanticObjectsCache = [];
     let semanticObjectsDirty = true;
     let overlayDrawRequested = false;
@@ -629,9 +704,12 @@
     let activeSystemCategory = "all";
     let selectedObjectId = null;
     let hoveredObjectId = null;
-    let edgesEnabled = true;
+    let edgesEnabled = false;
     let xrayEnabled = false;
-    let overlayEnabled = true;
+    let overlayEnabled = false;
+    let viewMode = "interior";
+    let autoRotateEnabled = false;
+    let lastTickTime = 0;
 
     const categoryColors = {
       electrical_power: "#e0a11b",
@@ -665,10 +743,112 @@
       }[char]));
     }
 
+    function buildRenderSemanticIndex(meta) {
+      semanticObjectByEntityId = new Map();
+      (meta.objectIndex || []).forEach((item) => {
+        if (!item.id) return;
+        const modelPrefix = item.domain === "architecture" ? "duplex-architecture" : "duplex-mep";
+        semanticObjectByEntityId.set(item.id, item);
+        semanticObjectByEntityId.set(`${modelPrefix}#${item.id}`, item);
+      });
+    }
+
+    function getEntitySemantic(entity) {
+      return semanticObjectByEntityId.get(entity.id) || semanticObjectByEntityId.get(String(entity.id || "").split("#").pop()) || null;
+    }
+
+    function getSemanticText(entity) {
+      const semantic = getEntitySemantic(entity);
+      return `${semantic?.bucket || ""} ${semantic?.ifcClass || ""} ${semantic?.name || ""} ${entity?.id || ""}`.toLowerCase();
+    }
+
+    function getPayloadText(item) {
+      return `${item?.bucket || ""} ${item?.ifcClass || ""} ${item?.name || ""} ${item?.id || ""}`.toLowerCase();
+    }
+
+    function getHyattInteriorTone(entity) {
+      const text = getSemanticText(entity);
+      if (text.includes("light") || text.includes("lamp") || text.includes("sconce") || text.includes("pendant")) return [1.0, 0.84, 0.52];
+      if (text.includes("window") || text.includes("curtain wall") || text.includes("skylight")) return [0.08, 0.09, 0.09];
+      if (text.includes("glazing")) return [0.72, 0.82, 0.86];
+      if (text.includes("door")) return [0.42, 0.28, 0.18];
+      if (text.includes("cabinet") || text.includes("cupboard") || text.includes("casework")) return [0.58, 0.38, 0.22];
+      if (text.includes("counter") || text.includes("top") || text.includes("vanity")) return [0.88, 0.86, 0.82];
+      if (text.includes("toilet") || text.includes("bath") || text.includes("lavatory") || text.includes("basin") || text.includes("sink")) return [0.96, 0.96, 0.93];
+      if (text.includes("furnishing")) return [0.72, 0.63, 0.52];
+      if (text.includes("table") || text.includes("chair")) return [0.64, 0.48, 0.32];
+      if (text.includes("bed") || text.includes("sofa")) return [0.82, 0.78, 0.69];
+      if (text.includes("stair")) return [0.3, 0.28, 0.25];
+      if (text.includes("floor") || text.includes("slab")) return [0.62, 0.52, 0.39];
+      if (text.includes("wall")) return [0.88, 0.86, 0.8];
+      if (text.includes("roof")) return [0.72, 0.72, 0.68];
+      return [0.82, 0.8, 0.74];
+    }
+
+    function getHyattInteriorOpacity(entity) {
+      const text = getSemanticText(entity);
+      if (text.includes("glazing")) return 0.48;
+      if (text.includes("window") || text.includes("curtain wall") || text.includes("skylight")) return 0.9;
+      if (text.includes("wall")) return 1;
+      if (text.includes("slab") || text.includes("floor")) return 1;
+      return 1;
+    }
+
+    function getMepEngineeringTone(entity) {
+      const text = getSemanticText(entity);
+      if (text.includes("duct") || text.includes("hvac") || text.includes("air")) return [0.08, 0.6, 0.72];
+      if (text.includes("hydronic") || text.includes("heat")) return [0.72, 0.31, 0.78];
+      if (text.includes("hot")) return [0.85, 0.24, 0.24];
+      if (text.includes("cold")) return [0.15, 0.42, 0.82];
+      if (text.includes("drain")) return [0.48, 0.34, 0.82];
+      if (text.includes("electric") || text.includes("cable") || text.includes("conduit")) return [0.88, 0.58, 0.08];
+      if (text.includes("fixture")) return [0.22, 0.62, 0.42];
+      return [0.45, 0.5, 0.56];
+    }
+
+    function isRoofCoverObject(object) {
+      const text = getSemanticText(object);
+      if (text.includes("roof") || text.includes("ceiling")) return true;
+      if (!object?.aabb) return false;
+      const centerY = (object.aabb[1] + object.aabb[4]) / 2;
+      return centerY >= 5.55;
+    }
+
+    function isMepNetworkObject(object) {
+      const semantic = getEntitySemantic(object);
+      const text = getSemanticText(object);
+      return isMepNetworkPayload(semantic, text);
+    }
+
+    function isMepNetworkPayload(item, text = getPayloadText(item)) {
+      if (!item || item.domain !== "systems") return false;
+      if (text.includes("space") || text.includes("room")) return false;
+      if (text.includes("wall") || text.includes("slab") || text.includes("roof")) return false;
+      if (text.includes("door") || text.includes("window") || text.includes("opening")) return false;
+      return true;
+    }
+
+    function applyObjectPresentation() {
+      Object.entries(loadedModels).forEach(([kind]) => {
+        getModelObjectIds(kind).forEach((id) => {
+          const entity = viewer.scene.objects[id];
+          if (!entity) return;
+          if (viewMode === "interior") {
+            entity.colorize = kind === "architecture" ? getHyattInteriorTone(entity) : getMepEngineeringTone(entity);
+            entity.opacity = kind === "architecture" ? getHyattInteriorOpacity(entity) : 0.18;
+          } else {
+            entity.colorize = kind === "mep" ? getMepEngineeringTone(entity) : [0.78, 0.78, 0.74];
+            entity.opacity = kind === "mep" ? 1 : 0.12;
+          }
+        });
+      });
+    }
+
     async function loadSpatialMeta() {
       const response = await fetch("./samples/duplex-apartment/derived/viewer-payload.json");
       const meta = await response.json();
       viewerPayload = meta;
+      buildRenderSemanticIndex(meta);
       setText("#levels", `${meta.counts.canonicalLevels} / ${meta.counts.sourceLevels}`);
       setText("#spaces", `${meta.counts.canonicalSpaces} / ${meta.counts.sourceSpaces}`);
       setText("#archCount", meta.counts.architecture);
@@ -808,6 +988,18 @@
       });
     }
 
+    function syncSidebarMode() {
+      const roomsTitle = document.querySelector("#roomList")?.previousElementSibling;
+      const systemsTitle = document.querySelector("#systemChips")?.previousElementSibling;
+      const legend = document.querySelector("#overlayLegend");
+      const showInterior = viewMode === "interior";
+      roomsTitle?.classList.toggle("mode-hidden", !showInterior);
+      document.querySelector("#roomList")?.classList.toggle("mode-hidden", !showInterior);
+      systemsTitle?.classList.toggle("mode-hidden", showInterior);
+      document.querySelector("#systemChips")?.classList.toggle("mode-hidden", showInterior);
+      legend?.classList.toggle("mode-hidden", showInterior);
+    }
+
     function renderOverlayLegend(meta) {
       const legend = document.querySelector("#overlayLegend");
       const counts = meta.systemClassification.counts;
@@ -823,6 +1015,8 @@
       const query = document.querySelector("#objectSearch").value.trim().toLowerCase();
       const list = document.querySelector("#objectList");
       const objects = viewerPayload.objectIndex.filter((item) => {
+        if (viewMode === "interior" && item.domain !== "architecture") return false;
+        if (viewMode === "mep" && !isMepNetworkPayload(item)) return false;
         const categoryMatch = activeSystemCategory === "all" || item.bucket === activeSystemCategory;
         const levelMatch = !Array.isArray(item.location) || isLocationInActiveLevel(item.location);
         const text = `${item.name || ""} ${item.ifcClass || ""} ${item.bucket || ""} ${item.source || ""} ${item.id || ""}`.toLowerCase();
@@ -897,6 +1091,82 @@
       overlayCanvas.style.width = `${width}px`;
       overlayCanvas.style.height = `${height}px`;
       overlayCtx.setTransform(ratio, 0, 0, ratio, 0, 0);
+      pbrRenderer.setSize(width, height, false);
+      pbrCamera.aspect = width / height;
+      pbrCamera.updateProjectionMatrix();
+    }
+
+    function createPbrBox({ size, position, material }) {
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(...size), material);
+      mesh.position.set(...position);
+      mesh.receiveShadow = true;
+      return mesh;
+    }
+
+    function buildPbrPreviewLayer() {
+      if (pbrPreviewBuilt) return;
+      pbrPreviewBuilt = true;
+      const wallMat = new THREE.MeshStandardMaterial({ color: 0xe8e3d8, roughness: 0.72 });
+      const floorMat = new THREE.MeshStandardMaterial({ color: 0x9f815d, roughness: 0.62 });
+      const floorAltMat = new THREE.MeshStandardMaterial({ color: 0xb08e66, roughness: 0.64 });
+      const woodMat = new THREE.MeshStandardMaterial({ color: 0x5b351c, roughness: 0.48 });
+      const fabricMat = new THREE.MeshStandardMaterial({ color: 0xd5cec0, roughness: 0.86 });
+      const glassMat = new THREE.MeshPhysicalMaterial({ color: 0xb9c9d0, roughness: 0.18, transparent: true, opacity: 0.34 });
+      const darkFrameMat = new THREE.MeshStandardMaterial({ color: 0x111315, roughness: 0.42, metalness: 0.22 });
+      const glowMat = new THREE.MeshStandardMaterial({ color: 0xffd28a, emissive: 0xffb65a, emissiveIntensity: 1.6, roughness: 0.5 });
+
+      pbrRig.add(createPbrBox({ size: [6.8, 0.06, 5.8], position: [0, -0.03, 0], material: floorMat }));
+      for (let i = 0; i < 18; i += 1) {
+        const z = -2.76 + i * 0.32;
+        pbrRig.add(createPbrBox({ size: [6.75, 0.012, 0.055], position: [0, 0.006, z], material: i % 2 ? floorAltMat : floorMat }));
+      }
+      pbrRig.add(createPbrBox({ size: [6.8, 2.8, 0.08], position: [0, 1.4, -2.9], material: wallMat }));
+      pbrRig.add(createPbrBox({ size: [0.08, 2.8, 5.8], position: [-3.4, 1.4, 0], material: wallMat }));
+      pbrRig.add(createPbrBox({ size: [0.08, 2.8, 5.8], position: [3.4, 1.4, 0], material: wallMat }));
+      pbrRig.add(createPbrBox({ size: [6.8, 0.08, 5.8], position: [0, 2.8, 0], material: wallMat }));
+
+      pbrRig.add(createPbrBox({ size: [0.08, 1.95, 3.8], position: [-3.36, 1.34, 0.55], material: glassMat }));
+      pbrRig.add(createPbrBox({ size: [0.08, 2.12, 4.0], position: [-3.42, 1.34, 0.55], material: darkFrameMat }));
+      for (let i = 0; i < 10; i += 1) {
+        pbrRig.add(createPbrBox({ size: [0.09, 0.025, 3.85], position: [-3.47, 0.48 + i * 0.17, 0.55], material: darkFrameMat }));
+      }
+
+      pbrRig.add(createPbrBox({ size: [2.15, 0.42, 0.86], position: [0.2, 0.42, -1.85], material: fabricMat }));
+      pbrRig.add(createPbrBox({ size: [2.18, 0.72, 0.16], position: [0.2, 0.93, -2.22], material: fabricMat }));
+      pbrRig.add(createPbrBox({ size: [0.18, 0.55, 0.86], position: [-0.98, 0.66, -1.85], material: fabricMat }));
+      pbrRig.add(createPbrBox({ size: [0.18, 0.55, 0.86], position: [1.38, 0.66, -1.85], material: fabricMat }));
+      pbrRig.add(createPbrBox({ size: [0.64, 0.18, 0.22], position: [-0.34, 0.87, -1.55], material: fabricMat }));
+      pbrRig.add(createPbrBox({ size: [0.64, 0.18, 0.22], position: [0.66, 0.87, -1.55], material: fabricMat }));
+      pbrRig.add(createPbrBox({ size: [1.45, 0.16, 0.74], position: [0.25, 0.42, -0.55], material: woodMat }));
+      [[-0.38, -0.23], [0.88, -0.23], [-0.38, -0.87], [0.88, -0.87]].forEach(([x, z]) => {
+        pbrRig.add(createPbrBox({ size: [0.12, 0.42, 0.12], position: [x, 0.18, z], material: woodMat }));
+      });
+
+      [-1.25, 0, 1.25].forEach((x) => {
+        pbrRig.add(createPbrBox({ size: [0.18, 0.18, 0.035], position: [x, 1.82, -2.84], material: glowMat }));
+        const light = new THREE.PointLight(0xffbf73, 0.7, 3.2);
+        light.position.set(x, 1.82, -2.55);
+        pbrRig.add(light);
+      });
+
+      pbrCamera.position.set(0.15, 1.55, 4.15);
+      pbrCamera.lookAt(0.1, 1.12, -1.8);
+    }
+
+    function renderPbrPreviewLayer() {
+      if (!pbrEnabled || viewMode !== "interior") {
+        pbrRenderer.clear();
+        return;
+      }
+      buildPbrPreviewLayer();
+      pbrRenderer.render(pbrScene, pbrCamera);
+    }
+
+    function setPbrPreviewEnabled(enabled) {
+      pbrEnabled = enabled && viewMode === "interior";
+      pbrCanvas.classList.toggle("active", pbrEnabled);
+      document.querySelector("#pbrBtn").classList.toggle("active", pbrEnabled);
+      renderPbrPreviewLayer();
     }
 
     function requestSemanticOverlayDraw(force = false) {
@@ -919,6 +1189,7 @@
     }
 
     function markCameraInteracting() {
+      if (autoRotateEnabled) setAutoRotateEnabled(false);
       if (!interactionActive) {
         interactionActive = true;
         overlayCanvas.classList.add("interaction-lite");
@@ -1066,9 +1337,7 @@
         loadedKinds.add(kind);
         setText(cfg.status, `${kind}: loaded`);
         if (loadedKinds.size === Object.keys(modelPaths).length) {
-          applyLayerVisibility();
-          fitAll();
-          applyXray(true);
+          setViewMode("interior", true);
           document.querySelector("#loading").classList.add("hidden");
         }
       });
@@ -1095,6 +1364,63 @@
         duration: 0.6,
         fitFOV: 45
       });
+    }
+
+    function flyToInteriorView(duration = 0.7) {
+      viewer.cameraFlight.flyTo({
+        eye: [3.0, 1.55, 0.92],
+        look: [7.05, 1.08, 2.78],
+        up: [0, 1, 0],
+        duration,
+        projection: "perspective"
+      });
+    }
+
+    function flyToMepView(duration = 0.7) {
+      const aabb = loadedModels.mep?.aabb || viewer.scene.getAABB();
+      viewer.cameraFlight.flyTo({
+        aabb,
+        duration,
+        fitFOV: 34,
+        projection: "perspective"
+      });
+    }
+
+    function fitCurrentView() {
+      if (viewMode === "interior") {
+        flyToInteriorView(0.55);
+      } else {
+        flyToMepView(0.55);
+      }
+    }
+
+    function setViewMode(mode, flyCamera = true) {
+      viewMode = mode;
+      document.querySelectorAll("[data-view-mode]").forEach((button) => {
+        button.classList.toggle("active", button.dataset.viewMode === mode);
+      });
+      activeLevelId = mode === "interior" ? "level:level-1" : "all";
+      if (viewerPayload) renderLevelChips(viewerPayload);
+      modelVisibility.architecture = mode === "interior";
+      modelVisibility.mep = mode === "mep";
+      overlayEnabled = false;
+      document.querySelector("#overlayBtn").classList.toggle("active", overlayEnabled);
+      if (mode !== "interior") {
+        setPbrPreviewEnabled(false);
+        setAutoRotateEnabled(false);
+      }
+      applyXray(false);
+      applyEdges(false);
+      syncSidebarMode();
+      applyLayerVisibility();
+      markSemanticObjectsDirty();
+      renderObjectList();
+      if (!flyCamera) return;
+      if (mode === "interior") {
+        flyToInteriorView(0.7);
+      } else {
+        flyToMepView(0.7);
+      }
     }
 
     function getModelObjectIds(kind) {
@@ -1125,13 +1451,18 @@
     function applyLayerVisibility() {
       const scene = viewer.scene;
       Object.entries(loadedModels).forEach(([kind, model]) => {
-        const modelEnabled = modelVisibility[kind] ?? true;
+        const modeEnabled = viewMode === "interior" ? kind === "architecture" : kind === "mep";
+        const modelEnabled = modeEnabled && (modelVisibility[kind] ?? true);
         getModelObjectIds(kind).forEach((id) => {
           const object = scene.objects[id];
-          const visible = modelEnabled && objectIsInActiveLevel(object);
+          const visible = modelEnabled
+            && objectIsInActiveLevel(object)
+            && !(viewMode === "interior" && kind === "architecture" && isRoofCoverObject(object))
+            && !(viewMode === "mep" && kind === "mep" && !isMepNetworkObject(object));
           if (object) object.visible = visible;
         });
       });
+      applyObjectPresentation();
       requestSemanticOverlayDraw(true);
     }
 
@@ -1161,15 +1492,23 @@
       document.querySelector("#edgesBtn").classList.toggle("active", enabled);
     }
 
+    function setAutoRotateEnabled(enabled) {
+      autoRotateEnabled = enabled && viewMode === "interior";
+      document.querySelector("#autoRotateBtn").classList.toggle("active", autoRotateEnabled);
+      if (autoRotateEnabled) {
+        lastTickTime = 0;
+      }
+    }
+
     function runSmoothWheelZoom() {
       smoothWheelRAF = requestAnimationFrame(() => {
         markCameraInteracting();
         smoothWheelFrames += 1;
-        const delta = smoothWheelVelocity * 0.2;
+        const delta = smoothWheelVelocity * 0.34;
         viewer.camera.zoom(delta);
-        smoothWheelVelocity *= 0.45;
+        smoothWheelVelocity *= 0.22;
         requestSemanticOverlayDraw(false);
-        if (Math.abs(smoothWheelVelocity) > 0.04 && smoothWheelFrames < 8) {
+        if (Math.abs(smoothWheelVelocity) > 0.03 && smoothWheelFrames < 5) {
           runSmoothWheelZoom();
         } else {
           smoothWheelVelocity = 0;
@@ -1181,27 +1520,23 @@
 
     viewer.scene.canvas.canvas.addEventListener("wheel", (event) => {
       event.preventDefault();
-      const normalized = Math.max(-1.8, Math.min(1.8, event.deltaY / 160));
-      smoothWheelVelocity += normalized * 1.35;
-      smoothWheelVelocity = Math.max(-8, Math.min(8, smoothWheelVelocity));
+      if (autoRotateEnabled) setAutoRotateEnabled(false);
+      const normalized = Math.max(-2.4, Math.min(2.4, event.deltaY / 120));
+      smoothWheelVelocity += normalized * 2.2;
+      smoothWheelVelocity = Math.max(-12, Math.min(12, smoothWheelVelocity));
       if (!smoothWheelRAF) {
         smoothWheelFrames = 0;
         runSmoothWheelZoom();
       }
     }, { passive: false });
 
-    document.querySelectorAll("[data-model]").forEach((button) => {
-      button.addEventListener("click", () => {
-        const kind = button.dataset.model;
-        setModelVisible(kind, !(modelVisibility[kind] ?? true));
-      });
+    document.querySelectorAll("[data-view-mode]").forEach((button) => {
+      button.addEventListener("click", () => setViewMode(button.dataset.viewMode, true));
     });
 
-    document.querySelectorAll("[data-focus]").forEach((button) => {
-      button.addEventListener("click", () => fitModel(button.dataset.focus));
-    });
-
-    document.querySelector("#homeBtn").addEventListener("click", fitAll);
+    document.querySelector("#homeBtn").addEventListener("click", fitCurrentView);
+    document.querySelector("#autoRotateBtn").addEventListener("click", () => setAutoRotateEnabled(!autoRotateEnabled));
+    document.querySelector("#pbrBtn").addEventListener("click", () => setPbrPreviewEnabled(!pbrEnabled));
     document.querySelector("#xrayBtn").addEventListener("click", () => applyXray(!xrayEnabled));
     document.querySelector("#edgesBtn").addEventListener("click", () => applyEdges(!edgesEnabled));
     document.querySelector("#overlayBtn").addEventListener("click", () => {
@@ -1219,17 +1554,23 @@
     window.addEventListener("resize", () => {
       resizeOverlay();
       requestSemanticOverlayDraw(true);
+      renderPbrPreviewLayer();
     });
     viewer.scene.on("tick", () => {
       const camera = viewer.camera;
+      const now = performance.now();
+      if (autoRotateEnabled && !interactionActive && viewMode === "interior") {
+        const elapsed = lastTickTime ? Math.min(48, now - lastTickTime) : 16;
+        camera.orbitYaw(elapsed * 0.0028);
+      }
+      lastTickTime = now;
       const signature = `${camera.eye.join(",")}|${camera.look.join(",")}|${camera.up.join(",")}`;
       if (signature !== lastCameraSignature) {
         lastCameraSignature = signature;
         requestSemanticOverlayDraw(false);
+        renderPbrPreviewLayer();
       }
     });
-    document.querySelector("#edgesBtn").classList.add("active");
-
     await loadSpatialMeta();
     loadModel("architecture");
     loadModel("mep");
