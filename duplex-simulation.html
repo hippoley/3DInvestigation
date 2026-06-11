@@ -78,21 +78,6 @@
       transition: opacity 120ms ease;
     }
 
-    #pbrOverlay {
-      position: fixed;
-      inset: 0;
-      z-index: 1;
-      width: 100%;
-      height: 100%;
-      pointer-events: none;
-      opacity: 0;
-      transition: opacity 180ms ease;
-    }
-
-    #pbrOverlay.active {
-      opacity: 1;
-    }
-
     #semanticOverlay.interaction-lite {
       opacity: 0;
     }
@@ -286,10 +271,6 @@
       min-width: 38px;
       padding: 0;
       font-size: 15px;
-    }
-
-    .icon-btn[data-feature="preview"] {
-      color: #7a623f;
     }
 
     .schema {
@@ -493,7 +474,6 @@
 </head>
 <body>
   <canvas id="viewer"></canvas>
-  <canvas id="pbrOverlay"></canvas>
   <canvas id="semanticOverlay"></canvas>
   <canvas id="navCubeCanvas"></canvas>
 
@@ -517,7 +497,6 @@
   <nav class="panel topbar" aria-label="view tools">
     <button class="icon-btn" id="homeBtn" title="重置视角">⌂</button>
     <button class="icon-btn" id="autoRotateBtn" title="环绕展示">↻</button>
-    <button class="icon-btn" id="pbrBtn" data-feature="preview" title="PBR 预览层">◐</button>
     <button class="icon-btn" id="xrayBtn" title="半透明">◫</button>
     <button class="icon-btn" id="edgesBtn" title="边线">▧</button>
     <button class="icon-btn hidden" id="overlayBtn" title="语义点位">•</button>
@@ -556,7 +535,6 @@
       DirLight,
       math
     } from "./node_modules/@xeokit/xeokit-sdk/dist/xeokit-sdk.es.js";
-    import * as THREE from "./node_modules/three/build/three.module.js";
 
     const modelPaths = {
       architecture: {
@@ -582,7 +560,8 @@
 
     viewer.scene.sao.enabled = true;
     viewer.scene.sao.numSamples = 28;
-    viewer.scene.sao.intensity = 0.12;
+    viewer.scene.sao.numSamples = 36;
+    viewer.scene.sao.intensity = 0.18;
     viewer.camera.eye = [-16, 14, 23];
     viewer.camera.look = [3.8, 2.4, 4.8];
     viewer.camera.up = [0, 1, 0];
@@ -631,51 +610,27 @@
     viewer.scene.clearLights();
     new AmbientLight(viewer.scene, {
       id: "hotelAmbient",
-      color: [1.0, 0.97, 0.91],
-      intensity: 0.68
+      color: [0.98, 0.96, 0.91],
+      intensity: 0.78
     });
     new DirLight(viewer.scene, {
       id: "hotelKey",
       dir: [-0.42, -0.86, -0.22],
-      color: [1.0, 0.92, 0.8],
-      intensity: 0.58,
+      color: [1.0, 0.9, 0.74],
+      intensity: 0.68,
       space: "view"
     });
     new DirLight(viewer.scene, {
       id: "hotelFill",
       dir: [0.62, -0.28, 0.52],
-      color: [0.78, 0.84, 0.9],
-      intensity: 0.28,
+      color: [0.72, 0.8, 0.88],
+      intensity: 0.24,
       space: "view"
     });
 
     const xktLoader = new XKTLoaderPlugin(viewer);
     const overlayCanvas = document.querySelector("#semanticOverlay");
     const overlayCtx = overlayCanvas.getContext("2d");
-    const pbrCanvas = document.querySelector("#pbrOverlay");
-    const pbrRenderer = new THREE.WebGLRenderer({
-      canvas: pbrCanvas,
-      alpha: true,
-      antialias: true
-    });
-    pbrRenderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
-    pbrRenderer.setClearColor(0x000000, 0);
-    pbrRenderer.outputColorSpace = THREE.SRGBColorSpace;
-    pbrRenderer.toneMapping = THREE.ACESFilmicToneMapping;
-    pbrRenderer.toneMappingExposure = 0.9;
-    const pbrScene = new THREE.Scene();
-    const pbrCamera = new THREE.PerspectiveCamera(55, 1, 0.01, 1000);
-    const pbrRig = new THREE.Group();
-    pbrScene.add(pbrRig);
-    pbrScene.add(new THREE.HemisphereLight(0xfff7ec, 0x6f7f8a, 1.8));
-    const pbrKeyLight = new THREE.DirectionalLight(0xffe1b8, 1.2);
-    pbrKeyLight.position.set(-3, 5, 4);
-    pbrScene.add(pbrKeyLight);
-    const pbrAccentLight = new THREE.PointLight(0xffc873, 0.85, 8);
-    pbrAccentLight.position.set(1.2, 2.2, -1.8);
-    pbrScene.add(pbrAccentLight);
-    let pbrPreviewBuilt = false;
-    let pbrEnabled = false;
     const loadedModels = {};
     const loadedKinds = new Set();
     const modelObjectIdsCache = {};
@@ -768,21 +723,21 @@
 
     function getHyattInteriorTone(entity) {
       const text = getSemanticText(entity);
-      if (text.includes("light") || text.includes("lamp") || text.includes("sconce") || text.includes("pendant")) return [1.0, 0.84, 0.52];
-      if (text.includes("window") || text.includes("curtain wall") || text.includes("skylight")) return [0.08, 0.09, 0.09];
-      if (text.includes("glazing")) return [0.72, 0.82, 0.86];
-      if (text.includes("door")) return [0.42, 0.28, 0.18];
-      if (text.includes("cabinet") || text.includes("cupboard") || text.includes("casework")) return [0.58, 0.38, 0.22];
-      if (text.includes("counter") || text.includes("top") || text.includes("vanity")) return [0.88, 0.86, 0.82];
-      if (text.includes("toilet") || text.includes("bath") || text.includes("lavatory") || text.includes("basin") || text.includes("sink")) return [0.96, 0.96, 0.93];
-      if (text.includes("furnishing")) return [0.72, 0.63, 0.52];
-      if (text.includes("table") || text.includes("chair")) return [0.64, 0.48, 0.32];
-      if (text.includes("bed") || text.includes("sofa")) return [0.82, 0.78, 0.69];
-      if (text.includes("stair")) return [0.3, 0.28, 0.25];
-      if (text.includes("floor") || text.includes("slab")) return [0.62, 0.52, 0.39];
-      if (text.includes("wall")) return [0.88, 0.86, 0.8];
-      if (text.includes("roof")) return [0.72, 0.72, 0.68];
-      return [0.82, 0.8, 0.74];
+      if (text.includes("light") || text.includes("lamp") || text.includes("sconce") || text.includes("pendant")) return [1.0, 0.78, 0.42];
+      if (text.includes("window") || text.includes("curtain wall") || text.includes("skylight")) return [0.09, 0.1, 0.1];
+      if (text.includes("glazing")) return [0.6, 0.72, 0.76];
+      if (text.includes("door")) return [0.36, 0.25, 0.17];
+      if (text.includes("cabinet") || text.includes("cupboard") || text.includes("casework")) return [0.44, 0.31, 0.22];
+      if (text.includes("counter") || text.includes("top") || text.includes("vanity")) return [0.78, 0.75, 0.68];
+      if (text.includes("toilet") || text.includes("bath") || text.includes("lavatory") || text.includes("basin") || text.includes("sink")) return [0.92, 0.91, 0.87];
+      if (text.includes("bed") || text.includes("sofa")) return [0.72, 0.67, 0.58];
+      if (text.includes("furnishing")) return [0.66, 0.55, 0.44];
+      if (text.includes("table") || text.includes("chair")) return [0.36, 0.24, 0.16];
+      if (text.includes("stair")) return [0.28, 0.26, 0.23];
+      if (text.includes("floor") || text.includes("slab")) return [0.52, 0.44, 0.34];
+      if (text.includes("wall")) return [0.84, 0.82, 0.76];
+      if (text.includes("roof") || text.includes("ceiling")) return [0.72, 0.7, 0.66];
+      return [0.76, 0.72, 0.64];
     }
 
     function getHyattInteriorOpacity(entity) {
@@ -1091,82 +1046,6 @@
       overlayCanvas.style.width = `${width}px`;
       overlayCanvas.style.height = `${height}px`;
       overlayCtx.setTransform(ratio, 0, 0, ratio, 0, 0);
-      pbrRenderer.setSize(width, height, false);
-      pbrCamera.aspect = width / height;
-      pbrCamera.updateProjectionMatrix();
-    }
-
-    function createPbrBox({ size, position, material }) {
-      const mesh = new THREE.Mesh(new THREE.BoxGeometry(...size), material);
-      mesh.position.set(...position);
-      mesh.receiveShadow = true;
-      return mesh;
-    }
-
-    function buildPbrPreviewLayer() {
-      if (pbrPreviewBuilt) return;
-      pbrPreviewBuilt = true;
-      const wallMat = new THREE.MeshStandardMaterial({ color: 0xe8e3d8, roughness: 0.72 });
-      const floorMat = new THREE.MeshStandardMaterial({ color: 0x9f815d, roughness: 0.62 });
-      const floorAltMat = new THREE.MeshStandardMaterial({ color: 0xb08e66, roughness: 0.64 });
-      const woodMat = new THREE.MeshStandardMaterial({ color: 0x5b351c, roughness: 0.48 });
-      const fabricMat = new THREE.MeshStandardMaterial({ color: 0xd5cec0, roughness: 0.86 });
-      const glassMat = new THREE.MeshPhysicalMaterial({ color: 0xb9c9d0, roughness: 0.18, transparent: true, opacity: 0.34 });
-      const darkFrameMat = new THREE.MeshStandardMaterial({ color: 0x111315, roughness: 0.42, metalness: 0.22 });
-      const glowMat = new THREE.MeshStandardMaterial({ color: 0xffd28a, emissive: 0xffb65a, emissiveIntensity: 1.6, roughness: 0.5 });
-
-      pbrRig.add(createPbrBox({ size: [6.8, 0.06, 5.8], position: [0, -0.03, 0], material: floorMat }));
-      for (let i = 0; i < 18; i += 1) {
-        const z = -2.76 + i * 0.32;
-        pbrRig.add(createPbrBox({ size: [6.75, 0.012, 0.055], position: [0, 0.006, z], material: i % 2 ? floorAltMat : floorMat }));
-      }
-      pbrRig.add(createPbrBox({ size: [6.8, 2.8, 0.08], position: [0, 1.4, -2.9], material: wallMat }));
-      pbrRig.add(createPbrBox({ size: [0.08, 2.8, 5.8], position: [-3.4, 1.4, 0], material: wallMat }));
-      pbrRig.add(createPbrBox({ size: [0.08, 2.8, 5.8], position: [3.4, 1.4, 0], material: wallMat }));
-      pbrRig.add(createPbrBox({ size: [6.8, 0.08, 5.8], position: [0, 2.8, 0], material: wallMat }));
-
-      pbrRig.add(createPbrBox({ size: [0.08, 1.95, 3.8], position: [-3.36, 1.34, 0.55], material: glassMat }));
-      pbrRig.add(createPbrBox({ size: [0.08, 2.12, 4.0], position: [-3.42, 1.34, 0.55], material: darkFrameMat }));
-      for (let i = 0; i < 10; i += 1) {
-        pbrRig.add(createPbrBox({ size: [0.09, 0.025, 3.85], position: [-3.47, 0.48 + i * 0.17, 0.55], material: darkFrameMat }));
-      }
-
-      pbrRig.add(createPbrBox({ size: [2.15, 0.42, 0.86], position: [0.2, 0.42, -1.85], material: fabricMat }));
-      pbrRig.add(createPbrBox({ size: [2.18, 0.72, 0.16], position: [0.2, 0.93, -2.22], material: fabricMat }));
-      pbrRig.add(createPbrBox({ size: [0.18, 0.55, 0.86], position: [-0.98, 0.66, -1.85], material: fabricMat }));
-      pbrRig.add(createPbrBox({ size: [0.18, 0.55, 0.86], position: [1.38, 0.66, -1.85], material: fabricMat }));
-      pbrRig.add(createPbrBox({ size: [0.64, 0.18, 0.22], position: [-0.34, 0.87, -1.55], material: fabricMat }));
-      pbrRig.add(createPbrBox({ size: [0.64, 0.18, 0.22], position: [0.66, 0.87, -1.55], material: fabricMat }));
-      pbrRig.add(createPbrBox({ size: [1.45, 0.16, 0.74], position: [0.25, 0.42, -0.55], material: woodMat }));
-      [[-0.38, -0.23], [0.88, -0.23], [-0.38, -0.87], [0.88, -0.87]].forEach(([x, z]) => {
-        pbrRig.add(createPbrBox({ size: [0.12, 0.42, 0.12], position: [x, 0.18, z], material: woodMat }));
-      });
-
-      [-1.25, 0, 1.25].forEach((x) => {
-        pbrRig.add(createPbrBox({ size: [0.18, 0.18, 0.035], position: [x, 1.82, -2.84], material: glowMat }));
-        const light = new THREE.PointLight(0xffbf73, 0.7, 3.2);
-        light.position.set(x, 1.82, -2.55);
-        pbrRig.add(light);
-      });
-
-      pbrCamera.position.set(0.15, 1.55, 4.15);
-      pbrCamera.lookAt(0.1, 1.12, -1.8);
-    }
-
-    function renderPbrPreviewLayer() {
-      if (!pbrEnabled || viewMode !== "interior") {
-        pbrRenderer.clear();
-        return;
-      }
-      buildPbrPreviewLayer();
-      pbrRenderer.render(pbrScene, pbrCamera);
-    }
-
-    function setPbrPreviewEnabled(enabled) {
-      pbrEnabled = enabled && viewMode === "interior";
-      pbrCanvas.classList.toggle("active", pbrEnabled);
-      document.querySelector("#pbrBtn").classList.toggle("active", pbrEnabled);
-      renderPbrPreviewLayer();
     }
 
     function requestSemanticOverlayDraw(force = false) {
@@ -1406,7 +1285,6 @@
       overlayEnabled = false;
       document.querySelector("#overlayBtn").classList.toggle("active", overlayEnabled);
       if (mode !== "interior") {
-        setPbrPreviewEnabled(false);
         setAutoRotateEnabled(false);
       }
       applyXray(false);
@@ -1536,7 +1414,6 @@
 
     document.querySelector("#homeBtn").addEventListener("click", fitCurrentView);
     document.querySelector("#autoRotateBtn").addEventListener("click", () => setAutoRotateEnabled(!autoRotateEnabled));
-    document.querySelector("#pbrBtn").addEventListener("click", () => setPbrPreviewEnabled(!pbrEnabled));
     document.querySelector("#xrayBtn").addEventListener("click", () => applyXray(!xrayEnabled));
     document.querySelector("#edgesBtn").addEventListener("click", () => applyEdges(!edgesEnabled));
     document.querySelector("#overlayBtn").addEventListener("click", () => {
@@ -1554,7 +1431,6 @@
     window.addEventListener("resize", () => {
       resizeOverlay();
       requestSemanticOverlayDraw(true);
-      renderPbrPreviewLayer();
     });
     viewer.scene.on("tick", () => {
       const camera = viewer.camera;
@@ -1568,7 +1444,6 @@
       if (signature !== lastCameraSignature) {
         lastCameraSignature = signature;
         requestSemanticOverlayDraw(false);
-        renderPbrPreviewLayer();
       }
     });
     await loadSpatialMeta();
