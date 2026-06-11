@@ -3,16 +3,16 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Duplex Apartment 1:1 BIM Viewer</title>
+  <title>Duplex Apartment 1:1 全屋还原仿真</title>
   <style>
     :root {
-      --panel: rgba(250, 251, 252, 0.86);
-      --panel-strong: rgba(255, 255, 255, 0.96);
-      --line: rgba(28, 38, 54, 0.12);
-      --ink: #172033;
-      --muted: #607086;
-      --soft: rgba(244, 247, 250, 0.82);
-      --blue: #0f6cbd;
+      --panel: rgba(255, 255, 255, 0.82);
+      --panel-strong: rgba(255, 255, 255, 0.94);
+      --line: rgba(36, 48, 69, 0.1);
+      --ink: #182033;
+      --muted: #687386;
+      --soft: rgba(245, 247, 250, 0.78);
+      --blue: #2368d1;
       --cyan: #0897a9;
       --red: #c84b54;
       --green: #198b61;
@@ -31,7 +31,7 @@
       margin: 0;
       overflow: hidden;
       color: var(--ink);
-      background: #d8dde4;
+      background: #e6e9ee;
       font-family: Inter, "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
     }
 
@@ -42,9 +42,8 @@
       pointer-events: none;
       content: "";
       background:
-        radial-gradient(ellipse at 50% 44%, rgba(255, 255, 255, 0.32), rgba(255, 255, 255, 0) 38%),
-        radial-gradient(ellipse at center, rgba(255, 255, 255, 0), rgba(31, 39, 52, 0.18) 100%),
-        linear-gradient(180deg, rgba(255, 255, 255, 0.48), rgba(206, 213, 222, 0.18));
+        linear-gradient(180deg, rgba(255, 255, 255, 0.5), rgba(222, 227, 235, 0.34)),
+        radial-gradient(ellipse at center, rgba(255, 255, 255, 0), rgba(42, 51, 68, 0.08));
     }
 
     #viewer {
@@ -52,8 +51,7 @@
       inset: 0;
       width: 100%;
       height: 100%;
-      background:
-        radial-gradient(ellipse at 50% 48%, #f4f6f8 0%, #d9dee6 58%, #a9b0bb 100%);
+      background: linear-gradient(180deg, #edf1f5 0%, #f8f9fb 55%, #e2e6eb 100%);
       touch-action: none;
       user-select: none;
     }
@@ -228,7 +226,7 @@
       width: min(592px, calc(100vw - 28px));
       padding: 7px;
       transform: translateX(-50%);
-      background: rgba(250, 251, 252, 0.9);
+      background: rgba(255, 255, 255, 0.88);
     }
 
     button {
@@ -256,29 +254,21 @@
     }
 
     .topbar {
-      top: auto;
-      bottom: 86px;
+      top: 20px;
       left: 50%;
       display: flex;
       gap: 8px;
       align-items: center;
       padding: 7px;
       transform: translateX(-50%);
-      background: rgba(250, 251, 252, 0.92);
-    }
-
-    .tool-separator {
-      width: 1px;
-      height: 28px;
-      background: rgba(28, 38, 54, 0.12);
+      background: rgba(255, 255, 255, 0.9);
     }
 
     .icon-btn {
-      width: 42px;
-      min-width: 42px;
+      width: 38px;
+      min-width: 38px;
       padding: 0;
-      font-size: 12px;
-      letter-spacing: 0;
+      font-size: 15px;
     }
 
     .schema {
@@ -466,8 +456,7 @@
       }
 
       .topbar {
-        top: 12px;
-        bottom: auto;
+        top: 10px;
       }
 
       .toolbar {
@@ -483,11 +472,11 @@
   <canvas id="navCubeCanvas"></canvas>
 
   <section class="panel hud" aria-label="simulation status">
-    <h1>Duplex Apartment 1:1 BIM Viewer</h1>
-    <p class="sub">几何来自真实 IFC 转换的 XKT；语义来自 spatial-meta/v1。当前是 BIM 级还原和机电可视化，不写入或生成额外户型对象。</p>
+    <h1>Duplex Apartment 1:1 全屋还原</h1>
+    <p class="sub">几何来自真实 IFC 转换的 XKT；语义来自 `spatial-meta/v1`。当前是 BIM 级还原，不是家装施工级复刻。</p>
     <div class="status-row"><span class="dot ok"></span><span id="archStatus">Architecture: loading</span></div>
     <div class="status-row"><span class="dot ok"></span><span id="mepStatus">MEP: loading</span></div>
-    <div class="status-row"><span class="dot warn"></span><span>Electrical / Plumbing / Rooms: semantic overlay from compiled metadata</span></div>
+    <div class="status-row"><span class="dot warn"></span><span>Electrical/Plumbing/Rooms: IFC 语义点位已叠加，XKT 几何层待转换</span></div>
     <div class="metrics">
       <div class="metric"><b>楼层记录</b><span id="levels">0</span></div>
       <div class="metric"><b>空间记录</b><span id="spaces">0</span></div>
@@ -500,16 +489,10 @@
   </section>
 
   <nav class="panel topbar" aria-label="view tools">
-    <button class="icon-btn" id="homeBtn" title="Fit to View">HOME</button>
-    <span class="tool-separator"></span>
-    <button class="icon-btn active" data-nav-mode="orbit" title="Orbit">ORB</button>
-    <button class="icon-btn" data-nav-mode="planView" title="Plan/Pan">PAN</button>
-    <button class="icon-btn" data-nav-mode="firstPerson" title="First Person">WALK</button>
-    <button class="icon-btn" id="topViewBtn" title="Top View">TOP</button>
-    <span class="tool-separator"></span>
-    <button class="icon-btn" id="xrayBtn" title="X-Ray">X</button>
-    <button class="icon-btn" id="edgesBtn" title="Edges">E</button>
-    <button class="icon-btn active" id="overlayBtn" title="Semantic Points">PTS</button>
+    <button class="icon-btn" id="homeBtn" title="重置视角">⌂</button>
+    <button class="icon-btn" id="xrayBtn" title="半透明">◫</button>
+    <button class="icon-btn" id="edgesBtn" title="边线">▧</button>
+    <button class="icon-btn active" id="overlayBtn" title="语义点位">•</button>
   </nav>
 
   <section class="panel schema" aria-label="schema summary">
@@ -525,7 +508,7 @@
     <ul class="object-list" id="objectList"></ul>
     <div class="detail" id="objectDetail">
       <strong>对象详情</strong>
-      从列表或模型中选择对象后，这里会显示来源、分类、坐标和 XKT 几何匹配状态。
+      选择列表里的对象后，这里会显示来源、分类、坐标和是否已经进入 XKT 几何层。
     </div>
   </section>
 
@@ -536,15 +519,13 @@
     <button data-focus="mep">看机电</button>
   </nav>
 
-  <div class="loading" id="loading">正在加载 1:1 BIM 模型...</div>
+  <div class="loading" id="loading">正在加载 1:1 BIM 模型…</div>
 
   <script type="module">
     import {
       Viewer,
       XKTLoaderPlugin,
       NavCubePlugin,
-      AmbientLight,
-      DirLight,
       math
     } from "./node_modules/@xeokit/xeokit-sdk/dist/xeokit-sdk.es.js";
 
@@ -571,10 +552,10 @@
     });
 
     viewer.scene.sao.enabled = true;
-    viewer.scene.sao.numSamples = 24;
-    viewer.scene.sao.intensity = 0.26;
-    viewer.camera.eye = [-14, 14, 22];
-    viewer.camera.look = [3.8, 2.3, 4.8];
+    viewer.scene.sao.numSamples = 16;
+    viewer.scene.sao.intensity = 0.18;
+    viewer.camera.eye = [-18, 13, 24];
+    viewer.camera.look = [3, 3, 3];
     viewer.camera.up = [0, 1, 0];
     const cameraControl = viewer.cameraControl;
     cameraControl.navMode = "orbit";
@@ -582,11 +563,11 @@
     cameraControl.doublePickFlyTo = true;
     cameraControl.panRightClick = true;
     cameraControl.zoomOnMouseWheel = false;
-    cameraControl.dragRotationRate = 240;
-    cameraControl.mouseWheelDollyRate = 34;
-    cameraControl.rotationInertia = 0.28;
-    cameraControl.panInertia = 0.38;
-    cameraControl.dollyInertia = 0.22;
+    cameraControl.dragRotationRate = 285;
+    cameraControl.mouseWheelDollyRate = 42;
+    cameraControl.rotationInertia = 0.18;
+    cameraControl.panInertia = 0.32;
+    cameraControl.dollyInertia = 0.12;
     cameraControl.keyboardPanRate = 4.0;
     cameraControl.keyboardDollyRate = 8.0;
     cameraControl.keyboardRotationRate = 70;
@@ -618,27 +599,6 @@
       rightMargin: 18
     });
 
-    viewer.scene.clearLights();
-    new AmbientLight(viewer.scene, {
-      id: "studioAmbient",
-      color: [0.88, 0.92, 0.98],
-      intensity: 0.7
-    });
-    new DirLight(viewer.scene, {
-      id: "studioKey",
-      dir: [-0.55, -0.82, -0.28],
-      color: [1.0, 0.94, 0.86],
-      intensity: 0.78,
-      space: "view"
-    });
-    new DirLight(viewer.scene, {
-      id: "studioFill",
-      dir: [0.42, -0.38, 0.6],
-      color: [0.68, 0.78, 0.95],
-      intensity: 0.34,
-      space: "view"
-    });
-
     const xktLoader = new XKTLoaderPlugin(viewer);
     const overlayCanvas = document.querySelector("#semanticOverlay");
     const overlayCtx = overlayCanvas.getContext("2d");
@@ -650,7 +610,6 @@
       mep: true
     };
     let viewerPayload = null;
-    let semanticObjectByEntityId = new Map();
     let semanticObjectsCache = [];
     let semanticObjectsDirty = true;
     let overlayDrawRequested = false;
@@ -706,62 +665,10 @@
       }[char]));
     }
 
-    function buildRenderSemanticIndex(meta) {
-      semanticObjectByEntityId = new Map();
-      (meta.objectIndex || []).forEach((item) => {
-        if (!item.id) return;
-        const modelPrefix = item.domain === "architecture" ? "duplex-architecture" : "duplex-mep";
-        semanticObjectByEntityId.set(item.id, item);
-        semanticObjectByEntityId.set(`${modelPrefix}#${item.id}`, item);
-      });
-    }
-
-    function getEntitySemantic(entity) {
-      return semanticObjectByEntityId.get(entity.id) || semanticObjectByEntityId.get(String(entity.id || "").split("#").pop()) || null;
-    }
-
-    function getDisplayTone(entity, kind) {
-      const semantic = getEntitySemantic(entity);
-      const text = `${semantic?.bucket || ""} ${semantic?.ifcClass || ""} ${semantic?.name || ""}`.toLowerCase();
-      if (kind === "mep") {
-        if (text.includes("hvac") || text.includes("duct") || text.includes("air")) return [0.2, 0.58, 0.72];
-        if (text.includes("hot")) return [0.82, 0.32, 0.28];
-        if (text.includes("cold")) return [0.22, 0.42, 0.78];
-        if (text.includes("drain")) return [0.42, 0.34, 0.72];
-        if (text.includes("electric") || text.includes("cable")) return [0.86, 0.62, 0.18];
-        return [0.52, 0.58, 0.64];
-      }
-      if (text.includes("window") || text.includes("glazing") || text.includes("curtain wall")) return [0.52, 0.62, 0.66];
-      if (text.includes("door")) return [0.56, 0.42, 0.3];
-      if (text.includes("slab") || text.includes("floor")) return [0.73, 0.72, 0.68];
-      if (text.includes("stair")) return [0.48, 0.48, 0.44];
-      if (text.includes("roof")) return [0.5, 0.5, 0.48];
-      if (text.includes("wall")) return [0.86, 0.84, 0.78];
-      if (text.includes("furnishing") || text.includes("cabinet") || text.includes("table") || text.includes("bed") || text.includes("sofa")) return [0.62, 0.5, 0.38];
-      return [0.76, 0.73, 0.66];
-    }
-
-    function applyPresentationStyle(enabled = true) {
-      Object.entries(loadedModels).forEach(([kind]) => {
-        getModelObjectIds(kind).forEach((id) => {
-          const entity = viewer.scene.objects[id];
-          if (!entity) return;
-          if (!enabled) {
-            entity.colorize = null;
-            entity.opacity = 1;
-            return;
-          }
-          entity.colorize = getDisplayTone(entity, kind);
-          entity.opacity = kind === "architecture" ? 1 : 0.9;
-        });
-      });
-    }
-
     async function loadSpatialMeta() {
       const response = await fetch("./samples/duplex-apartment/derived/viewer-payload.json");
       const meta = await response.json();
       viewerPayload = meta;
-      buildRenderSemanticIndex(meta);
       setText("#levels", `${meta.counts.canonicalLevels} / ${meta.counts.sourceLevels}`);
       setText("#spaces", `${meta.counts.canonicalSpaces} / ${meta.counts.sourceSpaces}`);
       setText("#archCount", meta.counts.architecture);
@@ -770,15 +677,15 @@
       setText("#linkCount", meta.counts.links);
 
       const rows = [
-        ["Schema", meta.schema],
-        ["Project", meta.sourceProject],
-        ["Levels", meta.counts.canonicalLevels],
-        ["Rooms", meta.counts.canonicalSpaces],
-        ["Source levels", meta.counts.sourceLevels],
-        ["Source rooms", meta.counts.sourceSpaces],
-        ["COBie components", meta.counts.cobieComponents],
-        ["COBie systems", meta.counts.cobieSystems],
-        ["Documents", meta.counts.documents]
+        ["说明书", meta.schema],
+        ["项目", meta.sourceProject],
+        ["楼层", meta.counts.canonicalLevels],
+        ["房间", meta.counts.canonicalSpaces],
+        ["楼层来源", meta.counts.sourceLevels],
+        ["房间来源", meta.counts.sourceSpaces],
+        ["COBie 构件", meta.counts.cobieComponents],
+        ["COBie 系统", meta.counts.cobieSystems],
+        ["资料文档", meta.counts.documents]
       ];
 
       const list = document.querySelector("#schemaList");
@@ -855,7 +762,7 @@
           markSemanticObjectsDirty();
           document.querySelector("#objectDetail").innerHTML = `
             <strong>对象详情</strong>
-            当前楼层：${escapeText(level.name)}。模型和语义点位已按该楼层过滤。
+            当前楼层：${escapeText(level.name)}。几何模型和语义点位已按该楼层过滤。
           `;
           requestSemanticOverlayDraw(true);
         });
@@ -892,7 +799,7 @@
           renderObjectList();
           document.querySelector("#objectDetail").innerHTML = `
             <strong>对象详情</strong>
-            当前系统分类：${escapeText(category)}。选择列表或模型对象后，这里会显示来源、分类和几何匹配状态。
+            当前系统分类：${escapeText(category)}。选择列表里的对象后，这里会显示来源、分类、坐标和是否已经进入 XKT 几何层。
           `;
           markSemanticObjectsDirty();
           requestSemanticOverlayDraw(true);
@@ -938,7 +845,7 @@
         button.type = "button";
         button.innerHTML = `
           <strong>${escapeText(item.name || item.ifcClass || item.id)}</strong>
-          <span>${escapeText(item.domain)} / ${escapeText(item.bucket)} / ${escapeText(item.source)}</span>
+          <span>${escapeText(item.domain)} · ${escapeText(item.bucket)} · ${escapeText(item.source)}</span>
         `;
         button.addEventListener("click", () => focusObject(item));
         row.appendChild(button);
@@ -1068,10 +975,10 @@
       const location = Array.isArray(item.location) ? item.location.map((value) => Number(value).toFixed(2)).join(", ") : "n/a";
       detail.innerHTML = `
         <strong>${escapeText(item.name || item.ifcClass || item.id)}</strong>
-        ${escapeText(item.domain)} / ${escapeText(item.bucket)} / ${escapeText(item.source)}<br>
+        ${escapeText(item.domain)} · ${escapeText(item.bucket)} · ${escapeText(item.source)}<br>
         IFC: ${escapeText(item.ifcClass)}<br>
         坐标: ${escapeText(location)}<br>
-        XKT: ${objectId ? "已匹配，可选中聚焦" : "未匹配，仅显示语义点位"}
+        XKT: ${objectId ? "已匹配，可聚焦" : "未匹配，仅语义点位"}
       `;
       if (!objectId) {
         requestSemanticOverlayDraw(true);
@@ -1102,7 +1009,7 @@
         <strong>${escapeText(entity.name || entity.id)}</strong>
         XKT 几何对象<br>
         ID: ${escapeText(entity.id)}<br>
-        状态：已选中，可双击聚焦
+        状态: 已选中，可双击聚焦
       `;
       if (flyTo) {
         viewer.cameraFlight.flyTo({
@@ -1160,10 +1067,8 @@
         setText(cfg.status, `${kind}: loaded`);
         if (loadedKinds.size === Object.keys(modelPaths).length) {
           applyLayerVisibility();
-          applyPresentationStyle(true);
           fitAll();
-          applyXray(false);
-          applyEdges(true);
+          applyXray(true);
           document.querySelector("#loading").classList.add("hidden");
         }
       });
@@ -1175,15 +1080,10 @@
     function fitAll() {
       const aabb = viewer.scene.getAABB();
       if (!aabb || !Number.isFinite(aabb[0])) return;
-      cameraControl.navMode = "orbit";
-      document.querySelectorAll("[data-nav-mode]").forEach((button) => {
-        button.classList.toggle("active", button.dataset.navMode === "orbit");
-      });
       viewer.cameraFlight.flyTo({
         aabb,
         duration: 0.6,
-        fitFOV: 44,
-        projection: "perspective"
+        fitFOV: 48
       });
     }
 
@@ -1194,54 +1094,6 @@
         aabb: model.aabb,
         duration: 0.6,
         fitFOV: 45
-      });
-    }
-
-    function getAABBCenter(aabb) {
-      return [
-        (aabb[0] + aabb[3]) / 2,
-        (aabb[1] + aabb[4]) / 2,
-        (aabb[2] + aabb[5]) / 2
-      ];
-    }
-
-    function switchNavMode(mode) {
-      cameraControl.navMode = mode;
-      document.querySelectorAll("[data-nav-mode]").forEach((button) => {
-        button.classList.toggle("active", button.dataset.navMode === mode);
-      });
-      if (mode === "firstPerson") {
-        viewer.camera.projection = "perspective";
-        viewer.cameraFlight.flyTo({
-          eye: [2.8, 1.65, 11.8],
-          look: [5.6, 1.55, 8.2],
-          up: [0, 1, 0],
-          duration: 0.55,
-          projection: "perspective"
-        });
-      }
-      if (mode === "planView") {
-        flyToTopView();
-      }
-    }
-
-    function flyToTopView() {
-      const aabb = viewer.scene.getAABB();
-      if (!aabb || !Number.isFinite(aabb[0])) return;
-      const center = getAABBCenter(aabb);
-      const sizeX = Math.abs(aabb[3] - aabb[0]);
-      const sizeZ = Math.abs(aabb[5] - aabb[2]);
-      const height = Math.max(sizeX, sizeZ) * 1.35;
-      cameraControl.navMode = "planView";
-      document.querySelectorAll("[data-nav-mode]").forEach((button) => {
-        button.classList.toggle("active", button.dataset.navMode === "planView");
-      });
-      viewer.cameraFlight.flyTo({
-        eye: [center[0], aabb[4] + height, center[2]],
-        look: center,
-        up: [0, 0, -1],
-        duration: 0.55,
-        projection: "ortho"
       });
     }
 
@@ -1349,12 +1201,7 @@
       button.addEventListener("click", () => fitModel(button.dataset.focus));
     });
 
-    document.querySelectorAll("[data-nav-mode]").forEach((button) => {
-      button.addEventListener("click", () => switchNavMode(button.dataset.navMode));
-    });
-
     document.querySelector("#homeBtn").addEventListener("click", fitAll);
-    document.querySelector("#topViewBtn").addEventListener("click", flyToTopView);
     document.querySelector("#xrayBtn").addEventListener("click", () => applyXray(!xrayEnabled));
     document.querySelector("#edgesBtn").addEventListener("click", () => applyEdges(!edgesEnabled));
     document.querySelector("#overlayBtn").addEventListener("click", () => {
@@ -1366,7 +1213,7 @@
       renderObjectList();
       document.querySelector("#objectDetail").innerHTML = `
         <strong>对象详情</strong>
-        搜索结果已更新。选择列表或模型对象后，这里会显示来源、分类、坐标和 XKT 几何状态。
+        搜索结果已更新。选择列表里的对象后，这里会显示来源、分类、坐标和是否已经进入 XKT 几何层。
       `;
     });
     window.addEventListener("resize", () => {
@@ -1396,7 +1243,3 @@
   </script>
 </body>
 </html>
-
-
-
-
