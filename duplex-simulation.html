@@ -103,6 +103,28 @@
       background: var(--panel);
       box-shadow: 0 18px 46px rgba(33, 42, 50, 0.13), 0 2px 8px rgba(33, 42, 50, 0.06);
       backdrop-filter: blur(18px) saturate(1.12);
+      transition: opacity 220ms ease, transform 220ms ease;
+    }
+
+    body.showcase .hud,
+    body.showcase .schema,
+    body.showcase #navCubeCanvas {
+      opacity: 0.18;
+    }
+
+    body.showcase .hud:hover,
+    body.showcase .schema:hover,
+    body.showcase .topbar,
+    body.showcase .toolbar {
+      opacity: 1;
+    }
+
+    body.showcase .hud {
+      transform: translateX(-10px);
+    }
+
+    body.showcase .schema {
+      transform: translateX(10px);
     }
 
     .panel::-webkit-scrollbar {
@@ -559,7 +581,6 @@
     });
 
     viewer.scene.sao.enabled = true;
-    viewer.scene.sao.numSamples = 28;
     viewer.scene.sao.numSamples = 36;
     viewer.scene.sao.intensity = 0.18;
     viewer.camera.eye = [-16, 14, 23];
@@ -731,8 +752,8 @@
       if (text.includes("counter") || text.includes("top") || text.includes("vanity")) return [0.78, 0.75, 0.68];
       if (text.includes("toilet") || text.includes("bath") || text.includes("lavatory") || text.includes("basin") || text.includes("sink")) return [0.92, 0.91, 0.87];
       if (text.includes("bed") || text.includes("sofa")) return [0.72, 0.67, 0.58];
-      if (text.includes("furnishing")) return [0.66, 0.55, 0.44];
       if (text.includes("table") || text.includes("chair")) return [0.36, 0.24, 0.16];
+      if (text.includes("furnishing")) return [0.66, 0.55, 0.44];
       if (text.includes("stair")) return [0.28, 0.26, 0.23];
       if (text.includes("floor") || text.includes("slab")) return [0.52, 0.44, 0.34];
       if (text.includes("wall")) return [0.84, 0.82, 0.76];
@@ -1373,6 +1394,7 @@
     function setAutoRotateEnabled(enabled) {
       autoRotateEnabled = enabled && viewMode === "interior";
       document.querySelector("#autoRotateBtn").classList.toggle("active", autoRotateEnabled);
+      document.body.classList.toggle("showcase", autoRotateEnabled);
       if (autoRotateEnabled) {
         lastTickTime = 0;
       }
