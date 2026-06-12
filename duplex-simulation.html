@@ -547,6 +547,15 @@
       text-align: left;
       border-radius: 12px;
       background: rgba(255, 255, 255, 0.78);
+      box-shadow: inset 0 0 0 1px rgba(31, 37, 35, 0.08);
+      transition: background 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+    }
+
+    .room-card.active,
+    .room-card:hover {
+      background: rgba(255, 255, 255, 0.94);
+      box-shadow: inset 0 0 0 1px rgba(80, 95, 88, 0.2), 0 10px 26px rgba(45, 39, 31, 0.1);
+      transform: translateY(-1px);
     }
 
     .room-thumb {
@@ -955,6 +964,9 @@
     let viewMode = "interior";
     let autoRotateEnabled = false;
     let lastTickTime = 0;
+    let roomRuntimeIndex = new Map();
+    let currentFocusedSpace = null;
+    let activePBRSpaceId = null;
     document.body.dataset.viewMode = viewMode;
 
     const categoryColors = {
@@ -1097,22 +1109,22 @@
       return mesh;
     }
 
-    function addPlant(x, z, scale = 1) {
-      cylinder("Plant pot", 0.22 * scale, 0.34 * scale, [x, 0.17 * scale, z], pbrMaterials.wood);
+    function addPlant(x, z, scale = 1, parent = pbrRoot, yOffset = 0) {
+      cylinder("Plant pot", 0.22 * scale, 0.34 * scale, [x, yOffset + 0.17 * scale, z], pbrMaterials.wood, [0, 0, 0], parent);
       for (let i = 0; i < 14; i += 1) {
         const leaf = new THREE.Mesh(new THREE.SphereGeometry(0.12 * scale, 12, 8), pbrMaterials.green);
-        leaf.position.set(x + Math.sin(i * 1.7) * 0.28 * scale, 0.48 * scale + (i % 5) * 0.08 * scale, z + Math.cos(i * 1.3) * 0.24 * scale);
+        leaf.position.set(x + Math.sin(i * 1.7) * 0.28 * scale, yOffset + 0.48 * scale + (i % 5) * 0.08 * scale, z + Math.cos(i * 1.3) * 0.24 * scale);
         leaf.scale.set(1.0, 0.46, 0.72);
         leaf.castShadow = true;
-        pbrRoot.add(leaf);
+        parent.add(leaf);
       }
     }
 
-    function addSofa(x, z, rot = 0) {
+    function addSofa(x, z, rot = 0, parent = pbrRoot, yOffset = 0) {
       const group = new THREE.Group();
-      group.position.set(x, 0, z);
+      group.position.set(x, yOffset, z);
       group.rotation.y = rot;
-      pbrRoot.add(group);
+      parent.add(group);
       box("Sofa seat", [2.3, 0.34, 0.82], [0, 0.42, 0], pbrMaterials.fabric, [0, 0, 0], group);
       box("Sofa back", [2.38, 0.78, 0.18], [0, 0.76, 0.4], pbrMaterials.fabric, [0, 0, 0], group);
       box("Sofa arm L", [0.18, 0.62, 0.82], [-1.18, 0.62, 0], pbrMaterials.fabric, [0, 0, 0], group);
@@ -1121,29 +1133,29 @@
       box("Sofa pillow", [0.46, 0.25, 0.12], [0.36, 0.78, -0.28], pbrMaterials.darkFabric, [0.1, 0, 0], group);
     }
 
-    function addKitchen(x, z) {
-      box("Kitchen island marble", [2.55, 0.16, 1.05], [x, 0.88, z], pbrMaterials.marble);
-      box("Kitchen island base", [2.35, 0.82, 0.82], [x, 0.43, z], pbrMaterials.wall);
-      cylinder("Faucet neck", 0.035, 0.58, [x + 0.32, 1.22, z - 0.1], pbrMaterials.chrome, [Math.PI / 2, 0, 0]);
-      cylinder("Faucet stem", 0.04, 0.36, [x + 0.1, 1.08, z - 0.1], pbrMaterials.chrome);
-      box("Sink basin", [0.68, 0.04, 0.42], [x - 0.2, 0.98, z - 0.05], pbrMaterials.chrome);
-      box("Refrigerator", [0.8, 1.82, 0.58], [x + 2.0, 0.92, z + 0.2], pbrMaterials.appliance);
-      box("Cabinets", [2.4, 0.78, 0.42], [x + 0.4, 0.48, z + 1.28], pbrMaterials.wood);
-      box("Countertop", [2.48, 0.12, 0.5], [x + 0.4, 0.9, z + 1.28], pbrMaterials.marble);
-      cylinder("Pendant light", 0.13, 0.28, [x - 0.55, 2.18, z], pbrMaterials.warmLight);
-      cylinder("Pendant light", 0.13, 0.28, [x + 0.45, 2.18, z], pbrMaterials.warmLight);
+    function addKitchen(x, z, parent = pbrRoot, yOffset = 0) {
+      box("Kitchen island marble", [2.55, 0.16, 1.05], [x, yOffset + 0.88, z], pbrMaterials.marble, [0, 0, 0], parent);
+      box("Kitchen island base", [2.35, 0.82, 0.82], [x, yOffset + 0.43, z], pbrMaterials.wall, [0, 0, 0], parent);
+      cylinder("Faucet neck", 0.035, 0.58, [x + 0.32, yOffset + 1.22, z - 0.1], pbrMaterials.chrome, [Math.PI / 2, 0, 0], parent);
+      cylinder("Faucet stem", 0.04, 0.36, [x + 0.1, yOffset + 1.08, z - 0.1], pbrMaterials.chrome, [0, 0, 0], parent);
+      box("Sink basin", [0.68, 0.04, 0.42], [x - 0.2, yOffset + 0.98, z - 0.05], pbrMaterials.chrome, [0, 0, 0], parent);
+      box("Refrigerator", [0.8, 1.82, 0.58], [x + 1.15, yOffset + 0.92, z + 0.55], pbrMaterials.appliance, [0, 0, 0], parent);
+      box("Cabinets", [2.4, 0.78, 0.42], [x + 0.2, yOffset + 0.48, z + 1.15], pbrMaterials.wood, [0, 0, 0], parent);
+      box("Countertop", [2.48, 0.12, 0.5], [x + 0.2, yOffset + 0.9, z + 1.15], pbrMaterials.marble, [0, 0, 0], parent);
+      cylinder("Pendant light", 0.13, 0.28, [x - 0.55, yOffset + 2.18, z], pbrMaterials.warmLight, [0, 0, 0], parent);
+      cylinder("Pendant light", 0.13, 0.28, [x + 0.45, yOffset + 2.18, z], pbrMaterials.warmLight, [0, 0, 0], parent);
     }
 
-    function addBathroom(x, z) {
-      box("Vanity cabinet", [1.8, 0.72, 0.46], [x, 0.42, z], pbrMaterials.wall);
-      box("Vanity marble top", [1.9, 0.12, 0.55], [x, 0.84, z], pbrMaterials.marble);
-      cylinder("Basin", 0.28, 0.08, [x - 0.45, 0.93, z], pbrMaterials.ceramic);
-      cylinder("Basin", 0.28, 0.08, [x + 0.45, 0.93, z], pbrMaterials.ceramic);
-      box("Mirror L", [0.54, 0.75, 0.04], [x - 0.45, 1.48, z + 0.27], pbrMaterials.glass);
-      box("Mirror R", [0.54, 0.75, 0.04], [x + 0.45, 1.48, z + 0.27], pbrMaterials.glass);
-      cylinder("Faucet L", 0.03, 0.24, [x - 0.45, 1.02, z - 0.02], pbrMaterials.chrome);
-      cylinder("Faucet R", 0.03, 0.24, [x + 0.45, 1.02, z - 0.02], pbrMaterials.chrome);
-      addPlant(x + 0.05, z - 0.08, 0.55);
+    function addBathroom(x, z, parent = pbrRoot, yOffset = 0) {
+      box("Vanity cabinet", [1.8, 0.72, 0.46], [x, yOffset + 0.42, z], pbrMaterials.wall, [0, 0, 0], parent);
+      box("Vanity marble top", [1.9, 0.12, 0.55], [x, yOffset + 0.84, z], pbrMaterials.marble, [0, 0, 0], parent);
+      cylinder("Basin", 0.28, 0.08, [x - 0.45, yOffset + 0.93, z], pbrMaterials.ceramic, [0, 0, 0], parent);
+      cylinder("Basin", 0.28, 0.08, [x + 0.45, yOffset + 0.93, z], pbrMaterials.ceramic, [0, 0, 0], parent);
+      box("Mirror L", [0.54, 0.75, 0.04], [x - 0.45, yOffset + 1.48, z + 0.27], pbrMaterials.glass, [0, 0, 0], parent);
+      box("Mirror R", [0.54, 0.75, 0.04], [x + 0.45, yOffset + 1.48, z + 0.27], pbrMaterials.glass, [0, 0, 0], parent);
+      cylinder("Faucet L", 0.03, 0.24, [x - 0.45, yOffset + 1.02, z - 0.02], pbrMaterials.chrome, [0, 0, 0], parent);
+      cylinder("Faucet R", 0.03, 0.24, [x + 0.45, yOffset + 1.02, z - 0.02], pbrMaterials.chrome, [0, 0, 0], parent);
+      addPlant(x + 0.05, z - 0.08, 0.55, parent, yOffset);
     }
 
     function buildPBRHome() {
@@ -1199,6 +1211,182 @@
       spaceCameraPresets.set("bed", { eye: [6.85, 1.46, 3.7], look: [8.08, 1.0, 5.12] });
       spaceCameraPresets.set("foyer", { eye: [1.35, 1.5, -0.62], look: [4.1, 1.22, 1.45] });
       document.body.classList.add("pbr-ready");
+    }
+
+    function getRenderableSpaces(meta = viewerPayload) {
+      return (meta?.canonicalSpaces || [])
+        .filter((space) => !String(`${space.name} ${space.longName}`).toLowerCase().includes("roof"));
+    }
+
+    function getSpaceKind(space) {
+      const text = `${space?.id || ""} ${space?.name || ""} ${space?.longName || ""}`.toLowerCase();
+      if (text.includes("living")) return "living";
+      if (text.includes("kitchen")) return "kitchen";
+      if (text.includes("bath") || text.includes("toilet")) return "bath";
+      if (text.includes("bed")) return "bed";
+      if (text.includes("hall")) return "hall";
+      if (text.includes("utility")) return "utility";
+      if (text.includes("stair")) return "stair";
+      if (text.includes("foyer") || text.includes("entry")) return "foyer";
+      return "room";
+    }
+
+    function getSpaceLevel(space) {
+      const name = String(space?.name || space?.id || "").toLowerCase();
+      const floorMatch = name.match(/^[ab]?(\d)/i) || name.match(/space:[ab](\d)/i);
+      if (floorMatch && floorMatch[1] === "2") return 3.1;
+      const validLocation = (space?.locations || []).find((point) => {
+        const z = Number(point?.[2]);
+        return Number.isFinite(z) && z > 0.8 && z < 4.2;
+      });
+      return validLocation ? 3.1 : 0;
+    }
+
+    function getRoomDimensions(space, kind) {
+      const area = Number(space?.area);
+      const base = {
+        living: [5.2, 4.7],
+        kitchen: [3.4, 3.15],
+        bath: [2.1, 1.95],
+        bed: [4.4, 4.05],
+        hall: [2.1, 3.2],
+        utility: [1.45, 1.2],
+        stair: [2.15, 2.25],
+        foyer: [3.25, 3.05],
+        room: [2.4, 2.2]
+      }[kind] || [2.4, 2.2];
+      if (!Number.isFinite(area) || area < 1) return base;
+      const currentArea = base[0] * base[1];
+      const scale = Math.sqrt(Math.min(1.18, Math.max(0.72, area / currentArea)));
+      return [base[0] * scale, base[1] * scale];
+    }
+
+    function getSchemaRoomPose(space, index) {
+      const kind = getSpaceKind(space);
+      const unit = String(space?.id || space?.name || "").toLowerCase().includes("space:b") || String(space?.name || "").toLowerCase().startsWith("b") ? "B" : "A";
+      const level = getSpaceLevel(space);
+      const unitX = unit === "A" ? 6.2 : 0.45;
+      const floorLift = level > 0 ? 0.14 : 0;
+      const sequence = {
+        foyer: [0, 0.05],
+        living: [0.55, 2.85],
+        kitchen: [1.45, 0.92],
+        bath: [-1.2, 4.75],
+        stair: [-0.95, 2.15],
+        hall: [0, 2.05],
+        bed: [0.95, 4.88],
+        utility: [-1.42, 0.75],
+        room: [-1.05, 3.35]
+      };
+      const offset = sequence[kind] || [((index % 3) - 1) * 1.7, 1.4 + Math.floor(index % 6) * 0.8];
+      if (kind === "bed" && String(space?.name || "").endsWith("3")) offset[0] = -1.35;
+      if (kind === "bath" && String(space?.name || "").endsWith("4")) offset[0] = -1.35;
+      return {
+        center: [unitX + offset[0], level + floorLift, offset[1]],
+        unit,
+        level,
+        kind,
+        size: getRoomDimensions(space, kind)
+      };
+    }
+
+    function addRoomShell(layout, space) {
+      const [width, depth] = layout.size;
+      const [x, y, z] = layout.center;
+      const height = 2.62;
+      const group = new THREE.Group();
+      group.name = `PBR ${space.name || space.id} ${space.longName || ""}`;
+      group.userData.spaceId = space.id;
+      pbrRoot.add(group);
+
+      box("Room wood floor", [width, 0.08, depth], [x, y - 0.04, z], pbrMaterials.floor, [0, 0, 0], group);
+      box("Room ceiling plane", [width, 0.06, depth], [x, y + height, z], pbrMaterials.wall, [0, 0, 0], group);
+      box("Room back wall", [width, height, 0.09], [x, y + height / 2, z + depth / 2], pbrMaterials.wall, [0, 0, 0], group);
+      box("Room left wall", [0.09, height, depth], [x - width / 2, y + height / 2, z], pbrMaterials.wall, [0, 0, 0], group);
+      box("Room right wall", [0.09, height, depth], [x + width / 2, y + height / 2, z], pbrMaterials.wall, [0, 0, 0], group);
+      box("Window frame", [0.06, 1.45, Math.max(1.2, depth * 0.48)], [x - width / 2 + 0.04, y + 1.35, z - depth * 0.08], pbrMaterials.blackMetal, [0, 0, 0], group);
+      box("Window glass", [0.035, 1.28, Math.max(1.0, depth * 0.42)], [x - width / 2 + 0.02, y + 1.35, z - depth * 0.08], pbrMaterials.glass, [0, 0, 0], group);
+      cylinder("Wall sconce", 0.1, 0.08, [x - width * 0.18, y + 1.72, z + depth / 2 - 0.08], pbrMaterials.warmLight, [Math.PI / 2, 0, 0], group);
+      cylinder("Wall sconce", 0.1, 0.08, [x + width * 0.18, y + 1.72, z + depth / 2 - 0.08], pbrMaterials.warmLight, [Math.PI / 2, 0, 0], group);
+      return group;
+    }
+
+    function addRoomFurniture(group, layout) {
+      const [width, depth] = layout.size;
+      const [x, y, z] = layout.center;
+      if (layout.kind === "living" || layout.kind === "foyer" || layout.kind === "room") {
+        addSofa(x - width * 0.05, z + depth * 0.02, 0, group, y);
+        box("Low timber table", [1.45, 0.18, 0.78], [x, y + 0.45, z - depth * 0.25], pbrMaterials.wood, [0, 0, 0], group);
+        box("Marble inset", [1.08, 0.04, 0.52], [x, y + 0.56, z - depth * 0.25], pbrMaterials.marble, [0, 0, 0], group);
+        addPlant(x + width * 0.33, z - depth * 0.32, 0.82, group, y);
+      } else if (layout.kind === "kitchen") {
+        addKitchen(x, z - depth * 0.12, group, y);
+      } else if (layout.kind === "bath") {
+        addBathroom(x, z, group, y);
+      } else if (layout.kind === "bed") {
+        box("Hotel bed base", [Math.min(2.25, width * 0.58), 0.42, 1.58], [x, y + 0.32, z + depth * 0.08], pbrMaterials.fabric, [0, 0, 0], group);
+        box("Soft pillows", [Math.min(1.7, width * 0.44), 0.25, 0.36], [x, y + 0.72, z - depth * 0.18], pbrMaterials.wall, [0, 0, 0], group);
+        box("Wood headboard", [Math.min(2.34, width * 0.62), 0.92, 0.16], [x, y + 0.78, z + depth * 0.36], pbrMaterials.wood, [0, 0, 0], group);
+        addPlant(x + width * 0.32, z - depth * 0.32, 0.68, group, y);
+      } else if (layout.kind === "utility" || layout.kind === "hall" || layout.kind === "stair") {
+        box("Built-in cabinet", [Math.min(1.6, width * 0.7), 1.52, 0.42], [x, y + 0.78, z + depth * 0.28], pbrMaterials.wood, [0, 0, 0], group);
+        box("Console top", [Math.min(1.7, width * 0.76), 0.12, 0.5], [x, y + 1.57, z + depth * 0.28], pbrMaterials.marble, [0, 0, 0], group);
+      }
+    }
+
+    function rebuildPBRFromSpatialMeta(meta) {
+      if (!meta || !pbrMaterials.wall) return;
+      pbrRoot.clear();
+      spaceCameraPresets.clear();
+      roomRuntimeIndex = new Map();
+      const spaces = getRenderableSpaces(meta);
+      spaces.forEach((space, index) => {
+        const layout = getSchemaRoomPose(space, index);
+        const group = addRoomShell(layout, space);
+        addRoomFurniture(group, layout);
+        const [x, y, z] = layout.center;
+        const [width, depth] = layout.size;
+        const entryZ = z - depth / 2 + Math.min(1.15, depth * 0.28);
+        const targetZ = z + (layout.kind === "living" ? depth * 0.02 : Math.min(0.45, depth * 0.18));
+        const lateral = layout.kind === "kitchen" ? Math.min(0.65, width * 0.18) : 0;
+        const preset = {
+          eye: [x - lateral, y + 1.34, entryZ],
+          look: [x + lateral * 0.35, y + 0.42, targetZ]
+        };
+        spaceCameraPresets.set(space.id, preset);
+        roomRuntimeIndex.set(space.id, {
+          ...layout,
+          preset,
+          source: "canonical-space-schema",
+          confidence: "semantic-layout"
+        });
+      });
+      spaceCameraPresets.set("living", spaceCameraPresets.get("space:a102") || spaceCameraPresets.get("space:b102"));
+      spaceCameraPresets.set("kitchen", spaceCameraPresets.get("space:a103") || spaceCameraPresets.get("space:b103"));
+      spaceCameraPresets.set("bath", spaceCameraPresets.get("space:a104") || spaceCameraPresets.get("space:b104"));
+      spaceCameraPresets.set("bed", spaceCameraPresets.get("space:a202") || spaceCameraPresets.get("space:b202"));
+      spaceCameraPresets.set("foyer", spaceCameraPresets.get("space:a101") || spaceCameraPresets.get("space:b101"));
+      if (!currentFocusedSpace) {
+        currentFocusedSpace = spaces.find((space) => getSpaceKind(space) === "living") || spaces[0] || null;
+      }
+      setActivePBRSpace(currentFocusedSpace?.id || null);
+      window.duplexViewerDebug = {
+        viewer,
+        pbrRoot,
+        pbrScene,
+        roomRuntimeIndex,
+        spaceCameraPresets,
+        setViewMode,
+        focusSpace
+      };
+    }
+
+    function setActivePBRSpace(spaceId = null) {
+      activePBRSpaceId = spaceId;
+      pbrRoot.children.forEach((group) => {
+        if (!group.userData?.spaceId) return;
+        group.visible = !spaceId || group.userData.spaceId === spaceId;
+      });
     }
 
     function syncPBRCamera() {
@@ -1376,6 +1564,7 @@
         list.appendChild(item);
       });
 
+      rebuildPBRFromSpatialMeta(meta);
       renderRooms(meta);
       buildLevelLayers(meta);
       renderLevelChips(meta);
@@ -1453,16 +1642,17 @@
     function renderRooms(meta) {
       const list = document.querySelector("#roomList");
       list.innerHTML = "";
-      meta.canonicalSpaces
-        .filter((space) => !String(`${space.name} ${space.longName}`).toLowerCase().includes("roof"))
-        .slice(0, 8)
+      getRenderableSpaces(meta)
         .forEach((space) => {
+        const runtime = roomRuntimeIndex.get(space.id);
         const area = Number.isFinite(space.area) ? `${space.area.toFixed(1)} m²` : "area n/a";
-        const refs = `${space.sourceRefs.length} refs`;
+        const refs = runtime ? `${runtime.unit} · ${runtime.level > 0 ? "2F" : "1F"}` : `${space.sourceRefs.length} refs`;
         const item = document.createElement("li");
         const button = document.createElement("button");
         button.type = "button";
         button.className = "room-card";
+        button.dataset.spaceId = space.id;
+        button.classList.toggle("active", currentFocusedSpace?.id === space.id);
         button.innerHTML = `
           <span class="room-thumb"></span>
           <strong>${escapeText(space.longName || space.name)}</strong>
@@ -1476,6 +1666,8 @@
 
     function getSpacePreset(space) {
       const text = `${space.id || ""} ${space.name || ""} ${space.longName || ""}`.toLowerCase();
+      const runtime = roomRuntimeIndex.get(space.id);
+      if (runtime?.preset) return runtime.preset;
       if (spaceCameraPresets.has(space.id)) return spaceCameraPresets.get(space.id);
       if (text.includes("living")) return spaceCameraPresets.get("living");
       if (text.includes("kitchen")) return spaceCameraPresets.get("kitchen");
@@ -1487,9 +1679,13 @@
 
     function focusSpace(space) {
       const preset = getSpacePreset(space);
+      const runtime = roomRuntimeIndex.get(space.id);
+      currentFocusedSpace = space;
+      setActivePBRSpace(space.id);
       if (preset) {
         setText("#bridgeModeTitle", space.longName || space.name || "Space");
-        setText("#bridgeModeText", `${space.name || "Room"} · ${Number.isFinite(space.area) ? `${space.area.toFixed(1)} m²` : "PBR room"}`);
+        setText("#bridgeModeText", `${space.name || "Room"} · ${Number.isFinite(space.area) ? `${space.area.toFixed(1)} m²` : "PBR room"} · ${runtime?.unit || "BIM"} ${runtime?.level > 0 ? "2F" : "1F"}`);
+        document.querySelectorAll(".room-card").forEach((node) => node.classList.toggle("active", node.dataset.spaceId === space.id));
         viewer.cameraFlight.flyTo({
           eye: preset.eye,
           look: preset.look,
@@ -1875,10 +2071,17 @@
       document.querySelectorAll("[data-view-mode]").forEach((button) => {
         button.classList.toggle("active", button.dataset.viewMode === mode);
       });
-      setText("#bridgeModeTitle", mode === "interior" ? "Residential view" : "Systems view");
-      setText("#bridgeModeText", mode === "interior" ? "Walkthrough · Level 1" : "MEP networks · all levels");
+      if (mode === "interior" && currentFocusedSpace) {
+        const runtime = roomRuntimeIndex.get(currentFocusedSpace.id);
+        setText("#bridgeModeTitle", currentFocusedSpace.longName || currentFocusedSpace.name || "Space");
+        setText("#bridgeModeText", `${currentFocusedSpace.name || "Room"} · ${Number.isFinite(currentFocusedSpace.area) ? `${currentFocusedSpace.area.toFixed(1)} m²` : "PBR room"} · ${runtime?.unit || "BIM"} ${runtime?.level > 0 ? "2F" : "1F"}`);
+      } else {
+        setText("#bridgeModeTitle", mode === "interior" ? "Residential view" : "Systems view");
+        setText("#bridgeModeText", mode === "interior" ? "Walkthrough · Level 1" : "MEP networks · all levels");
+      }
       pbrCanvas.classList.toggle("pbr-hidden", mode !== "interior");
       viewer.scene.canvas.canvas.style.opacity = mode === "interior" ? "0" : "1";
+      setActivePBRSpace(mode === "interior" ? currentFocusedSpace?.id : null);
       activeLevelId = mode === "interior" ? "level:level-1" : "all";
       if (viewerPayload) renderLevelChips(viewerPayload);
       modelVisibility.architecture = mode === "interior";
@@ -1896,7 +2099,18 @@
       renderObjectList();
       if (!flyCamera) return;
       if (mode === "interior") {
-        flyToInteriorView(0.7);
+        const preset = currentFocusedSpace ? getSpacePreset(currentFocusedSpace) : null;
+        if (preset) {
+          viewer.cameraFlight.flyTo({
+            eye: preset.eye,
+            look: preset.look,
+            up: [0, 1, 0],
+            duration: 0.7,
+            projection: "perspective"
+          });
+        } else {
+          flyToInteriorView(0.7);
+        }
       } else {
         flyToMepView(0.7);
       }
