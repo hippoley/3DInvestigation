@@ -6,12 +6,12 @@
   <title>Duplex Apartment 1:1 全屋还原仿真</title>
   <style>
     :root {
-      --panel: rgba(250, 251, 250, 0.86);
-      --panel-strong: rgba(255, 255, 255, 0.95);
-      --line: rgba(54, 66, 76, 0.12);
-      --ink: #1d2329;
-      --muted: #65707a;
-      --soft: rgba(246, 248, 249, 0.8);
+      --panel: rgba(255, 255, 255, 0.9);
+      --panel-strong: rgba(255, 255, 255, 0.97);
+      --line: rgba(28, 34, 38, 0.1);
+      --ink: #20231f;
+      --muted: #6b716a;
+      --soft: rgba(247, 247, 244, 0.84);
       --blue: #2368d1;
       --cyan: #0897a9;
       --red: #c84b54;
@@ -31,7 +31,7 @@
       margin: 0;
       overflow: hidden;
       color: var(--ink);
-      background: #d9dde0;
+      background: #111;
       font-family: Inter, "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
     }
 
@@ -42,9 +42,9 @@
       pointer-events: none;
       content: "";
       background:
-        radial-gradient(ellipse at 50% 42%, rgba(255, 255, 255, 0.48), rgba(255, 255, 255, 0) 46%),
-        radial-gradient(ellipse at center, rgba(255, 255, 255, 0), rgba(45, 55, 64, 0.12) 100%),
-        linear-gradient(180deg, rgba(255, 255, 255, 0.58), rgba(214, 219, 223, 0.2));
+        linear-gradient(90deg, rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0) 9%, rgba(0, 0, 0, 0) 91%, rgba(0, 0, 0, 0.82)),
+        radial-gradient(ellipse at 50% 42%, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0) 46%),
+        radial-gradient(ellipse at center, rgba(255, 255, 255, 0), rgba(36, 42, 44, 0.1) 100%);
     }
 
     #viewer {
@@ -53,7 +53,7 @@
       width: 100%;
       height: 100%;
       background:
-        radial-gradient(ellipse at 50% 48%, #f8f9f8 0%, #dde2e4 60%, #a9b0b4 100%);
+        radial-gradient(ellipse at 50% 48%, #fbfbf8 0%, #e0e3df 62%, #aeb5b1 100%);
       touch-action: none;
       user-select: none;
     }
@@ -99,11 +99,11 @@
       position: fixed;
       z-index: 3;
       border: 1px solid var(--line);
-      border-radius: 8px;
+      border-radius: 14px;
       background: var(--panel);
-      box-shadow: 0 18px 46px rgba(33, 42, 50, 0.13), 0 2px 8px rgba(33, 42, 50, 0.06);
-      backdrop-filter: blur(18px) saturate(1.12);
-      transition: opacity 220ms ease, transform 220ms ease;
+      box-shadow: 0 24px 60px rgba(19, 22, 20, 0.14), 0 3px 12px rgba(19, 22, 20, 0.08);
+      backdrop-filter: blur(22px) saturate(1.08);
+      transition: opacity 220ms ease, transform 220ms ease, background 220ms ease;
     }
 
     body.showcase .hud,
@@ -139,19 +139,22 @@
     }
 
     .hud {
-      top: 20px;
-      left: 20px;
-      width: min(348px, calc(100vw - 36px));
-      max-height: calc(100vh - 36px);
+      top: 48px;
+      left: 26px;
+      width: min(286px, calc(100vw - 36px));
+      max-height: calc(100vh - 96px);
       overflow: auto;
-      padding: 14px;
+      padding: 11px;
+      background: rgba(255, 255, 255, 0.88);
     }
 
     .hud h1 {
-      margin: 0 0 7px;
-      font-size: 17px;
+      margin: 4px 0 2px;
+      font-size: 18px;
       line-height: 1.32;
       letter-spacing: 0;
+      font-family: Georgia, "Times New Roman", "Microsoft YaHei", serif;
+      font-weight: 500;
     }
 
     .sub {
@@ -161,19 +164,49 @@
       line-height: 1.55;
     }
 
+    .brand-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 8px;
+      color: #7d837c;
+      font-size: 11px;
+      font-weight: 760;
+    }
+
+    .brand-mark {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: #232620;
+      font-size: 13px;
+      letter-spacing: 0;
+    }
+
+    .brand-mark i {
+      width: 18px;
+      height: 18px;
+      border-radius: 6px;
+      background:
+        linear-gradient(135deg, rgba(246, 250, 255, 0.92), rgba(199, 214, 226, 0.9)),
+        #edf2f5;
+      box-shadow: inset 0 0 0 1px rgba(80, 92, 100, 0.14);
+    }
+
     .metrics {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 7px;
-      margin-top: 12px;
+      gap: 6px;
+      margin-top: 10px;
     }
 
     .metric {
-      min-height: 58px;
-      padding: 9px;
-      border: 1px solid rgba(36, 48, 69, 0.08);
-      border-radius: 6px;
-      background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(246, 248, 251, 0.8));
+      min-height: 52px;
+      padding: 8px;
+      border: 1px solid rgba(36, 48, 42, 0.08);
+      border-radius: 10px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.84), rgba(247, 247, 244, 0.72));
     }
 
     .metric b {
@@ -243,20 +276,22 @@
 
     .toolbar {
       left: 50%;
-      bottom: 20px;
-      display: grid;
-      grid-template-columns: repeat(2, minmax(140px, 1fr));
-      gap: 8px;
-      width: min(420px, calc(100vw - 28px));
+      bottom: 18px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      width: auto;
+      max-width: calc(100vw - 32px);
       padding: 7px;
       transform: translateX(-50%);
-      background: rgba(255, 255, 255, 0.88);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.86);
     }
 
     button {
-      min-height: 37px;
+      min-height: 35px;
       border: 1px solid rgba(36, 48, 69, 0.1);
-      border-radius: 6px;
+      border-radius: 9px;
       color: var(--ink);
       background: rgba(255, 255, 255, 0.84);
       font: 700 13px/1.2 Inter, "Microsoft YaHei", system-ui, sans-serif;
@@ -278,30 +313,64 @@
     }
 
     .topbar {
-      top: 20px;
+      top: 18px;
       left: 50%;
       display: flex;
-      gap: 8px;
+      gap: 9px;
       align-items: center;
-      padding: 7px;
+      min-width: min(430px, calc(100vw - 40px));
+      min-height: 72px;
+      padding: 9px 12px;
       transform: translateX(-50%);
-      background: rgba(255, 255, 255, 0.9);
+      border-radius: 999px;
+      color: rgba(255, 255, 255, 0.88);
+      background: linear-gradient(180deg, rgba(36, 34, 28, 0.74), rgba(33, 31, 27, 0.58));
+      box-shadow: 0 26px 64px rgba(0, 0, 0, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.18);
     }
 
     .icon-btn {
-      width: 38px;
-      min-width: 38px;
+      width: 36px;
+      min-width: 36px;
       padding: 0;
       font-size: 15px;
+      color: rgba(255, 255, 255, 0.9);
+      border-color: rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .bridge-status {
+      flex: 1;
+      min-width: 0;
+      text-align: center;
+      line-height: 1.2;
+    }
+
+    .bridge-status strong,
+    .bridge-status span {
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .bridge-status strong {
+      font-size: 14px;
+      font-weight: 760;
+    }
+
+    .bridge-status span {
+      margin-top: 4px;
+      color: rgba(255, 255, 255, 0.62);
+      font-size: 12px;
     }
 
     .schema {
-      right: 20px;
-      top: 20px;
-      width: min(374px, calc(100vw - 36px));
-      max-height: calc(100vh - 108px);
+      right: 26px;
+      top: 48px;
+      width: min(322px, calc(100vw - 36px));
+      max-height: calc(100vh - 96px);
       overflow: auto;
-      padding: 14px;
+      padding: 11px;
     }
 
     .schema h2 {
@@ -331,7 +400,7 @@
       gap: 10px;
       padding: 8px 9px;
       border: 1px solid rgba(36, 48, 69, 0.07);
-      border-radius: 6px;
+      border-radius: 10px;
       background: var(--soft);
       font-size: 12px;
     }
@@ -387,6 +456,55 @@
       font-weight: 750;
     }
 
+    .room-list {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .room-card {
+      width: 100%;
+      min-height: 78px;
+      padding: 7px;
+      text-align: left;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.78);
+    }
+
+    .room-thumb {
+      display: block;
+      height: 44px;
+      margin-bottom: 6px;
+      border-radius: 9px;
+      background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(30, 35, 32, 0.16)),
+        linear-gradient(120deg, #ecebe4, #cfc8ba 52%, #879186);
+      box-shadow: inset 0 0 0 1px rgba(31, 37, 35, 0.08);
+    }
+
+    .room-card strong,
+    .room-card span {
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .room-card strong {
+      font-size: 11px;
+      line-height: 1.2;
+    }
+
+    .room-card span {
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 650;
+    }
+
     .object-list {
       display: grid;
       gap: 6px;
@@ -435,6 +553,42 @@
       color: var(--muted);
       font-size: 11px;
       line-height: 1.5;
+    }
+
+    .bottom-time {
+      display: grid;
+      align-items: center;
+      gap: 2px;
+      min-width: 260px;
+      padding: 0 8px;
+      color: rgba(28, 32, 30, 0.72);
+      font-size: 11px;
+      text-align: center;
+    }
+
+    .bottom-time strong {
+      color: var(--ink);
+      font-size: 13px;
+    }
+
+    .time-slider {
+      width: 100%;
+      height: 14px;
+      appearance: none;
+      border-radius: 999px;
+      outline: none;
+      background: linear-gradient(90deg, #f3da6b, #ee9d67 44%, #9584d8 100%);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.62), 0 4px 14px rgba(77, 62, 40, 0.12);
+    }
+
+    .time-slider::-webkit-slider-thumb {
+      width: 22px;
+      height: 22px;
+      appearance: none;
+      border: 2px solid rgba(255, 255, 255, 0.92);
+      border-radius: 50%;
+      background: #4f5b58;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
     }
 
     .detail strong {
@@ -489,7 +643,12 @@
 
       .toolbar {
         bottom: 10px;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        width: calc(100vw - 20px);
+        justify-content: center;
+      }
+
+      .bottom-time {
+        min-width: 140px;
       }
     }
   </style>
@@ -500,11 +659,12 @@
   <canvas id="navCubeCanvas"></canvas>
 
   <section class="panel hud" aria-label="simulation status">
-    <h1>Duplex Apartment 1:1 全屋还原</h1>
-    <p class="sub">几何来自真实 IFC 转换的 XKT；语义来自 `spatial-meta/v1`。当前是 BIM 级还原，不是家装施工级复刻。</p>
+    <div class="brand-row"><span class="brand-mark"><i></i>Bridge</span><span id="projectBadge">Duplex</span></div>
+    <h1>Duplex Apartment</h1>
+    <p class="sub">1:1 BIM residence · spatial-meta/v1</p>
     <div class="status-row"><span class="dot ok"></span><span id="archStatus">Architecture: loading</span></div>
     <div class="status-row"><span class="dot ok"></span><span id="mepStatus">MEP: loading</span></div>
-    <div class="status-row"><span class="dot warn"></span><span>Electrical/Plumbing/Rooms: IFC 语义点位已叠加，XKT 几何层待转换</span></div>
+    <div class="status-row"><span class="dot warn"></span><span id="bridgeStatusLine">Detecting spaces and systems</span></div>
     <div class="metrics">
       <div class="metric"><b>楼层记录</b><span id="levels">0</span></div>
       <div class="metric"><b>空间记录</b><span id="spaces">0</span></div>
@@ -518,6 +678,10 @@
 
   <nav class="panel topbar" aria-label="view tools">
     <button class="icon-btn" id="homeBtn" title="重置视角">⌂</button>
+    <div class="bridge-status">
+      <strong id="bridgeModeTitle">Residential view</strong>
+      <span id="bridgeModeText">Walkthrough · Level 1</span>
+    </div>
     <button class="icon-btn" id="autoRotateBtn" title="环绕展示">↻</button>
     <button class="icon-btn" id="xrayBtn" title="半透明">◫</button>
     <button class="icon-btn" id="edgesBtn" title="边线">▧</button>
@@ -530,7 +694,7 @@
     <div class="mini-title">楼层</div>
     <div class="chips" id="levelChips"></div>
     <div class="mini-title">房间</div>
-    <ul class="schema-list" id="roomList"></ul>
+    <ul class="room-list" id="roomList"></ul>
     <div class="mini-title">系统</div>
     <div class="chips" id="systemChips"></div>
     <input class="field" id="objectSearch" type="search" placeholder="搜索构件、房间、管线、设备" />
@@ -543,6 +707,11 @@
 
   <nav class="panel toolbar" aria-label="view modes">
     <button data-view-mode="interior" class="active">家装设计</button>
+    <div class="bottom-time">
+      <span>Daytime</span>
+      <strong id="timeLabel">1:00 PM</strong>
+      <input class="time-slider" id="timeSlider" type="range" min="8" max="20" value="13" step="0.25" aria-label="daytime" />
+    </div>
     <button data-view-mode="mep">管网风暖</button>
   </nav>
 
@@ -629,19 +798,19 @@
     });
 
     viewer.scene.clearLights();
-    new AmbientLight(viewer.scene, {
+    const ambientLight = new AmbientLight(viewer.scene, {
       id: "hotelAmbient",
       color: [0.98, 0.98, 0.95],
       intensity: 0.9
     });
-    new DirLight(viewer.scene, {
+    const keyLight = new DirLight(viewer.scene, {
       id: "hotelKey",
       dir: [-0.42, -0.86, -0.22],
       color: [1.0, 0.95, 0.84],
       intensity: 0.62,
       space: "view"
     });
-    new DirLight(viewer.scene, {
+    const fillLight = new DirLight(viewer.scene, {
       id: "hotelFill",
       dir: [0.62, -0.28, 0.52],
       color: [0.82, 0.9, 0.96],
@@ -834,6 +1003,8 @@
       const meta = await response.json();
       viewerPayload = meta;
       buildRenderSemanticIndex(meta);
+      setText("#projectBadge", meta.sourceProject || "Duplex");
+      setText("#bridgeStatusLine", `Detected ${meta.counts.canonicalSpaces} spaces · ${meta.counts.systems} systems`);
       setText("#levels", `${meta.counts.canonicalLevels} / ${meta.counts.sourceLevels}`);
       setText("#spaces", `${meta.counts.canonicalSpaces} / ${meta.counts.sourceSpaces}`);
       setText("#archCount", meta.counts.architecture);
@@ -942,9 +1113,31 @@
         const area = Number.isFinite(space.area) ? `${space.area.toFixed(1)} m²` : "area n/a";
         const refs = `${space.sourceRefs.length} refs`;
         const item = document.createElement("li");
-        item.innerHTML = `<strong>${escapeText(space.name)}</strong><span>${escapeText(area)} · ${escapeText(refs)}</span>`;
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "room-card";
+        button.innerHTML = `
+          <span class="room-thumb"></span>
+          <strong>${escapeText(space.longName || space.name)}</strong>
+          <span>${escapeText(space.name)} · ${escapeText(area)} · ${escapeText(refs)}</span>
+        `;
+        button.addEventListener("click", () => focusSpace(space));
+        item.appendChild(button);
         list.appendChild(item);
       });
+    }
+
+    function focusSpace(space) {
+      const ref = (space.sourceRefs || []).find((item) => item.source === "architecture" && findSceneObjectId(item.id))
+        || (space.sourceRefs || []).find((item) => findSceneObjectId(item.id));
+      const objectId = ref ? findSceneObjectId(ref.id) : null;
+      setText("#bridgeModeTitle", space.longName || space.name || "Space");
+      setText("#bridgeModeText", `${space.name || "Room"} · ${Number.isFinite(space.area) ? `${space.area.toFixed(1)} m²` : "BIM space"}`);
+      if (objectId && viewer.scene.objects[objectId]) {
+        setSelectedObject(objectId, true);
+      } else {
+        flyToInteriorView(0.55);
+      }
     }
 
     function renderSystemChips(meta) {
@@ -1185,6 +1378,8 @@
       if (!objectId || !viewer.scene.objects[objectId]) return;
       viewer.scene.setObjectsSelected([objectId], true);
       const entity = viewer.scene.objects[objectId];
+      setText("#bridgeModeTitle", entity.name || "Selected object");
+      setText("#bridgeModeText", viewMode === "interior" ? "Residential component" : "MEP component");
       document.querySelector("#objectDetail").innerHTML = `
         <strong>${escapeText(entity.name || entity.id)}</strong>
         XKT 几何对象<br>
@@ -1308,6 +1503,8 @@
       document.querySelectorAll("[data-view-mode]").forEach((button) => {
         button.classList.toggle("active", button.dataset.viewMode === mode);
       });
+      setText("#bridgeModeTitle", mode === "interior" ? "Residential view" : "Systems view");
+      setText("#bridgeModeText", mode === "interior" ? "Walkthrough · Level 1" : "MEP networks · all levels");
       activeLevelId = mode === "interior" ? "level:level-1" : "all";
       if (viewerPayload) renderLevelChips(viewerPayload);
       modelVisibility.architecture = mode === "interior";
@@ -1407,9 +1604,38 @@
       autoRotateEnabled = enabled && viewMode === "interior";
       document.querySelector("#autoRotateBtn").classList.toggle("active", autoRotateEnabled);
       document.body.classList.toggle("showcase", autoRotateEnabled);
+      setText("#bridgeModeText", autoRotateEnabled ? "Auto tour · residential view" : (viewMode === "interior" ? "Walkthrough · Level 1" : "MEP networks · all levels"));
       if (autoRotateEnabled) {
         lastTickTime = 0;
       }
+    }
+
+    function formatTime(value) {
+      const hour = Math.floor(value);
+      const minutes = Math.round((value - hour) * 60);
+      const suffix = hour >= 12 ? "PM" : "AM";
+      const displayHour = ((hour + 11) % 12) + 1;
+      return `${displayHour}:${String(minutes).padStart(2, "0")} ${suffix}`;
+    }
+
+    function updateDaylight(value) {
+      const t = (Number(value) - 8) / 12;
+      const noon = 1 - Math.min(1, Math.abs(t - 0.42) * 2.2);
+      const evening = Math.max(0, t - 0.62) / 0.38;
+      ambientLight.intensity = 0.72 + noon * 0.24 - evening * 0.08;
+      keyLight.intensity = 0.5 + noon * 0.24 + evening * 0.08;
+      fillLight.intensity = 0.24 + (1 - noon) * 0.12;
+      keyLight.color = [
+        1,
+        0.92 - evening * 0.08 + noon * 0.04,
+        0.78 - evening * 0.12 + noon * 0.08
+      ];
+      fillLight.color = [
+        0.78 - evening * 0.08,
+        0.86 - evening * 0.04,
+        0.96
+      ];
+      setText("#timeLabel", formatTime(Number(value)));
     }
 
     function runSmoothWheelZoom() {
@@ -1450,6 +1676,7 @@
     document.querySelector("#autoRotateBtn").addEventListener("click", () => setAutoRotateEnabled(!autoRotateEnabled));
     document.querySelector("#xrayBtn").addEventListener("click", () => applyXray(!xrayEnabled));
     document.querySelector("#edgesBtn").addEventListener("click", () => applyEdges(!edgesEnabled));
+    document.querySelector("#timeSlider").addEventListener("input", (event) => updateDaylight(event.target.value));
     document.querySelector("#overlayBtn").addEventListener("click", () => {
       overlayEnabled = !overlayEnabled;
       document.querySelector("#overlayBtn").classList.toggle("active", overlayEnabled);
@@ -1480,6 +1707,7 @@
         requestSemanticOverlayDraw(false);
       }
     });
+    updateDaylight(document.querySelector("#timeSlider").value);
     await loadSpatialMeta();
     loadModel("architecture");
     loadModel("mep");
