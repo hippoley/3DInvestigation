@@ -18,6 +18,15 @@
       --green: #198b61;
       --amber: #c88613;
       --violet: #8158d9;
+      --grade-brightness: 1.01;
+      --grade-contrast: 1.04;
+      --grade-saturation: 1.06;
+      --sun-x: 18%;
+      --sun-y: 24%;
+      --sun-alpha: 0.14;
+      --bloom-alpha: 0.1;
+      --warm-alpha: 0.16;
+      --cool-alpha: 0.08;
     }
 
     * {
@@ -54,8 +63,46 @@
       height: 100%;
       background:
         radial-gradient(ellipse at 50% 48%, #fbfbf8 0%, #e0e3df 62%, #aeb5b1 100%);
+      filter: brightness(var(--grade-brightness)) contrast(var(--grade-contrast)) saturate(var(--grade-saturation));
       touch-action: none;
       user-select: none;
+    }
+
+    .render-grade,
+    .render-grade::before,
+    .render-grade::after {
+      position: fixed;
+      inset: 0;
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    .render-grade {
+      background:
+        radial-gradient(circle at var(--sun-x) var(--sun-y), rgba(255, 247, 212, var(--sun-alpha)), rgba(255, 255, 255, 0) 27%),
+        radial-gradient(ellipse at 50% 60%, rgba(255, 255, 255, var(--bloom-alpha)), rgba(255, 255, 255, 0) 42%),
+        linear-gradient(135deg, rgba(255, 232, 190, var(--warm-alpha)), rgba(255, 255, 255, 0) 42%),
+        linear-gradient(315deg, rgba(186, 211, 230, var(--cool-alpha)), rgba(255, 255, 255, 0) 46%);
+      mix-blend-mode: screen;
+      opacity: 0.48;
+    }
+
+    .render-grade::before {
+      content: "";
+      background:
+        linear-gradient(90deg, rgba(0, 0, 0, 0.34), rgba(0, 0, 0, 0) 12%, rgba(0, 0, 0, 0) 88%, rgba(0, 0, 0, 0.34)),
+        radial-gradient(ellipse at center, rgba(255, 255, 255, 0), rgba(0, 0, 0, 0.16) 100%);
+      mix-blend-mode: multiply;
+      opacity: 0.72;
+    }
+
+    .render-grade::after {
+      content: "";
+      background:
+        radial-gradient(ellipse at 50% 38%, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0) 34%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.04));
+      mix-blend-mode: soft-light;
+      opacity: 0.68;
     }
 
     #navCubeCanvas {
@@ -655,6 +702,7 @@
 </head>
 <body>
   <canvas id="viewer"></canvas>
+  <div class="render-grade" id="renderGrade"></div>
   <canvas id="semanticOverlay"></canvas>
   <canvas id="navCubeCanvas"></canvas>
 
@@ -750,8 +798,16 @@
     });
 
     viewer.scene.sao.enabled = true;
-    viewer.scene.sao.numSamples = 36;
-    viewer.scene.sao.intensity = 0.28;
+    viewer.scene.sao.numSamples = 42;
+    viewer.scene.sao.intensity = 0.24;
+    viewer.scene.sao.bias = 0.44;
+    viewer.scene.sao.scale = 1.08;
+    viewer.scene.sao.kernelRadius = 84;
+    viewer.scene.sao.blendCutoff = 0.18;
+    viewer.scene.sao.blendFactor = 0.72;
+    viewer.scene.sao.blur = true;
+    viewer.scene.gammaOutput = true;
+    viewer.scene.gammaFactor = 2.18;
     viewer.camera.eye = [-16, 14, 23];
     viewer.camera.look = [3.8, 2.4, 4.8];
     viewer.camera.up = [0, 1, 0];
@@ -815,6 +871,20 @@
       dir: [0.62, -0.28, 0.52],
       color: [0.82, 0.9, 0.96],
       intensity: 0.34,
+      space: "view"
+    });
+    const windowLight = new DirLight(viewer.scene, {
+      id: "windowDaylight",
+      dir: [-0.18, -0.62, -0.76],
+      color: [0.82, 0.9, 1.0],
+      intensity: 0.28,
+      space: "view"
+    });
+    const interiorBounceLight = new DirLight(viewer.scene, {
+      id: "interiorBounce",
+      dir: [0.08, 0.42, 0.24],
+      color: [1.0, 0.88, 0.72],
+      intensity: 0.16,
       space: "view"
     });
 
@@ -1622,9 +1692,13 @@
       const t = (Number(value) - 8) / 12;
       const noon = 1 - Math.min(1, Math.abs(t - 0.42) * 2.2);
       const evening = Math.max(0, t - 0.62) / 0.38;
+      const morning = Math.max(0, 0.26 - t) / 0.26;
+      const rootStyle = document.documentElement.style;
       ambientLight.intensity = 0.72 + noon * 0.24 - evening * 0.08;
       keyLight.intensity = 0.5 + noon * 0.24 + evening * 0.08;
       fillLight.intensity = 0.24 + (1 - noon) * 0.12;
+      windowLight.intensity = 0.2 + noon * 0.24 + morning * 0.08;
+      interiorBounceLight.intensity = 0.12 + evening * 0.16 + morning * 0.08;
       keyLight.color = [
         1,
         0.92 - evening * 0.08 + noon * 0.04,
@@ -1635,6 +1709,25 @@
         0.86 - evening * 0.04,
         0.96
       ];
+      windowLight.color = [
+        0.74 + noon * 0.12,
+        0.84 + noon * 0.08,
+        1.0
+      ];
+      interiorBounceLight.color = [
+        1.0,
+        0.82 + noon * 0.1 - evening * 0.04,
+        0.58 + noon * 0.16 - evening * 0.12
+      ];
+      rootStyle.setProperty("--grade-brightness", String(1.0 + noon * 0.035 - evening * 0.01));
+      rootStyle.setProperty("--grade-contrast", String(1.035 + noon * 0.025));
+      rootStyle.setProperty("--grade-saturation", String(1.035 + noon * 0.035 + evening * 0.035));
+      rootStyle.setProperty("--sun-x", `${16 + t * 62}%`);
+      rootStyle.setProperty("--sun-y", `${22 + Math.sin(t * Math.PI) * 16}%`);
+      rootStyle.setProperty("--sun-alpha", String(0.08 + noon * 0.12 + evening * 0.06));
+      rootStyle.setProperty("--bloom-alpha", String(0.055 + noon * 0.08));
+      rootStyle.setProperty("--warm-alpha", String(0.06 + evening * 0.18 + noon * 0.03));
+      rootStyle.setProperty("--cool-alpha", String(0.06 + morning * 0.12));
       setText("#timeLabel", formatTime(Number(value)));
     }
 
