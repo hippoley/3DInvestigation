@@ -582,24 +582,24 @@
 
     viewer.scene.sao.enabled = true;
     viewer.scene.sao.numSamples = 36;
-    viewer.scene.sao.intensity = 0.18;
+    viewer.scene.sao.intensity = 0.28;
     viewer.camera.eye = [-16, 14, 23];
     viewer.camera.look = [3.8, 2.4, 4.8];
     viewer.camera.up = [0, 1, 0];
     const cameraControl = viewer.cameraControl;
-    cameraControl.navMode = "orbit";
+    cameraControl.navMode = "firstPerson";
     cameraControl.followPointer = false;
     cameraControl.doublePickFlyTo = true;
     cameraControl.panRightClick = true;
     cameraControl.zoomOnMouseWheel = false;
-    cameraControl.dragRotationRate = 210;
-    cameraControl.mouseWheelDollyRate = 78;
-    cameraControl.rotationInertia = 0.16;
-    cameraControl.panInertia = 0.18;
-    cameraControl.dollyInertia = 0.04;
-    cameraControl.keyboardPanRate = 5.0;
-    cameraControl.keyboardDollyRate = 12.0;
-    cameraControl.keyboardRotationRate = 82;
+    cameraControl.dragRotationRate = 330;
+    cameraControl.mouseWheelDollyRate = 62;
+    cameraControl.rotationInertia = 0.08;
+    cameraControl.panInertia = 0.12;
+    cameraControl.dollyInertia = 0.025;
+    cameraControl.keyboardPanRate = 7.0;
+    cameraControl.keyboardDollyRate = 15.0;
+    cameraControl.keyboardRotationRate = 92;
     cameraControl.doubleClickTimeFrame = 280;
 
     const pivotElement = document.createElement("div");
@@ -631,21 +631,21 @@
     viewer.scene.clearLights();
     new AmbientLight(viewer.scene, {
       id: "hotelAmbient",
-      color: [0.98, 0.96, 0.91],
-      intensity: 0.78
+      color: [0.98, 0.98, 0.95],
+      intensity: 0.9
     });
     new DirLight(viewer.scene, {
       id: "hotelKey",
       dir: [-0.42, -0.86, -0.22],
-      color: [1.0, 0.9, 0.74],
-      intensity: 0.68,
+      color: [1.0, 0.95, 0.84],
+      intensity: 0.62,
       space: "view"
     });
     new DirLight(viewer.scene, {
       id: "hotelFill",
       dir: [0.62, -0.28, 0.52],
-      color: [0.72, 0.8, 0.88],
-      intensity: 0.24,
+      color: [0.82, 0.9, 0.96],
+      intensity: 0.34,
       space: "view"
     });
 
@@ -744,28 +744,37 @@
 
     function getHyattInteriorTone(entity) {
       const text = getSemanticText(entity);
-      if (text.includes("light") || text.includes("lamp") || text.includes("sconce") || text.includes("pendant")) return [1.0, 0.78, 0.42];
-      if (text.includes("window") || text.includes("curtain wall") || text.includes("skylight")) return [0.09, 0.1, 0.1];
-      if (text.includes("glazing")) return [0.6, 0.72, 0.76];
-      if (text.includes("door")) return [0.36, 0.25, 0.17];
-      if (text.includes("cabinet") || text.includes("cupboard") || text.includes("casework")) return [0.44, 0.31, 0.22];
-      if (text.includes("counter") || text.includes("top") || text.includes("vanity")) return [0.78, 0.75, 0.68];
-      if (text.includes("toilet") || text.includes("bath") || text.includes("lavatory") || text.includes("basin") || text.includes("sink")) return [0.92, 0.91, 0.87];
-      if (text.includes("bed") || text.includes("sofa")) return [0.72, 0.67, 0.58];
-      if (text.includes("table") || text.includes("chair")) return [0.36, 0.24, 0.16];
-      if (text.includes("furnishing")) return [0.66, 0.55, 0.44];
+      if (text.includes("light") || text.includes("lamp") || text.includes("sconce") || text.includes("pendant")) return [1.0, 0.82, 0.5];
+      if (text.includes("window") || text.includes("curtain wall") || text.includes("skylight")) return [0.07, 0.08, 0.08];
+      if (text.includes("glazing")) return [0.58, 0.72, 0.78];
+      if (text.includes("refrigerator") || text.includes("range") || text.includes("microwave") || text.includes("appliance") || text.includes("equipment")) return [0.43, 0.44, 0.42];
+      if (text.includes("door")) return [0.34, 0.23, 0.15];
+      if (text.includes("cabinet") || text.includes("cupboard") || text.includes("casework")) return [0.42, 0.28, 0.18];
+      if (text.includes("counter") || text.includes("top") || text.includes("vanity")) return [0.82, 0.79, 0.7];
+      if (text.includes("toilet") || text.includes("bath") || text.includes("lavatory") || text.includes("basin") || text.includes("sink")) return [0.94, 0.93, 0.89];
+      if (text.includes("bed") || text.includes("sofa")) return [0.66, 0.61, 0.52];
+      if (text.includes("table") || text.includes("chair")) return [0.32, 0.21, 0.13];
+      if (text.includes("furnishing")) return [0.57, 0.46, 0.35];
       if (text.includes("stair")) return [0.28, 0.26, 0.23];
-      if (text.includes("floor") || text.includes("slab")) return [0.52, 0.44, 0.34];
-      if (text.includes("wall")) return [0.84, 0.82, 0.76];
-      if (text.includes("roof") || text.includes("ceiling")) return [0.72, 0.7, 0.66];
-      return [0.76, 0.72, 0.64];
+      if (text.includes("floor") || text.includes("slab")) return [0.5, 0.39, 0.27];
+      if (text.includes("wall")) return [0.87, 0.84, 0.78];
+      if (text.includes("roof") || text.includes("ceiling")) return [0.82, 0.79, 0.72];
+      return [0.76, 0.71, 0.62];
     }
 
     function getHyattInteriorOpacity(entity) {
       const text = getSemanticText(entity);
-      if (text.includes("glazing")) return 0.48;
-      if (text.includes("window") || text.includes("curtain wall") || text.includes("skylight")) return 0.9;
-      if (text.includes("wall")) return 1;
+      if (xrayEnabled) {
+        if (text.includes("wall")) return 0.28;
+        if (text.includes("roof") || text.includes("ceiling")) return 0.1;
+        if (text.includes("glazing") || text.includes("window") || text.includes("curtain wall") || text.includes("skylight")) return 0.34;
+        if (text.includes("floor") || text.includes("slab")) return 0.78;
+        if (text.includes("door")) return 0.82;
+        return 0.96;
+      }
+      if (text.includes("glazing")) return 0.5;
+      if (text.includes("window") || text.includes("curtain wall") || text.includes("skylight")) return 0.92;
+      if (text.includes("wall")) return 0.96;
       if (text.includes("slab") || text.includes("floor")) return 1;
       return 1;
     }
@@ -1372,8 +1381,11 @@
         const model = loadedModels[kind];
         if (!model) return;
         const ids = getModelObjectIds(kind);
-        if (ids.length) scene.setObjectsXRayed(ids, enabled);
+        if (!ids.length) return;
+        scene.setObjectsXRayed(ids, viewMode === "mep" ? enabled : false);
       });
+      applyObjectPresentation();
+      requestSemanticOverlayDraw(true);
       document.querySelector("#xrayBtn").classList.toggle("active", enabled);
     }
 
@@ -1404,11 +1416,11 @@
       smoothWheelRAF = requestAnimationFrame(() => {
         markCameraInteracting();
         smoothWheelFrames += 1;
-        const delta = smoothWheelVelocity * 0.34;
+        const delta = smoothWheelVelocity * 0.22;
         viewer.camera.zoom(delta);
-        smoothWheelVelocity *= 0.22;
+        smoothWheelVelocity *= 0.42;
         requestSemanticOverlayDraw(false);
-        if (Math.abs(smoothWheelVelocity) > 0.03 && smoothWheelFrames < 5) {
+        if (Math.abs(smoothWheelVelocity) > 0.02 && smoothWheelFrames < 8) {
           runSmoothWheelZoom();
         } else {
           smoothWheelVelocity = 0;
@@ -1421,9 +1433,9 @@
     viewer.scene.canvas.canvas.addEventListener("wheel", (event) => {
       event.preventDefault();
       if (autoRotateEnabled) setAutoRotateEnabled(false);
-      const normalized = Math.max(-2.4, Math.min(2.4, event.deltaY / 120));
-      smoothWheelVelocity += normalized * 2.2;
-      smoothWheelVelocity = Math.max(-12, Math.min(12, smoothWheelVelocity));
+      const normalized = Math.max(-1.8, Math.min(1.8, event.deltaY / 120));
+      smoothWheelVelocity += normalized * 1.45;
+      smoothWheelVelocity = Math.max(-7.5, Math.min(7.5, smoothWheelVelocity));
       if (!smoothWheelRAF) {
         smoothWheelFrames = 0;
         runSmoothWheelZoom();
