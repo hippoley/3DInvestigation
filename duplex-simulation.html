@@ -27,6 +27,8 @@
       --bloom-alpha: 0.08;
       --warm-alpha: 0.025;
       --cool-alpha: 0.045;
+      --app-vw: 100vw;
+      --app-vh: 100vh;
     }
 
     * {
@@ -51,16 +53,20 @@
       pointer-events: none;
       content: "";
       background:
-        radial-gradient(ellipse at 50% 42%, rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0) 50%),
-        linear-gradient(180deg, rgba(255, 255, 255, 0.42), rgba(238, 244, 246, 0.18));
+        radial-gradient(ellipse at 50% 74%, rgba(66, 84, 88, 0.08), rgba(66, 84, 88, 0) 34%),
+        radial-gradient(ellipse at 50% 42%, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0) 52%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.44), rgba(232, 240, 241, 0.24));
     }
 
     #viewer {
       position: fixed;
-      inset: 0;
-      width: 100%;
-      height: 100%;
+      left: 0;
+      top: 0;
+      z-index: 0;
+      width: var(--app-vw);
+      height: var(--app-vh);
       background:
+        radial-gradient(ellipse at 50% 70%, rgba(170, 184, 184, 0.22), rgba(170, 184, 184, 0) 34%),
         radial-gradient(ellipse at 50% 48%, #fbfcfb 0%, #edf3f3 64%, #d9e3e4 100%);
       filter: brightness(var(--grade-brightness)) contrast(var(--grade-contrast)) saturate(var(--grade-saturation));
       touch-action: none;
@@ -75,15 +81,19 @@
     .render-grade::before,
     .render-grade::after {
       position: fixed;
-      inset: 0;
+      left: 0;
+      top: 0;
       z-index: 2;
+      width: var(--app-vw);
+      height: var(--app-vh);
       pointer-events: none;
     }
 
     .render-grade {
       background:
         radial-gradient(circle at var(--sun-x) var(--sun-y), rgba(255, 247, 212, var(--sun-alpha)), rgba(255, 255, 255, 0) 27%),
-        radial-gradient(ellipse at 50% 60%, rgba(255, 255, 255, var(--bloom-alpha)), rgba(255, 255, 255, 0) 42%),
+        radial-gradient(ellipse at 50% 62%, rgba(255, 255, 255, var(--bloom-alpha)), rgba(255, 255, 255, 0) 44%),
+        radial-gradient(ellipse at 50% 82%, rgba(64, 78, 82, 0.035), rgba(64, 78, 82, 0) 42%),
         linear-gradient(135deg, rgba(255, 232, 190, var(--warm-alpha)), rgba(255, 255, 255, 0) 42%),
         linear-gradient(315deg, rgba(186, 211, 230, var(--cool-alpha)), rgba(255, 255, 255, 0) 46%);
       mix-blend-mode: screen;
@@ -121,10 +131,11 @@
 
     #semanticOverlay {
       position: fixed;
-      inset: 0;
+      left: 0;
+      top: 0;
       z-index: 2;
-      width: 100%;
-      height: 100%;
+      width: var(--app-vw);
+      height: var(--app-vh);
       pointer-events: none;
       transition: opacity 120ms ease;
     }
@@ -135,7 +146,7 @@
 
     .camera-pivot-marker {
       position: fixed;
-      z-index: 4;
+      z-index: 7;
       width: 14px;
       height: 14px;
       margin: -7px 0 0 -7px;
@@ -148,7 +159,8 @@
 
     .panel {
       position: fixed;
-      z-index: 3;
+      z-index: 6;
+      pointer-events: auto;
       border: 1px solid var(--line);
       border-radius: 14px;
       background: var(--panel);
@@ -339,6 +351,10 @@
       background: rgba(255, 255, 255, 0.86);
     }
 
+    .mode-label-short {
+      display: none;
+    }
+
     button {
       min-height: 35px;
       border: 1px solid rgba(36, 48, 69, 0.1);
@@ -420,7 +436,7 @@
       right: 26px;
       top: 48px;
       width: min(322px, calc(100vw - 36px));
-      max-height: calc(100vh - 96px);
+      max-height: calc(var(--app-vh) - 96px);
       overflow: auto;
       padding: 11px;
     }
@@ -620,7 +636,7 @@
       display: grid;
       align-items: center;
       gap: 2px;
-      width: 260px;
+      width: 258px;
       max-width: 32vw;
       min-width: 180px;
       padding: 0 8px;
@@ -665,8 +681,8 @@
       position: fixed;
       left: 50%;
       top: 50%;
-      z-index: 5;
-      width: min(360px, calc(100vw - 36px));
+      z-index: 9;
+      width: min(360px, calc(var(--app-vw) - 36px));
       padding: 14px;
       border: 1px solid var(--line);
       border-radius: 8px;
@@ -695,7 +711,7 @@
       }
 
       .hud {
-        width: min(320px, calc(100vw - 36px));
+        width: min(320px, calc(var(--app-vw) - 36px));
       }
     }
 
@@ -706,21 +722,21 @@
 
       .topbar {
         left: 10px;
-        right: 10px;
         top: 10px;
-        width: auto;
-        max-width: none;
-        min-height: 58px;
-        padding: 7px;
+        right: auto;
+        width: calc(var(--app-vw) - 20px);
+        max-width: calc(var(--app-vw) - 20px);
+        min-height: 54px;
+        padding: 6px;
         gap: 6px;
         transform: none;
         border-radius: 18px;
       }
 
       .topbar .icon-btn {
-        width: 34px;
-        min-width: 34px;
-        min-height: 34px;
+        width: 32px;
+        min-width: 32px;
+        min-height: 32px;
       }
 
       .bridge-status strong {
@@ -733,20 +749,32 @@
 
       .toolbar {
         left: 10px;
-        right: 10px;
-        bottom: 10px;
+        right: auto;
+        top: calc(var(--app-vh) - 86px);
+        bottom: auto;
         display: grid;
         grid-template-columns: auto minmax(0, 1fr) auto;
-        width: auto;
-        max-width: none;
+        width: calc(var(--app-vw) - 20px);
+        max-width: calc(var(--app-vw) - 20px);
+        min-height: 76px;
+        padding: 8px;
         transform: none;
         justify-content: stretch;
       }
 
       .toolbar button {
-        min-width: 0;
-        padding: 0 8px;
-        font-size: 12px;
+        width: 44px;
+        min-width: 44px;
+        padding: 0 6px;
+        font-size: 11px;
+      }
+
+      .mode-label-long {
+        display: none;
+      }
+
+      .mode-label-short {
+        display: inline;
       }
 
       .bottom-time {
@@ -812,13 +840,13 @@
   </section>
 
   <nav class="panel toolbar" aria-label="view modes">
-    <button data-view-mode="interior" class="active" aria-pressed="true">家装设计</button>
+    <button data-view-mode="interior" class="active" aria-label="家装设计" aria-pressed="true"><span class="mode-label-long" aria-hidden="true">家装设计</span><span class="mode-label-short" aria-hidden="true">家装</span></button>
     <div class="bottom-time">
       <span>Daytime</span>
       <strong id="timeLabel">1:00 PM</strong>
       <input class="time-slider" id="timeSlider" type="range" min="8" max="20" value="13" step="0.25" aria-label="daytime" />
     </div>
-    <button data-view-mode="mep" aria-pressed="false">管网风暖</button>
+    <button data-view-mode="mep" aria-label="管网风暖" aria-pressed="false"><span class="mode-label-long" aria-hidden="true">管网风暖</span><span class="mode-label-short" aria-hidden="true">管网</span></button>
   </nav>
 
   <div class="loading" id="loading">正在加载 1:1 BIM 模型…</div>
@@ -890,15 +918,35 @@
     document.body.appendChild(pivotElement);
     cameraControl.pivotElement = pivotElement;
 
-    viewer.scene.canvas.canvas.addEventListener("contextmenu", (event) => event.preventDefault());
-    viewer.scene.canvas.canvas.addEventListener("pointerdown", () => {
+    const viewerCanvas = viewer.scene.canvas.canvas;
+
+    function finishPointerInteraction(event) {
+      if (!pointerDragging) return;
+      pointerDragging = false;
+      try {
+        if (event?.pointerId !== undefined) viewerCanvas.releasePointerCapture(event.pointerId);
+      } catch {
+        // Some browsers release capture automatically when the pointer leaves the canvas.
+      }
+      markCameraInteracting();
+    }
+
+    viewerCanvas.addEventListener("contextmenu", (event) => event.preventDefault());
+    viewerCanvas.addEventListener("pointerdown", (event) => {
       pointerDragging = true;
+      try {
+        viewerCanvas.setPointerCapture(event.pointerId);
+      } catch {
+        // Pointer capture is best-effort; camera control still works without it.
+      }
       markCameraInteracting();
     });
-    window.addEventListener("pointerup", () => {
+    window.addEventListener("pointerup", finishPointerInteraction);
+    window.addEventListener("pointercancel", finishPointerInteraction);
+    window.addEventListener("blur", () => {
       pointerDragging = false;
     });
-    viewer.scene.canvas.canvas.addEventListener("pointermove", () => {
+    viewerCanvas.addEventListener("pointermove", () => {
       if (pointerDragging) markCameraInteracting();
     });
 
@@ -963,15 +1011,21 @@
     let overlayDrawRequested = false;
     let overlayNeedsForceDraw = false;
     let overlayDeferredTimer = null;
+    let overlayResizeRAF = null;
+    let overlayWidth = 0;
+    let overlayHeight = 0;
+    let overlayRatio = 0;
     let lastOverlayDrawTime = 0;
     let lastCameraSignature = "";
     let interactionIdleTimer = null;
+    let lastInteractionAt = 0;
     let interactionActive = false;
     let pointerDragging = false;
     let smoothWheelRAF = null;
     let smoothWheelVelocity = 0;
     let smoothWheelFrames = 0;
-    const overlayFrameInterval = 66;
+    const overlayFrameInterval = 72;
+    const interactionIdleDelay = 240;
     let levelLayers = [];
     let activeLevelId = "all";
     let activeSystemCategory = "all";
@@ -1058,7 +1112,7 @@
     }
 
     function setCanvasCursor(value) {
-      viewer.scene.canvas.canvas.style.cursor = value;
+      viewerCanvas.style.cursor = value;
     }
 
     function captureCameraPose() {
@@ -1120,20 +1174,20 @@
     function getHyattInteriorTone(entity) {
       const text = getSemanticText(entity);
       if (text.includes("light") || text.includes("lamp") || text.includes("sconce") || text.includes("pendant")) return [1.0, 0.9, 0.68];
-      if (text.includes("glazing")) return [0.62, 0.78, 0.9];
-      if (text.includes("window") || text.includes("curtain wall") || text.includes("skylight")) return [0.18, 0.24, 0.28];
+      if (text.includes("glazing")) return [0.58, 0.74, 0.86];
+      if (text.includes("window") || text.includes("curtain wall") || text.includes("skylight")) return [0.2, 0.25, 0.28];
       if (text.includes("refrigerator") || text.includes("range") || text.includes("microwave") || text.includes("appliance") || text.includes("equipment")) return [0.42, 0.44, 0.43];
-      if (text.includes("door")) return [0.5, 0.38, 0.26];
-      if (text.includes("cabinet") || text.includes("cupboard") || text.includes("casework")) return [0.78, 0.72, 0.62];
+      if (text.includes("door")) return [0.56, 0.42, 0.28];
+      if (text.includes("cabinet") || text.includes("cupboard") || text.includes("casework")) return [0.76, 0.7, 0.6];
       if (text.includes("counter") || text.includes("top") || text.includes("vanity")) return [0.9, 0.88, 0.82];
       if (text.includes("toilet") || text.includes("bath") || text.includes("lavatory") || text.includes("basin") || text.includes("sink")) return [0.96, 0.95, 0.91];
       if (text.includes("bed") || text.includes("sofa")) return [0.78, 0.76, 0.7];
       if (text.includes("table") || text.includes("chair") || text.includes("furnishing")) return [0.64, 0.54, 0.42];
       if (text.includes("stair")) return [0.42, 0.4, 0.36];
-      if (text.includes("floor") || text.includes("slab")) return [0.82, 0.8, 0.74];
-      if (text.includes("wall")) return [0.96, 0.95, 0.9];
-      if (text.includes("roof") || text.includes("ceiling")) return [0.92, 0.93, 0.9];
-      return [0.86, 0.84, 0.78];
+      if (text.includes("floor") || text.includes("slab")) return [0.76, 0.74, 0.68];
+      if (text.includes("wall")) return [0.94, 0.93, 0.88];
+      if (text.includes("roof") || text.includes("ceiling")) return [0.88, 0.9, 0.88];
+      return [0.84, 0.82, 0.76];
     }
 
     function getHyattInteriorOpacity(entity) {
@@ -1148,21 +1202,21 @@
       }
       if (text.includes("glazing")) return 0.42;
       if (text.includes("window") || text.includes("curtain wall") || text.includes("skylight")) return 0.76;
-      if (text.includes("wall")) return 1;
+      if (text.includes("wall")) return 0.96;
       if (text.includes("slab") || text.includes("floor")) return 1;
       return 1;
     }
 
     function getMepEngineeringTone(entity) {
       const text = getSemanticText(entity);
-      if (text.includes("duct") || text.includes("hvac") || text.includes("air")) return [0.22, 0.64, 0.74];
-      if (text.includes("hydronic") || text.includes("heat")) return [0.72, 0.4, 0.74];
-      if (text.includes("hot")) return [0.82, 0.34, 0.28];
-      if (text.includes("cold")) return [0.24, 0.5, 0.82];
-      if (text.includes("drain")) return [0.5, 0.42, 0.78];
-      if (text.includes("electric") || text.includes("cable") || text.includes("conduit")) return [0.88, 0.66, 0.22];
-      if (text.includes("fixture")) return [0.34, 0.62, 0.48];
-      return [0.52, 0.56, 0.6];
+      if (text.includes("duct") || text.includes("hvac") || text.includes("air")) return [0.16, 0.66, 0.78];
+      if (text.includes("hydronic") || text.includes("heat")) return [0.72, 0.36, 0.78];
+      if (text.includes("hot")) return [0.88, 0.3, 0.24];
+      if (text.includes("cold")) return [0.18, 0.48, 0.86];
+      if (text.includes("drain")) return [0.48, 0.38, 0.82];
+      if (text.includes("electric") || text.includes("cable") || text.includes("conduit")) return [0.92, 0.68, 0.16];
+      if (text.includes("fixture")) return [0.28, 0.64, 0.48];
+      return [0.48, 0.54, 0.6];
     }
 
     function isRoofCoverObject(object) {
@@ -1194,10 +1248,10 @@
           if (!entity) return;
           if (viewMode === "interior") {
             entity.colorize = kind === "architecture" ? getHyattInteriorTone(entity) : getMepEngineeringTone(entity);
-            entity.opacity = kind === "architecture" ? getHyattInteriorOpacity(entity) : 0.08;
+            entity.opacity = kind === "architecture" ? getHyattInteriorOpacity(entity) : 0.06;
           } else {
             entity.colorize = kind === "mep" ? getMepEngineeringTone(entity) : [0.94, 0.94, 0.9];
-            entity.opacity = kind === "mep" ? 0.95 : 0.08;
+            entity.opacity = kind === "mep" ? 1 : 0.045;
           }
         });
       });
@@ -1634,14 +1688,30 @@
     }
 
     function resizeOverlay() {
-      const width = window.innerWidth;
-      const height = window.innerHeight;
+      const viewport = window.visualViewport;
+      const width = Math.round(viewport?.width || document.documentElement.clientWidth || window.innerWidth);
+      const height = Math.round(viewport?.height || document.documentElement.clientHeight || window.innerHeight);
       const ratio = window.devicePixelRatio || 1;
-      overlayCanvas.width = Math.floor(width * ratio);
-      overlayCanvas.height = Math.floor(height * ratio);
+      document.documentElement.style.setProperty("--app-vw", `${width}px`);
+      document.documentElement.style.setProperty("--app-vh", `${height}px`);
+      if (width === overlayWidth && height === overlayHeight && ratio === overlayRatio) return;
+      overlayWidth = width;
+      overlayHeight = height;
+      overlayRatio = ratio;
+      overlayCanvas.width = Math.max(1, Math.floor(width * ratio));
+      overlayCanvas.height = Math.max(1, Math.floor(height * ratio));
       overlayCanvas.style.width = `${width}px`;
       overlayCanvas.style.height = `${height}px`;
       overlayCtx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    }
+
+    function scheduleOverlayResize() {
+      if (overlayResizeRAF) return;
+      overlayResizeRAF = requestAnimationFrame(() => {
+        overlayResizeRAF = null;
+        resizeOverlay();
+        requestSemanticOverlayDraw(true);
+      });
     }
 
     function requestSemanticOverlayDraw(force = false) {
@@ -1664,6 +1734,7 @@
     }
 
     function markCameraInteracting() {
+      lastInteractionAt = performance.now();
       if (autoRotateEnabled) setAutoRotateEnabled(false);
       if (!interactionActive) {
         interactionActive = true;
@@ -1673,14 +1744,20 @@
         }
       }
       window.clearTimeout(interactionIdleTimer);
-      interactionIdleTimer = window.setTimeout(() => {
+      const settleInteraction = () => {
+        const remaining = interactionIdleDelay - (performance.now() - lastInteractionAt);
+        if (remaining > 0) {
+          interactionIdleTimer = window.setTimeout(settleInteraction, remaining);
+          return;
+        }
         interactionActive = false;
         overlayCanvas.classList.remove("interaction-lite");
         if (edgesEnabled) {
           setAllModelEdges(true);
         }
         requestSemanticOverlayDraw(true);
-      }, 180);
+      };
+      interactionIdleTimer = window.setTimeout(settleInteraction, interactionIdleDelay);
     }
 
     function drawSemanticOverlay() {
@@ -1897,7 +1974,7 @@
       const applyMode = () => {
         viewMode = mode;
         document.body.dataset.viewMode = mode;
-        document.querySelectorAll("button[data-view-mode]").forEach((button) => {
+        document.querySelectorAll(".toolbar button[data-view-mode]").forEach((button) => {
           const active = button.dataset.viewMode === mode;
           button.classList.toggle("active", active);
           button.setAttribute("aria-pressed", String(active));
@@ -2088,11 +2165,11 @@
       smoothWheelRAF = requestAnimationFrame(() => {
         markCameraInteracting();
         smoothWheelFrames += 1;
-        const delta = smoothWheelVelocity * 0.22;
+        const delta = smoothWheelVelocity * 0.18;
         viewer.camera.zoom(delta);
-        smoothWheelVelocity *= 0.42;
+        smoothWheelVelocity *= 0.46;
         requestSemanticOverlayDraw(false);
-        if (Math.abs(smoothWheelVelocity) > 0.02 && smoothWheelFrames < 8) {
+        if (Math.abs(smoothWheelVelocity) > 0.018 && smoothWheelFrames < 10) {
           runSmoothWheelZoom();
         } else {
           smoothWheelVelocity = 0;
@@ -2102,19 +2179,26 @@
       });
     }
 
-    viewer.scene.canvas.canvas.addEventListener("wheel", (event) => {
+    function normalizeWheelDelta(event) {
+      const divisor = event.deltaMode === WheelEvent.DOM_DELTA_LINE ? 3 : 96;
+      const raw = event.deltaY / divisor;
+      return Math.max(-1.6, Math.min(1.6, raw));
+    }
+
+    viewerCanvas.addEventListener("wheel", (event) => {
       event.preventDefault();
       if (autoRotateEnabled) setAutoRotateEnabled(false);
-      const normalized = Math.max(-1.8, Math.min(1.8, event.deltaY / 120));
-      smoothWheelVelocity += normalized * 1.45;
-      smoothWheelVelocity = Math.max(-7.5, Math.min(7.5, smoothWheelVelocity));
+      const normalized = normalizeWheelDelta(event);
+      if (Math.abs(normalized) < 0.025) return;
+      smoothWheelVelocity += normalized * 1.18;
+      smoothWheelVelocity = Math.max(-6.8, Math.min(6.8, smoothWheelVelocity));
       if (!smoothWheelRAF) {
         smoothWheelFrames = 0;
         runSmoothWheelZoom();
       }
     }, { passive: false });
 
-    document.querySelectorAll("button[data-view-mode]").forEach((button) => {
+    document.querySelectorAll(".toolbar button[data-view-mode]").forEach((button) => {
       button.addEventListener("click", () => setViewMode(button.dataset.viewMode, false));
     });
 
@@ -2136,10 +2220,10 @@
         搜索结果已更新。选择列表里的对象后，这里会显示来源、分类、坐标和是否已经进入 XKT 几何层。
       `;
     });
-    window.addEventListener("resize", () => {
-      resizeOverlay();
-      requestSemanticOverlayDraw(true);
-    });
+    window.addEventListener("resize", scheduleOverlayResize);
+    window.addEventListener("orientationchange", scheduleOverlayResize);
+    window.visualViewport?.addEventListener("resize", scheduleOverlayResize);
+    window.visualViewport?.addEventListener("scroll", scheduleOverlayResize);
     viewer.scene.on("tick", () => {
       const camera = viewer.camera;
       const now = performance.now();
@@ -2148,7 +2232,9 @@
         camera.orbitYaw(elapsed * 0.0028);
       }
       lastTickTime = now;
-      const signature = `${camera.eye.join(",")}|${camera.look.join(",")}|${camera.up.join(",")}`;
+      const signature = [...camera.eye, ...camera.look, ...camera.up]
+        .map((value) => Number(value).toFixed(3))
+        .join("|");
       if (signature !== lastCameraSignature) {
         lastCameraSignature = signature;
         requestSemanticOverlayDraw(false);
