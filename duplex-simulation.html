@@ -18,15 +18,15 @@
       --green: #198b61;
       --amber: #c88613;
       --violet: #8158d9;
-      --grade-brightness: 1.01;
-      --grade-contrast: 1.04;
-      --grade-saturation: 1.06;
+      --grade-brightness: 1.02;
+      --grade-contrast: 1.02;
+      --grade-saturation: 0.96;
       --sun-x: 18%;
       --sun-y: 24%;
-      --sun-alpha: 0.14;
-      --bloom-alpha: 0.1;
-      --warm-alpha: 0.16;
-      --cool-alpha: 0.08;
+      --sun-alpha: 0.04;
+      --bloom-alpha: 0.08;
+      --warm-alpha: 0.025;
+      --cool-alpha: 0.045;
     }
 
     * {
@@ -40,7 +40,7 @@
       margin: 0;
       overflow: hidden;
       color: var(--ink);
-      background: #111;
+      background: #eef2f3;
       font-family: Inter, "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
     }
 
@@ -51,9 +51,8 @@
       pointer-events: none;
       content: "";
       background:
-        linear-gradient(90deg, rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0) 9%, rgba(0, 0, 0, 0) 91%, rgba(0, 0, 0, 0.82)),
-        radial-gradient(ellipse at 50% 42%, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0) 46%),
-        radial-gradient(ellipse at center, rgba(255, 255, 255, 0), rgba(36, 42, 44, 0.1) 100%);
+        radial-gradient(ellipse at 50% 42%, rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0) 50%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.42), rgba(238, 244, 246, 0.18));
     }
 
     #viewer {
@@ -62,38 +61,14 @@
       width: 100%;
       height: 100%;
       background:
-        radial-gradient(ellipse at 50% 48%, #fbfbf8 0%, #e0e3df 62%, #aeb5b1 100%);
+        radial-gradient(ellipse at 50% 48%, #fbfcfb 0%, #edf3f3 64%, #d9e3e4 100%);
       filter: brightness(var(--grade-brightness)) contrast(var(--grade-contrast)) saturate(var(--grade-saturation));
       touch-action: none;
       user-select: none;
     }
 
-    #pbrViewer {
-      position: fixed;
-      inset: 0;
-      z-index: 1;
-      width: 100%;
-      height: 100%;
-      pointer-events: none;
-      opacity: 0;
-      transition: opacity 260ms ease;
-    }
-
-    body.pbr-ready[data-view-mode="interior"] #pbrViewer {
-      opacity: 1;
-    }
-
-    body.pbr-ready[data-view-mode="interior"] #viewer {
-      opacity: 0;
-    }
-
     body[data-view-mode="mep"] #viewer {
       opacity: 1;
-    }
-
-    #pbrViewer.pbr-hidden {
-      display: none !important;
-      opacity: 0 !important;
     }
 
     .render-grade,
@@ -112,16 +87,15 @@
         linear-gradient(135deg, rgba(255, 232, 190, var(--warm-alpha)), rgba(255, 255, 255, 0) 42%),
         linear-gradient(315deg, rgba(186, 211, 230, var(--cool-alpha)), rgba(255, 255, 255, 0) 46%);
       mix-blend-mode: screen;
-      opacity: 0.22;
+      opacity: 0.08;
     }
 
     .render-grade::before {
       content: "";
       background:
-        linear-gradient(90deg, rgba(0, 0, 0, 0.34), rgba(0, 0, 0, 0) 12%, rgba(0, 0, 0, 0) 88%, rgba(0, 0, 0, 0.34)),
-        radial-gradient(ellipse at center, rgba(255, 255, 255, 0), rgba(0, 0, 0, 0.16) 100%);
+        radial-gradient(ellipse at center, rgba(255, 255, 255, 0), rgba(95, 110, 118, 0.035) 100%);
       mix-blend-mode: multiply;
-      opacity: 0.72;
+      opacity: 0.16;
     }
 
     .render-grade::after {
@@ -130,17 +104,19 @@
         radial-gradient(ellipse at 50% 38%, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0) 34%),
         linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.04));
       mix-blend-mode: soft-light;
-      opacity: 0.68;
+      opacity: 0.18;
     }
 
     #navCubeCanvas {
       position: fixed;
-      right: 18px;
+      right: 366px;
       bottom: 86px;
       z-index: 2;
-      width: 150px;
-      height: 150px;
+      width: 118px;
+      height: 118px;
       pointer-events: none;
+      opacity: 0.58;
+      filter: saturate(0.78) brightness(1.05);
     }
 
     #semanticOverlay {
@@ -393,7 +369,8 @@
       display: flex;
       gap: 9px;
       align-items: center;
-      min-width: min(430px, calc(100vw - 40px));
+      width: min(430px, calc(100vw - 40px));
+      min-width: 0;
       min-height: 72px;
       padding: 9px 12px;
       transform: translateX(-50%);
@@ -643,7 +620,9 @@
       display: grid;
       align-items: center;
       gap: 2px;
-      min-width: 260px;
+      width: 260px;
+      max-width: 32vw;
+      min-width: 180px;
       padding: 0 8px;
       color: rgba(28, 32, 30, 0.72);
       font-size: 11px;
@@ -707,6 +686,10 @@
     }
 
     @media (max-width: 900px) {
+      #navCubeCanvas {
+        display: none;
+      }
+
       .schema {
         display: none;
       }
@@ -722,24 +705,61 @@
       }
 
       .topbar {
+        left: 10px;
+        right: 10px;
         top: 10px;
+        width: auto;
+        max-width: none;
+        min-height: 58px;
+        padding: 7px;
+        gap: 6px;
+        transform: none;
+        border-radius: 18px;
+      }
+
+      .topbar .icon-btn {
+        width: 34px;
+        min-width: 34px;
+        min-height: 34px;
+      }
+
+      .bridge-status strong {
+        font-size: 13px;
+      }
+
+      .bridge-status span {
+        font-size: 11px;
       }
 
       .toolbar {
+        left: 10px;
+        right: 10px;
         bottom: 10px;
-        width: calc(100vw - 20px);
-        justify-content: center;
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        width: auto;
+        max-width: none;
+        transform: none;
+        justify-content: stretch;
+      }
+
+      .toolbar button {
+        min-width: 0;
+        padding: 0 8px;
+        font-size: 12px;
       }
 
       .bottom-time {
-        min-width: 140px;
+        width: 100%;
+        max-width: none;
+        min-width: 0;
+        padding: 0 4px;
       }
     }
   </style>
 </head>
 <body>
   <canvas id="viewer"></canvas>
-  <canvas id="pbrViewer"></canvas>
   <div class="render-grade" id="renderGrade"></div>
   <canvas id="semanticOverlay"></canvas>
   <canvas id="navCubeCanvas"></canvas>
@@ -763,15 +783,15 @@
   </section>
 
   <nav class="panel topbar" aria-label="view tools">
-    <button class="icon-btn" id="homeBtn" title="重置视角">⌂</button>
+    <button class="icon-btn" id="homeBtn" title="重置视角" aria-label="重置视角">⌂</button>
     <div class="bridge-status">
       <strong id="bridgeModeTitle">Residential view</strong>
       <span id="bridgeModeText">Walkthrough · Level 1</span>
     </div>
-    <button class="icon-btn" id="autoRotateBtn" title="环绕展示">↻</button>
-    <button class="icon-btn" id="xrayBtn" title="半透明">◫</button>
-    <button class="icon-btn" id="edgesBtn" title="边线">▧</button>
-    <button class="icon-btn hidden" id="overlayBtn" title="语义点位">•</button>
+    <button class="icon-btn" id="autoRotateBtn" title="环绕展示" aria-label="环绕展示" aria-pressed="false">↻</button>
+    <button class="icon-btn" id="xrayBtn" title="半透明" aria-label="半透明" aria-pressed="false">◫</button>
+    <button class="icon-btn" id="edgesBtn" title="边线" aria-label="边线" aria-pressed="false">▧</button>
+    <button class="icon-btn hidden" id="overlayBtn" title="语义点位" aria-label="语义点位" aria-pressed="false">•</button>
   </nav>
 
   <section class="panel schema" aria-label="schema summary">
@@ -792,13 +812,13 @@
   </section>
 
   <nav class="panel toolbar" aria-label="view modes">
-    <button data-view-mode="interior" class="active">家装设计</button>
+    <button data-view-mode="interior" class="active" aria-pressed="true">家装设计</button>
     <div class="bottom-time">
       <span>Daytime</span>
       <strong id="timeLabel">1:00 PM</strong>
       <input class="time-slider" id="timeSlider" type="range" min="8" max="20" value="13" step="0.25" aria-label="daytime" />
     </div>
-    <button data-view-mode="mep">管网风暖</button>
+    <button data-view-mode="mep" aria-pressed="false">管网风暖</button>
   </nav>
 
   <div class="loading" id="loading">正在加载 1:1 BIM 模型…</div>
@@ -812,7 +832,6 @@
       DirLight,
       math
     } from "./node_modules/@xeokit/xeokit-sdk/dist/xeokit-sdk.es.js";
-    import * as THREE from "./node_modules/three/build/three.module.js";
 
     const modelPaths = {
       architecture: {
@@ -836,14 +855,14 @@
       saoEnabled: true
     });
 
-    viewer.scene.sao.enabled = true;
-    viewer.scene.sao.numSamples = 42;
-    viewer.scene.sao.intensity = 0.24;
-    viewer.scene.sao.bias = 0.44;
-    viewer.scene.sao.scale = 1.08;
-    viewer.scene.sao.kernelRadius = 84;
-    viewer.scene.sao.blendCutoff = 0.18;
-    viewer.scene.sao.blendFactor = 0.72;
+    viewer.scene.sao.enabled = false;
+    viewer.scene.sao.numSamples = 24;
+    viewer.scene.sao.intensity = 0.06;
+    viewer.scene.sao.bias = 0.62;
+    viewer.scene.sao.scale = 0.55;
+    viewer.scene.sao.kernelRadius = 42;
+    viewer.scene.sao.blendCutoff = 0.35;
+    viewer.scene.sao.blendFactor = 0.22;
     viewer.scene.sao.blur = true;
     viewer.scene.gammaOutput = true;
     viewer.scene.gammaFactor = 2.18;
@@ -886,44 +905,44 @@
     new NavCubePlugin(viewer, {
       canvasId: "navCubeCanvas",
       visible: true,
-      size: 150,
+      size: 118,
       alignment: "bottomRight",
-      bottomMargin: 78,
-      rightMargin: 18
+      bottomMargin: 86,
+      rightMargin: 366
     });
 
     viewer.scene.clearLights();
     const ambientLight = new AmbientLight(viewer.scene, {
       id: "hotelAmbient",
-      color: [0.98, 0.98, 0.95],
-      intensity: 0.9
+      color: [1.0, 1.0, 0.98],
+      intensity: 1.34
     });
     const keyLight = new DirLight(viewer.scene, {
       id: "hotelKey",
-      dir: [-0.42, -0.86, -0.22],
-      color: [1.0, 0.95, 0.84],
-      intensity: 0.62,
+      dir: [-0.34, -0.82, -0.34],
+      color: [1.0, 0.98, 0.94],
+      intensity: 0.92,
       space: "view"
     });
     const fillLight = new DirLight(viewer.scene, {
       id: "hotelFill",
       dir: [0.62, -0.28, 0.52],
-      color: [0.82, 0.9, 0.96],
-      intensity: 0.34,
+      color: [0.9, 0.96, 1.0],
+      intensity: 0.58,
       space: "view"
     });
     const windowLight = new DirLight(viewer.scene, {
       id: "windowDaylight",
       dir: [-0.18, -0.62, -0.76],
-      color: [0.82, 0.9, 1.0],
-      intensity: 0.28,
+      color: [0.86, 0.95, 1.0],
+      intensity: 0.62,
       space: "view"
     });
     const interiorBounceLight = new DirLight(viewer.scene, {
       id: "interiorBounce",
       dir: [0.08, 0.42, 0.24],
-      color: [1.0, 0.88, 0.72],
-      intensity: 0.16,
+      color: [1.0, 0.92, 0.78],
+      intensity: 0.3,
       space: "view"
     });
 
@@ -966,7 +985,7 @@
     let lastTickTime = 0;
     let roomRuntimeIndex = new Map();
     let currentFocusedSpace = null;
-    let activePBRSpaceId = null;
+    let initialViewFocused = false;
     document.body.dataset.viewMode = viewMode;
 
     const categoryColors = {
@@ -981,237 +1000,6 @@
       plumbing_hot_water: "#d94b4b",
       plumbing_other: "#5f6978"
     };
-
-    const pbrCanvas = document.querySelector("#pbrViewer");
-    const pbrRenderer = new THREE.WebGLRenderer({
-      canvas: pbrCanvas,
-      antialias: true,
-      alpha: true,
-      powerPreference: "high-performance"
-    });
-    pbrRenderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.6));
-    pbrRenderer.setSize(window.innerWidth, window.innerHeight, false);
-    pbrRenderer.outputColorSpace = THREE.SRGBColorSpace;
-    pbrRenderer.toneMapping = THREE.ACESFilmicToneMapping;
-    pbrRenderer.toneMappingExposure = 1.12;
-    pbrRenderer.shadowMap.enabled = true;
-    pbrRenderer.shadowMap.type = THREE.PCFSoftShadowMap;
-
-    const pbrScene = new THREE.Scene();
-    const pbrCamera = new THREE.PerspectiveCamera(62, window.innerWidth / window.innerHeight, 0.05, 120);
-    const pbrRoot = new THREE.Group();
-    pbrScene.add(pbrRoot);
-
-    const pbrMaterials = {};
-    const spaceCameraPresets = new Map();
-    let pbrSunLight = null;
-    let pbrBounceLight = null;
-    let pbrHemiLight = null;
-
-    function makeStripeTexture(colors, width = 256, height = 256, direction = "vertical") {
-      const canvas = document.createElement("canvas");
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext("2d");
-      ctx.fillStyle = colors[0];
-      ctx.fillRect(0, 0, width, height);
-      for (let i = 0; i < 58; i += 1) {
-        const color = colors[i % colors.length];
-        ctx.fillStyle = color;
-        if (direction === "vertical") {
-          const x = Math.floor((i * 37) % width);
-          ctx.globalAlpha = 0.18 + ((i % 7) / 24);
-          ctx.fillRect(x, 0, 2 + (i % 5), height);
-        } else {
-          const y = Math.floor((i * 31) % height);
-          ctx.globalAlpha = 0.12 + ((i % 7) / 28);
-          ctx.fillRect(0, y, width, 2 + (i % 4));
-        }
-      }
-      ctx.globalAlpha = 1;
-      const texture = new THREE.CanvasTexture(canvas);
-      texture.colorSpace = THREE.SRGBColorSpace;
-      texture.wrapS = THREE.RepeatWrapping;
-      texture.wrapT = THREE.RepeatWrapping;
-      texture.anisotropy = 8;
-      return texture;
-    }
-
-    function makeMarbleTexture() {
-      const canvas = document.createElement("canvas");
-      canvas.width = 512;
-      canvas.height = 512;
-      const ctx = canvas.getContext("2d");
-      const gradient = ctx.createLinearGradient(0, 0, 512, 512);
-      gradient.addColorStop(0, "#f7f4ec");
-      gradient.addColorStop(0.52, "#fffdf7");
-      gradient.addColorStop(1, "#ded8cc");
-      ctx.fillStyle = gradient;
-      ctx.fillRect(0, 0, 512, 512);
-      for (let i = 0; i < 34; i += 1) {
-        ctx.beginPath();
-        ctx.strokeStyle = i % 3 === 0 ? "rgba(128,132,126,0.28)" : "rgba(187,178,164,0.18)";
-        ctx.lineWidth = 1 + (i % 4) * 0.7;
-        const y = (i * 41) % 520;
-        ctx.moveTo(-40, y);
-        ctx.bezierCurveTo(140, y - 90 + (i % 5) * 18, 280, y + 78, 560, y - 24);
-        ctx.stroke();
-      }
-      const texture = new THREE.CanvasTexture(canvas);
-      texture.colorSpace = THREE.SRGBColorSpace;
-      texture.wrapS = THREE.RepeatWrapping;
-      texture.wrapT = THREE.RepeatWrapping;
-      texture.anisotropy = 8;
-      return texture;
-    }
-
-    function makePBRMaterials() {
-      const wood = makeStripeTexture(["#ad8254", "#c59c69", "#8f643d", "#d1aa78"], 512, 512);
-      wood.repeat.set(4.8, 3.2);
-      const fabric = makeStripeTexture(["#d7d0c1", "#bfb7a6", "#ece5d8"], 256, 256, "horizontal");
-      fabric.repeat.set(2, 2);
-      const marble = makeMarbleTexture();
-      marble.repeat.set(1.6, 1.1);
-      pbrMaterials.wall = new THREE.MeshStandardMaterial({ color: "#f2eee5", roughness: 0.74, metalness: 0 });
-      pbrMaterials.floor = new THREE.MeshStandardMaterial({ map: wood, roughness: 0.42, metalness: 0.02 });
-      pbrMaterials.fabric = new THREE.MeshStandardMaterial({ map: fabric, color: "#ddd5c6", roughness: 0.86, metalness: 0 });
-      pbrMaterials.darkFabric = new THREE.MeshStandardMaterial({ color: "#908a7d", roughness: 0.88, metalness: 0 });
-      pbrMaterials.wood = new THREE.MeshStandardMaterial({ color: "#8e6039", roughness: 0.45, metalness: 0.02 });
-      pbrMaterials.marble = new THREE.MeshStandardMaterial({ map: marble, color: "#fffaf0", roughness: 0.22, metalness: 0.02 });
-      pbrMaterials.chrome = new THREE.MeshStandardMaterial({ color: "#d8d5cb", roughness: 0.16, metalness: 0.86 });
-      pbrMaterials.blackMetal = new THREE.MeshStandardMaterial({ color: "#111312", roughness: 0.28, metalness: 0.72 });
-      pbrMaterials.glass = new THREE.MeshPhysicalMaterial({ color: "#d8eef8", roughness: 0.05, metalness: 0, transmission: 0.4, transparent: true, opacity: 0.46 });
-      pbrMaterials.green = new THREE.MeshStandardMaterial({ color: "#4f6f4a", roughness: 0.68, metalness: 0 });
-      pbrMaterials.ceramic = new THREE.MeshStandardMaterial({ color: "#f8f6ef", roughness: 0.2, metalness: 0.01 });
-      pbrMaterials.appliance = new THREE.MeshStandardMaterial({ color: "#393b39", roughness: 0.22, metalness: 0.66 });
-      pbrMaterials.warmLight = new THREE.MeshStandardMaterial({ color: "#ffe4aa", emissive: "#ffb44f", emissiveIntensity: 1.4, roughness: 0.35 });
-    }
-
-    function box(name, size, position, material, rotation = [0, 0, 0], parent = pbrRoot) {
-      const mesh = new THREE.Mesh(new THREE.BoxGeometry(size[0], size[1], size[2]), material);
-      mesh.name = name;
-      mesh.position.set(position[0], position[1], position[2]);
-      mesh.rotation.set(rotation[0], rotation[1], rotation[2]);
-      mesh.castShadow = true;
-      mesh.receiveShadow = true;
-      parent.add(mesh);
-      return mesh;
-    }
-
-    function cylinder(name, radius, depth, position, material, rotation = [0, 0, 0], parent = pbrRoot) {
-      const mesh = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, depth, 32), material);
-      mesh.name = name;
-      mesh.position.set(position[0], position[1], position[2]);
-      mesh.rotation.set(rotation[0], rotation[1], rotation[2]);
-      mesh.castShadow = true;
-      mesh.receiveShadow = true;
-      parent.add(mesh);
-      return mesh;
-    }
-
-    function addPlant(x, z, scale = 1, parent = pbrRoot, yOffset = 0) {
-      cylinder("Plant pot", 0.22 * scale, 0.34 * scale, [x, yOffset + 0.17 * scale, z], pbrMaterials.wood, [0, 0, 0], parent);
-      for (let i = 0; i < 14; i += 1) {
-        const leaf = new THREE.Mesh(new THREE.SphereGeometry(0.12 * scale, 12, 8), pbrMaterials.green);
-        leaf.position.set(x + Math.sin(i * 1.7) * 0.28 * scale, yOffset + 0.48 * scale + (i % 5) * 0.08 * scale, z + Math.cos(i * 1.3) * 0.24 * scale);
-        leaf.scale.set(1.0, 0.46, 0.72);
-        leaf.castShadow = true;
-        parent.add(leaf);
-      }
-    }
-
-    function addSofa(x, z, rot = 0, parent = pbrRoot, yOffset = 0) {
-      const group = new THREE.Group();
-      group.position.set(x, yOffset, z);
-      group.rotation.y = rot;
-      parent.add(group);
-      box("Sofa seat", [2.3, 0.34, 0.82], [0, 0.42, 0], pbrMaterials.fabric, [0, 0, 0], group);
-      box("Sofa back", [2.38, 0.78, 0.18], [0, 0.76, 0.4], pbrMaterials.fabric, [0, 0, 0], group);
-      box("Sofa arm L", [0.18, 0.62, 0.82], [-1.18, 0.62, 0], pbrMaterials.fabric, [0, 0, 0], group);
-      box("Sofa arm R", [0.18, 0.62, 0.82], [1.18, 0.62, 0], pbrMaterials.fabric, [0, 0, 0], group);
-      box("Sofa pillow", [0.46, 0.25, 0.12], [-0.46, 0.78, -0.28], pbrMaterials.darkFabric, [0.1, 0, 0], group);
-      box("Sofa pillow", [0.46, 0.25, 0.12], [0.36, 0.78, -0.28], pbrMaterials.darkFabric, [0.1, 0, 0], group);
-    }
-
-    function addKitchen(x, z, parent = pbrRoot, yOffset = 0) {
-      box("Kitchen island marble", [2.55, 0.16, 1.05], [x, yOffset + 0.88, z], pbrMaterials.marble, [0, 0, 0], parent);
-      box("Kitchen island base", [2.35, 0.82, 0.82], [x, yOffset + 0.43, z], pbrMaterials.wall, [0, 0, 0], parent);
-      cylinder("Faucet neck", 0.035, 0.58, [x + 0.32, yOffset + 1.22, z - 0.1], pbrMaterials.chrome, [Math.PI / 2, 0, 0], parent);
-      cylinder("Faucet stem", 0.04, 0.36, [x + 0.1, yOffset + 1.08, z - 0.1], pbrMaterials.chrome, [0, 0, 0], parent);
-      box("Sink basin", [0.68, 0.04, 0.42], [x - 0.2, yOffset + 0.98, z - 0.05], pbrMaterials.chrome, [0, 0, 0], parent);
-      box("Refrigerator", [0.8, 1.82, 0.58], [x + 1.15, yOffset + 0.92, z + 0.55], pbrMaterials.appliance, [0, 0, 0], parent);
-      box("Cabinets", [2.4, 0.78, 0.42], [x + 0.2, yOffset + 0.48, z + 1.15], pbrMaterials.wood, [0, 0, 0], parent);
-      box("Countertop", [2.48, 0.12, 0.5], [x + 0.2, yOffset + 0.9, z + 1.15], pbrMaterials.marble, [0, 0, 0], parent);
-      cylinder("Pendant light", 0.13, 0.28, [x - 0.55, yOffset + 2.18, z], pbrMaterials.warmLight, [0, 0, 0], parent);
-      cylinder("Pendant light", 0.13, 0.28, [x + 0.45, yOffset + 2.18, z], pbrMaterials.warmLight, [0, 0, 0], parent);
-    }
-
-    function addBathroom(x, z, parent = pbrRoot, yOffset = 0) {
-      box("Vanity cabinet", [1.8, 0.72, 0.46], [x, yOffset + 0.42, z], pbrMaterials.wall, [0, 0, 0], parent);
-      box("Vanity marble top", [1.9, 0.12, 0.55], [x, yOffset + 0.84, z], pbrMaterials.marble, [0, 0, 0], parent);
-      cylinder("Basin", 0.28, 0.08, [x - 0.45, yOffset + 0.93, z], pbrMaterials.ceramic, [0, 0, 0], parent);
-      cylinder("Basin", 0.28, 0.08, [x + 0.45, yOffset + 0.93, z], pbrMaterials.ceramic, [0, 0, 0], parent);
-      box("Mirror L", [0.54, 0.75, 0.04], [x - 0.45, yOffset + 1.48, z + 0.27], pbrMaterials.glass, [0, 0, 0], parent);
-      box("Mirror R", [0.54, 0.75, 0.04], [x + 0.45, yOffset + 1.48, z + 0.27], pbrMaterials.glass, [0, 0, 0], parent);
-      cylinder("Faucet L", 0.03, 0.24, [x - 0.45, yOffset + 1.02, z - 0.02], pbrMaterials.chrome, [0, 0, 0], parent);
-      cylinder("Faucet R", 0.03, 0.24, [x + 0.45, yOffset + 1.02, z - 0.02], pbrMaterials.chrome, [0, 0, 0], parent);
-      addPlant(x + 0.05, z - 0.08, 0.55, parent, yOffset);
-    }
-
-    function buildPBRHome() {
-      makePBRMaterials();
-      pbrScene.background = null;
-      pbrHemiLight = new THREE.HemisphereLight(0xffffff, 0xb7aa95, 1.8);
-      pbrScene.add(pbrHemiLight);
-      pbrSunLight = new THREE.DirectionalLight(0xfff4dc, 2.2);
-      pbrSunLight.position.set(-4, 5, -3);
-      pbrSunLight.castShadow = true;
-      pbrSunLight.shadow.mapSize.set(2048, 2048);
-      pbrSunLight.shadow.camera.near = 0.1;
-      pbrSunLight.shadow.camera.far = 24;
-      pbrSunLight.shadow.camera.left = -9;
-      pbrSunLight.shadow.camera.right = 9;
-      pbrSunLight.shadow.camera.top = 9;
-      pbrSunLight.shadow.camera.bottom = -9;
-      pbrScene.add(pbrSunLight);
-      pbrBounceLight = new THREE.PointLight(0xffddb2, 1.5, 9);
-      pbrBounceLight.position.set(4.5, 1.9, 2.2);
-      pbrScene.add(pbrBounceLight);
-
-      box("PBR floor", [11.5, 0.08, 7.4], [4.4, -0.04, 2.7], pbrMaterials.floor);
-      box("PBR ceiling", [11.5, 0.08, 7.4], [4.4, 2.55, 2.7], pbrMaterials.wall);
-      box("PBR back wall", [11.5, 2.55, 0.12], [4.4, 1.27, 6.35], pbrMaterials.wall);
-      box("PBR left wall", [0.12, 2.55, 7.4], [-1.35, 1.27, 2.7], pbrMaterials.wall);
-      box("PBR right wall", [0.12, 2.55, 7.4], [10.15, 1.27, 2.7], pbrMaterials.wall);
-      box("PBR front partial wall", [3.4, 2.55, 0.12], [0.35, 1.27, -0.95], pbrMaterials.wall);
-      box("Black window frame", [0.08, 1.7, 3.4], [-1.26, 1.3, 1.35], pbrMaterials.blackMetal);
-      box("Window glass", [0.04, 1.5, 3.1], [-1.31, 1.32, 1.35], pbrMaterials.glass);
-      addSofa(4.2, 3.6, 0);
-      addSofa(7.3, 2.5, -Math.PI / 2);
-      box("Coffee table", [1.55, 0.16, 0.86], [5.35, 0.5, 2.52], pbrMaterials.wood);
-      box("Coffee table marble inset", [1.18, 0.04, 0.56], [5.35, 0.6, 2.52], pbrMaterials.marble);
-      cylinder("Table leg", 0.045, 0.46, [4.7, 0.26, 2.16], pbrMaterials.wood);
-      cylinder("Table leg", 0.045, 0.46, [6.0, 0.26, 2.16], pbrMaterials.wood);
-      cylinder("Table leg", 0.045, 0.46, [4.7, 0.26, 2.9], pbrMaterials.wood);
-      cylinder("Table leg", 0.045, 0.46, [6.0, 0.26, 2.9], pbrMaterials.wood);
-      addKitchen(7.7, 0.72);
-      addBathroom(1.0, 5.5);
-      box("Bed base", [2.15, 0.42, 1.55], [8.0, 0.32, 5.0], pbrMaterials.fabric);
-      box("Bed pillows", [1.7, 0.25, 0.36], [8.0, 0.72, 4.42], pbrMaterials.wall);
-      box("Headboard", [2.24, 0.92, 0.16], [8.0, 0.78, 5.84], pbrMaterials.wood);
-      addPlant(0.6, 1.1, 1.25);
-
-      spaceCameraPresets.set("space:a102", { eye: [3.0, 1.55, 0.92], look: [7.05, 1.08, 2.78] });
-      spaceCameraPresets.set("space:a103", { eye: [6.4, 1.52, -0.4], look: [8.0, 1.08, 0.9] });
-      spaceCameraPresets.set("space:a104", { eye: [0.0, 1.45, 4.7], look: [1.0, 1.15, 5.42] });
-      spaceCameraPresets.set("space:a105", { eye: [7.0, 1.45, 3.7], look: [8.1, 1.0, 5.1] });
-      spaceCameraPresets.set("living", { eye: [3.0, 1.55, 0.92], look: [7.05, 1.08, 2.78] });
-      spaceCameraPresets.set("kitchen", { eye: [6.45, 1.55, -0.52], look: [7.9, 1.08, 0.74] });
-      spaceCameraPresets.set("bath", { eye: [-0.08, 1.48, 4.66], look: [1.02, 1.08, 5.44] });
-      spaceCameraPresets.set("bed", { eye: [6.85, 1.46, 3.7], look: [8.08, 1.0, 5.12] });
-      spaceCameraPresets.set("foyer", { eye: [1.35, 1.5, -0.62], look: [4.1, 1.22, 1.45] });
-      document.body.classList.add("pbr-ready");
-    }
 
     function getRenderableSpaces(meta = viewerPayload) {
       return (meta?.canonicalSpaces || [])
@@ -1242,163 +1030,26 @@
       return validLocation ? 3.1 : 0;
     }
 
-    function getRoomDimensions(space, kind) {
-      const area = Number(space?.area);
-      const base = {
-        living: [5.2, 4.7],
-        kitchen: [3.4, 3.15],
-        bath: [2.1, 1.95],
-        bed: [4.4, 4.05],
-        hall: [2.1, 3.2],
-        utility: [1.45, 1.2],
-        stair: [2.15, 2.25],
-        foyer: [3.25, 3.05],
-        room: [2.4, 2.2]
-      }[kind] || [2.4, 2.2];
-      if (!Number.isFinite(area) || area < 1) return base;
-      const currentArea = base[0] * base[1];
-      const scale = Math.sqrt(Math.min(1.18, Math.max(0.72, area / currentArea)));
-      return [base[0] * scale, base[1] * scale];
-    }
-
-    function getSchemaRoomPose(space, index) {
-      const kind = getSpaceKind(space);
-      const unit = String(space?.id || space?.name || "").toLowerCase().includes("space:b") || String(space?.name || "").toLowerCase().startsWith("b") ? "B" : "A";
-      const level = getSpaceLevel(space);
-      const unitX = unit === "A" ? 6.2 : 0.45;
-      const floorLift = level > 0 ? 0.14 : 0;
-      const sequence = {
-        foyer: [0, 0.05],
-        living: [0.55, 2.85],
-        kitchen: [1.45, 0.92],
-        bath: [-1.2, 4.75],
-        stair: [-0.95, 2.15],
-        hall: [0, 2.05],
-        bed: [0.95, 4.88],
-        utility: [-1.42, 0.75],
-        room: [-1.05, 3.35]
-      };
-      const offset = sequence[kind] || [((index % 3) - 1) * 1.7, 1.4 + Math.floor(index % 6) * 0.8];
-      if (kind === "bed" && String(space?.name || "").endsWith("3")) offset[0] = -1.35;
-      if (kind === "bath" && String(space?.name || "").endsWith("4")) offset[0] = -1.35;
-      return {
-        center: [unitX + offset[0], level + floorLift, offset[1]],
-        unit,
-        level,
-        kind,
-        size: getRoomDimensions(space, kind)
-      };
-    }
-
-    function addRoomShell(layout, space) {
-      const [width, depth] = layout.size;
-      const [x, y, z] = layout.center;
-      const height = 2.62;
-      const group = new THREE.Group();
-      group.name = `PBR ${space.name || space.id} ${space.longName || ""}`;
-      group.userData.spaceId = space.id;
-      pbrRoot.add(group);
-
-      box("Room wood floor", [width, 0.08, depth], [x, y - 0.04, z], pbrMaterials.floor, [0, 0, 0], group);
-      box("Room ceiling plane", [width, 0.06, depth], [x, y + height, z], pbrMaterials.wall, [0, 0, 0], group);
-      box("Room back wall", [width, height, 0.09], [x, y + height / 2, z + depth / 2], pbrMaterials.wall, [0, 0, 0], group);
-      box("Room left wall", [0.09, height, depth], [x - width / 2, y + height / 2, z], pbrMaterials.wall, [0, 0, 0], group);
-      box("Room right wall", [0.09, height, depth], [x + width / 2, y + height / 2, z], pbrMaterials.wall, [0, 0, 0], group);
-      box("Window frame", [0.06, 1.45, Math.max(1.2, depth * 0.48)], [x - width / 2 + 0.04, y + 1.35, z - depth * 0.08], pbrMaterials.blackMetal, [0, 0, 0], group);
-      box("Window glass", [0.035, 1.28, Math.max(1.0, depth * 0.42)], [x - width / 2 + 0.02, y + 1.35, z - depth * 0.08], pbrMaterials.glass, [0, 0, 0], group);
-      cylinder("Wall sconce", 0.1, 0.08, [x - width * 0.18, y + 1.72, z + depth / 2 - 0.08], pbrMaterials.warmLight, [Math.PI / 2, 0, 0], group);
-      cylinder("Wall sconce", 0.1, 0.08, [x + width * 0.18, y + 1.72, z + depth / 2 - 0.08], pbrMaterials.warmLight, [Math.PI / 2, 0, 0], group);
-      return group;
-    }
-
-    function addRoomFurniture(group, layout) {
-      const [width, depth] = layout.size;
-      const [x, y, z] = layout.center;
-      if (layout.kind === "living" || layout.kind === "foyer" || layout.kind === "room") {
-        addSofa(x - width * 0.05, z + depth * 0.02, 0, group, y);
-        box("Low timber table", [1.45, 0.18, 0.78], [x, y + 0.45, z - depth * 0.25], pbrMaterials.wood, [0, 0, 0], group);
-        box("Marble inset", [1.08, 0.04, 0.52], [x, y + 0.56, z - depth * 0.25], pbrMaterials.marble, [0, 0, 0], group);
-        addPlant(x + width * 0.33, z - depth * 0.32, 0.82, group, y);
-      } else if (layout.kind === "kitchen") {
-        addKitchen(x, z - depth * 0.12, group, y);
-      } else if (layout.kind === "bath") {
-        addBathroom(x, z, group, y);
-      } else if (layout.kind === "bed") {
-        box("Hotel bed base", [Math.min(2.25, width * 0.58), 0.42, 1.58], [x, y + 0.32, z + depth * 0.08], pbrMaterials.fabric, [0, 0, 0], group);
-        box("Soft pillows", [Math.min(1.7, width * 0.44), 0.25, 0.36], [x, y + 0.72, z - depth * 0.18], pbrMaterials.wall, [0, 0, 0], group);
-        box("Wood headboard", [Math.min(2.34, width * 0.62), 0.92, 0.16], [x, y + 0.78, z + depth * 0.36], pbrMaterials.wood, [0, 0, 0], group);
-        addPlant(x + width * 0.32, z - depth * 0.32, 0.68, group, y);
-      } else if (layout.kind === "utility" || layout.kind === "hall" || layout.kind === "stair") {
-        box("Built-in cabinet", [Math.min(1.6, width * 0.7), 1.52, 0.42], [x, y + 0.78, z + depth * 0.28], pbrMaterials.wood, [0, 0, 0], group);
-        box("Console top", [Math.min(1.7, width * 0.76), 0.12, 0.5], [x, y + 1.57, z + depth * 0.28], pbrMaterials.marble, [0, 0, 0], group);
-      }
-    }
-
-    function rebuildPBRFromSpatialMeta(meta) {
-      if (!meta || !pbrMaterials.wall) return;
-      pbrRoot.clear();
-      spaceCameraPresets.clear();
+    function buildSpaceRuntimeIndex(meta) {
+      if (!meta) return;
       roomRuntimeIndex = new Map();
-      const spaces = getRenderableSpaces(meta);
-      spaces.forEach((space, index) => {
-        const layout = getSchemaRoomPose(space, index);
-        const group = addRoomShell(layout, space);
-        addRoomFurniture(group, layout);
-        const [x, y, z] = layout.center;
-        const [width, depth] = layout.size;
-        const entryZ = z - depth / 2 + Math.min(1.15, depth * 0.28);
-        const targetZ = z + (layout.kind === "living" ? depth * 0.02 : Math.min(0.45, depth * 0.18));
-        const lateral = layout.kind === "kitchen" ? Math.min(0.65, width * 0.18) : 0;
-        const preset = {
-          eye: [x - lateral, y + 1.34, entryZ],
-          look: [x + lateral * 0.35, y + 0.42, targetZ]
-        };
-        spaceCameraPresets.set(space.id, preset);
+      getRenderableSpaces(meta).forEach((space) => {
+        const unit = String(space?.name || space?.id || "").toUpperCase().startsWith("B") ? "B" : "A";
+        const level = getSpaceLevel(space);
         roomRuntimeIndex.set(space.id, {
-          ...layout,
-          preset,
-          source: "canonical-space-schema",
-          confidence: "semantic-layout"
+          unit,
+          level,
+          kind: getSpaceKind(space),
+          source: "ifc-space-sourceRefs",
+          confidence: "cad-derived"
         });
       });
-      spaceCameraPresets.set("living", spaceCameraPresets.get("space:a102") || spaceCameraPresets.get("space:b102"));
-      spaceCameraPresets.set("kitchen", spaceCameraPresets.get("space:a103") || spaceCameraPresets.get("space:b103"));
-      spaceCameraPresets.set("bath", spaceCameraPresets.get("space:a104") || spaceCameraPresets.get("space:b104"));
-      spaceCameraPresets.set("bed", spaceCameraPresets.get("space:a202") || spaceCameraPresets.get("space:b202"));
-      spaceCameraPresets.set("foyer", spaceCameraPresets.get("space:a101") || spaceCameraPresets.get("space:b101"));
-      if (!currentFocusedSpace) {
-        currentFocusedSpace = spaces.find((space) => getSpaceKind(space) === "living") || spaces[0] || null;
-      }
-      setActivePBRSpace(currentFocusedSpace?.id || null);
       window.duplexViewerDebug = {
         viewer,
-        pbrRoot,
-        pbrScene,
         roomRuntimeIndex,
-        spaceCameraPresets,
         setViewMode,
         focusSpace
       };
-    }
-
-    function setActivePBRSpace(spaceId = null) {
-      activePBRSpaceId = spaceId;
-      pbrRoot.children.forEach((group) => {
-        if (!group.userData?.spaceId) return;
-        group.visible = !spaceId || group.userData.spaceId === spaceId;
-      });
-    }
-
-    function syncPBRCamera() {
-      const eye = viewer.camera.eye;
-      const look = viewer.camera.look;
-      const up = viewer.camera.up;
-      pbrCamera.position.set(eye[0], eye[1], eye[2]);
-      pbrCamera.up.set(up[0], up[1], up[2]);
-      pbrCamera.lookAt(look[0], look[1], look[2]);
-      pbrCamera.aspect = window.innerWidth / window.innerHeight;
-      pbrCamera.updateProjectionMatrix();
-      pbrRenderer.render(pbrScene, pbrCamera);
     }
 
     function setText(selector, value) {
@@ -1408,6 +1059,29 @@
 
     function setCanvasCursor(value) {
       viewer.scene.canvas.canvas.style.cursor = value;
+    }
+
+    function captureCameraPose() {
+      return {
+        eye: [...viewer.camera.eye],
+        look: [...viewer.camera.look],
+        up: [...viewer.camera.up]
+      };
+    }
+
+    function restoreCameraPose(pose) {
+      if (!pose) return;
+      viewer.camera.eye = [...pose.eye];
+      viewer.camera.look = [...pose.look];
+      viewer.camera.up = [...pose.up];
+      requestSemanticOverlayDraw(true);
+    }
+
+    function runWithLockedCamera(callback) {
+      const pose = captureCameraPose();
+      callback();
+      restoreCameraPose(pose);
+      requestAnimationFrame(() => restoreCameraPose(pose));
     }
 
     function escapeText(value) {
@@ -1445,22 +1119,21 @@
 
     function getHyattInteriorTone(entity) {
       const text = getSemanticText(entity);
-      if (text.includes("light") || text.includes("lamp") || text.includes("sconce") || text.includes("pendant")) return [1.0, 0.82, 0.5];
-      if (text.includes("window") || text.includes("curtain wall") || text.includes("skylight")) return [0.07, 0.08, 0.08];
-      if (text.includes("glazing")) return [0.58, 0.72, 0.78];
-      if (text.includes("refrigerator") || text.includes("range") || text.includes("microwave") || text.includes("appliance") || text.includes("equipment")) return [0.43, 0.44, 0.42];
-      if (text.includes("door")) return [0.34, 0.23, 0.15];
-      if (text.includes("cabinet") || text.includes("cupboard") || text.includes("casework")) return [0.42, 0.28, 0.18];
-      if (text.includes("counter") || text.includes("top") || text.includes("vanity")) return [0.82, 0.79, 0.7];
-      if (text.includes("toilet") || text.includes("bath") || text.includes("lavatory") || text.includes("basin") || text.includes("sink")) return [0.94, 0.93, 0.89];
-      if (text.includes("bed") || text.includes("sofa")) return [0.66, 0.61, 0.52];
-      if (text.includes("table") || text.includes("chair")) return [0.32, 0.21, 0.13];
-      if (text.includes("furnishing")) return [0.57, 0.46, 0.35];
-      if (text.includes("stair")) return [0.28, 0.26, 0.23];
-      if (text.includes("floor") || text.includes("slab")) return [0.5, 0.39, 0.27];
-      if (text.includes("wall")) return [0.87, 0.84, 0.78];
-      if (text.includes("roof") || text.includes("ceiling")) return [0.82, 0.79, 0.72];
-      return [0.76, 0.71, 0.62];
+      if (text.includes("light") || text.includes("lamp") || text.includes("sconce") || text.includes("pendant")) return [1.0, 0.9, 0.68];
+      if (text.includes("glazing")) return [0.62, 0.78, 0.9];
+      if (text.includes("window") || text.includes("curtain wall") || text.includes("skylight")) return [0.18, 0.24, 0.28];
+      if (text.includes("refrigerator") || text.includes("range") || text.includes("microwave") || text.includes("appliance") || text.includes("equipment")) return [0.42, 0.44, 0.43];
+      if (text.includes("door")) return [0.5, 0.38, 0.26];
+      if (text.includes("cabinet") || text.includes("cupboard") || text.includes("casework")) return [0.78, 0.72, 0.62];
+      if (text.includes("counter") || text.includes("top") || text.includes("vanity")) return [0.9, 0.88, 0.82];
+      if (text.includes("toilet") || text.includes("bath") || text.includes("lavatory") || text.includes("basin") || text.includes("sink")) return [0.96, 0.95, 0.91];
+      if (text.includes("bed") || text.includes("sofa")) return [0.78, 0.76, 0.7];
+      if (text.includes("table") || text.includes("chair") || text.includes("furnishing")) return [0.64, 0.54, 0.42];
+      if (text.includes("stair")) return [0.42, 0.4, 0.36];
+      if (text.includes("floor") || text.includes("slab")) return [0.82, 0.8, 0.74];
+      if (text.includes("wall")) return [0.96, 0.95, 0.9];
+      if (text.includes("roof") || text.includes("ceiling")) return [0.92, 0.93, 0.9];
+      return [0.86, 0.84, 0.78];
     }
 
     function getHyattInteriorOpacity(entity) {
@@ -1473,23 +1146,23 @@
         if (text.includes("door")) return 0.82;
         return 0.96;
       }
-      if (text.includes("glazing")) return 0.5;
-      if (text.includes("window") || text.includes("curtain wall") || text.includes("skylight")) return 0.92;
-      if (text.includes("wall")) return 0.96;
+      if (text.includes("glazing")) return 0.42;
+      if (text.includes("window") || text.includes("curtain wall") || text.includes("skylight")) return 0.76;
+      if (text.includes("wall")) return 1;
       if (text.includes("slab") || text.includes("floor")) return 1;
       return 1;
     }
 
     function getMepEngineeringTone(entity) {
       const text = getSemanticText(entity);
-      if (text.includes("duct") || text.includes("hvac") || text.includes("air")) return [0.08, 0.6, 0.72];
-      if (text.includes("hydronic") || text.includes("heat")) return [0.72, 0.31, 0.78];
-      if (text.includes("hot")) return [0.85, 0.24, 0.24];
-      if (text.includes("cold")) return [0.15, 0.42, 0.82];
-      if (text.includes("drain")) return [0.48, 0.34, 0.82];
-      if (text.includes("electric") || text.includes("cable") || text.includes("conduit")) return [0.88, 0.58, 0.08];
-      if (text.includes("fixture")) return [0.22, 0.62, 0.42];
-      return [0.45, 0.5, 0.56];
+      if (text.includes("duct") || text.includes("hvac") || text.includes("air")) return [0.22, 0.64, 0.74];
+      if (text.includes("hydronic") || text.includes("heat")) return [0.72, 0.4, 0.74];
+      if (text.includes("hot")) return [0.82, 0.34, 0.28];
+      if (text.includes("cold")) return [0.24, 0.5, 0.82];
+      if (text.includes("drain")) return [0.5, 0.42, 0.78];
+      if (text.includes("electric") || text.includes("cable") || text.includes("conduit")) return [0.88, 0.66, 0.22];
+      if (text.includes("fixture")) return [0.34, 0.62, 0.48];
+      return [0.52, 0.56, 0.6];
     }
 
     function isRoofCoverObject(object) {
@@ -1521,10 +1194,10 @@
           if (!entity) return;
           if (viewMode === "interior") {
             entity.colorize = kind === "architecture" ? getHyattInteriorTone(entity) : getMepEngineeringTone(entity);
-            entity.opacity = kind === "architecture" ? getHyattInteriorOpacity(entity) : 0.18;
+            entity.opacity = kind === "architecture" ? getHyattInteriorOpacity(entity) : 0.08;
           } else {
-            entity.colorize = kind === "mep" ? getMepEngineeringTone(entity) : [0.78, 0.78, 0.74];
-            entity.opacity = kind === "mep" ? 1 : 0.12;
+            entity.colorize = kind === "mep" ? getMepEngineeringTone(entity) : [0.94, 0.94, 0.9];
+            entity.opacity = kind === "mep" ? 0.95 : 0.08;
           }
         });
       });
@@ -1564,9 +1237,10 @@
         list.appendChild(item);
       });
 
-      rebuildPBRFromSpatialMeta(meta);
-      renderRooms(meta);
       buildLevelLayers(meta);
+      activeLevelId = findLevelLayer("level:level-1") ? "level:level-1" : "all";
+      buildSpaceRuntimeIndex(meta);
+      renderRooms(meta);
       renderLevelChips(meta);
       renderSystemChips(meta);
       renderOverlayLegend(meta);
@@ -1607,6 +1281,68 @@
       return Number.isFinite(z) && z >= layer.min && z < layer.max;
     }
 
+    function spaceIsInLevel(space, levelId) {
+      if (levelId === "all") return true;
+      const layer = findLevelLayer(levelId);
+      const aabb = getSpaceAABB(space);
+      if (!layer) return false;
+      if (!aabb) {
+        const fallbackLevel = getSpaceLevel(space);
+        if (levelId === "level:level-1") return fallbackLevel < 1.5;
+        if (levelId === "level:level-2") return fallbackLevel >= 1.5 && fallbackLevel < 5;
+        return false;
+      }
+      const z = (aabb[1] + aabb[4]) / 2;
+      return z >= layer.min && z < layer.max;
+    }
+
+    function unionAABB(aabbs) {
+      const valid = aabbs.filter((aabb) => aabb?.length === 6 && Number.isFinite(Number(aabb[0])));
+      if (!valid.length) return null;
+      return valid.reduce((acc, aabb) => [
+        Math.min(acc[0], aabb[0]),
+        Math.min(acc[1], aabb[1]),
+        Math.min(acc[2], aabb[2]),
+        Math.max(acc[3], aabb[3]),
+        Math.max(acc[4], aabb[4]),
+        Math.max(acc[5], aabb[5])
+      ], [...valid[0]]);
+    }
+
+    function getLevelSpaces(levelId) {
+      return getRenderableSpaces(viewerPayload).filter((space) => spaceIsInLevel(space, levelId));
+    }
+
+    function aabbIsInLevel(aabb, levelId) {
+      if (levelId === "all") return true;
+      const layer = findLevelLayer(levelId);
+      if (!layer || aabb?.length !== 6) return false;
+      return aabb[4] >= layer.min - 0.05 && aabb[1] < layer.max + 0.05;
+    }
+
+    function getLevelAABB(levelId) {
+      if (levelId === "all") return viewer.scene.getAABB();
+      const spaceAABB = unionAABB(getLevelSpaces(levelId).map((space) => getSpaceAABB(space)));
+      if (spaceAABB) return spaceAABB;
+      const architectureAABBs = getModelObjectIds("architecture")
+        .filter((id) => id !== loadedModels.architecture?.id)
+        .map((id) => viewer.scene.objects[id])
+        .filter((object) => object?.aabb && aabbIsInLevel(object.aabb, levelId) && !isRoofCoverObject(object))
+        .map((object) => object.aabb);
+      const architectureAABB = unionAABB(architectureAABBs);
+      if (architectureAABB) return architectureAABB;
+      return unionAABB(getModelObjectIds("mep")
+        .filter((id) => id !== loadedModels.mep?.id)
+        .map((id) => viewer.scene.objects[id])
+        .filter((object) => object?.aabb && aabbIsInLevel(object.aabb, levelId))
+        .map((object) => object.aabb));
+    }
+
+    function flyToLevel(levelId, duration = 0.55) {
+      const aabb = getLevelAABB(levelId);
+      return flyToAABB(aabb, duration);
+    }
+
     function renderLevelChips(meta) {
       const chips = document.querySelector("#levelChips");
       chips.innerHTML = "";
@@ -1625,9 +1361,15 @@
         button.classList.toggle("active", level.id === activeLevelId);
         button.addEventListener("click", () => {
           activeLevelId = level.id;
+          if (currentFocusedSpace && !spaceIsInLevel(currentFocusedSpace, activeLevelId)) {
+            currentFocusedSpace = null;
+          }
+          syncModeTitle();
           renderLevelChips(meta);
+          renderRooms(meta);
           renderObjectList();
           applyLayerVisibility();
+          flyToLevel(level.id, 0.5);
           markSemanticObjectsDirty();
           document.querySelector("#objectDetail").innerHTML = `
             <strong>对象详情</strong>
@@ -1643,6 +1385,7 @@
       const list = document.querySelector("#roomList");
       list.innerHTML = "";
       getRenderableSpaces(meta)
+        .filter((space) => spaceIsInLevel(space, activeLevelId))
         .forEach((space) => {
         const runtime = roomRuntimeIndex.get(space.id);
         const area = Number.isFinite(space.area) ? `${space.area.toFixed(1)} m²` : "area n/a";
@@ -1658,53 +1401,110 @@
           <strong>${escapeText(space.longName || space.name)}</strong>
           <span>${escapeText(space.name)} · ${escapeText(area)} · ${escapeText(refs)}</span>
         `;
-        button.addEventListener("click", () => focusSpace(space));
+        button.addEventListener("click", () => focusSpace(space, false));
         item.appendChild(button);
         list.appendChild(item);
       });
     }
 
-    function getSpacePreset(space) {
-      const text = `${space.id || ""} ${space.name || ""} ${space.longName || ""}`.toLowerCase();
-      const runtime = roomRuntimeIndex.get(space.id);
-      if (runtime?.preset) return runtime.preset;
-      if (spaceCameraPresets.has(space.id)) return spaceCameraPresets.get(space.id);
-      if (text.includes("living")) return spaceCameraPresets.get("living");
-      if (text.includes("kitchen")) return spaceCameraPresets.get("kitchen");
-      if (text.includes("bath") || text.includes("toilet")) return spaceCameraPresets.get("bath");
-      if (text.includes("bed")) return spaceCameraPresets.get("bed");
-      if (text.includes("foyer") || text.includes("entry")) return spaceCameraPresets.get("foyer");
-      return null;
+    function getSpaceObjectId(space) {
+      return (space.sourceRefs || [])
+        .map((item) => findSceneObjectId(item.id))
+        .find((objectId) => objectId && viewer.scene.objects[objectId]) || null;
     }
 
-    function focusSpace(space) {
-      const preset = getSpacePreset(space);
-      const runtime = roomRuntimeIndex.get(space.id);
-      currentFocusedSpace = space;
-      setActivePBRSpace(space.id);
-      if (preset) {
-        setText("#bridgeModeTitle", space.longName || space.name || "Space");
-        setText("#bridgeModeText", `${space.name || "Room"} · ${Number.isFinite(space.area) ? `${space.area.toFixed(1)} m²` : "PBR room"} · ${runtime?.unit || "BIM"} ${runtime?.level > 0 ? "2F" : "1F"}`);
-        document.querySelectorAll(".room-card").forEach((node) => node.classList.toggle("active", node.dataset.spaceId === space.id));
+    function getAABBCenter(aabb) {
+      return [
+        (aabb[0] + aabb[3]) / 2,
+        (aabb[1] + aabb[4]) / 2,
+        (aabb[2] + aabb[5]) / 2
+      ];
+    }
+
+    function getAABBSize(aabb) {
+      return [
+        Math.max(0.1, aabb[3] - aabb[0]),
+        Math.max(0.1, aabb[4] - aabb[1]),
+        Math.max(0.1, aabb[5] - aabb[2])
+      ];
+    }
+
+    function getSpaceAABB(space) {
+      const objectId = getSpaceObjectId(space);
+      const object = objectId ? viewer.scene.objects[objectId] : null;
+      return object?.aabb || null;
+    }
+
+    function flyToAABB(aabb, duration = 0.55) {
+      if (!aabb) return false;
+      const center = getAABBCenter(aabb);
+      const size = getAABBSize(aabb);
+      const radius = Math.max(size[0], size[2], 2.2);
+      const narrowView = window.matchMedia("(max-width: 680px)").matches;
+      if (narrowView) {
         viewer.cameraFlight.flyTo({
-          eye: preset.eye,
-          look: preset.look,
-          up: [0, 1, 0],
-          duration: 0.62,
+          aabb,
+          duration,
+          fitFOV: 58,
           projection: "perspective"
         });
-        return;
+        return true;
       }
-      const ref = (space.sourceRefs || []).find((item) => item.source === "architecture" && findSceneObjectId(item.id))
-        || (space.sourceRefs || []).find((item) => findSceneObjectId(item.id));
-      const objectId = ref ? findSceneObjectId(ref.id) : null;
+      const y = Math.max(center[1] + 1.35, aabb[1] + Math.min(1.65, size[1] * 0.58));
+      viewer.cameraFlight.flyTo({
+        eye: [
+          center[0] - radius * 0.58,
+          y + Math.min(1.3, radius * 0.12),
+          center[2] - radius * 0.72
+        ],
+        look: [
+          center[0] + radius * 0.08,
+          Math.max(aabb[1] + 1.05, center[1] + Math.min(0.25, size[1] * 0.12)),
+          center[2] + radius * 0.1
+        ],
+        up: [0, 1, 0],
+        duration,
+        projection: "perspective"
+      });
+      return true;
+    }
+
+    function flyToSpace(space, duration = 0.55) {
+      return flyToAABB(getSpaceAABB(space), duration);
+    }
+
+    function focusSpace(space, flyCamera = false) {
+      const runtime = roomRuntimeIndex.get(space.id);
+      currentFocusedSpace = space;
+      const objectId = getSpaceObjectId(space);
       setText("#bridgeModeTitle", space.longName || space.name || "Space");
-      setText("#bridgeModeText", `${space.name || "Room"} · ${Number.isFinite(space.area) ? `${space.area.toFixed(1)} m²` : "BIM space"}`);
+      setText("#bridgeModeText", `${space.name || "Room"} · ${Number.isFinite(space.area) ? `${space.area.toFixed(1)} m²` : "BIM space"} · ${runtime?.unit || "IFC"} ${runtime?.level > 0 ? "2F" : "1F"}`);
+      document.querySelectorAll(".room-card").forEach((node) => node.classList.toggle("active", node.dataset.spaceId === space.id));
+      setSelectedObject(null, false);
       if (objectId && viewer.scene.objects[objectId]) {
-        setSelectedObject(objectId, true);
+        if (flyCamera) flyToSpace(space, 0.58);
+        setText("#bridgeModeTitle", space.longName || space.name || "Space");
+        setText("#bridgeModeText", `${space.name || "Room"} · ${Number.isFinite(space.area) ? `${space.area.toFixed(1)} m²` : "BIM space"} · ${runtime?.unit || "IFC"} ${runtime?.level > 0 ? "2F" : "1F"}`);
+        document.querySelector("#objectDetail").innerHTML = `
+          <strong>${escapeText(space.longName || space.name || space.id)}</strong>
+          IFC 空间对象<br>
+          Room: ${escapeText(space.name || "n/a")}<br>
+          XKT: ${escapeText(objectId)}<br>
+          Source refs: ${escapeText((space.sourceRefs || []).length)}
+        `;
       } else {
-        flyToInteriorView(0.55);
+        document.querySelector("#objectDetail").innerHTML = `
+          <strong>${escapeText(space.longName || space.name || space.id)}</strong>
+          IFC 空间记录<br>
+          Source refs: ${escapeText((space.sourceRefs || []).length)}<br>
+          状态: 当前 XKT 尚未加载或未匹配到可聚焦对象
+        `;
+        if (flyCamera) flyToContextView(0.55);
       }
+      renderObjectList();
+      applyLayerVisibility();
+      markSemanticObjectsDirty();
+      requestSemanticOverlayDraw(true);
     }
 
     function renderSystemChips(meta) {
@@ -1759,13 +1559,19 @@
       if (!viewerPayload) return;
       const query = document.querySelector("#objectSearch").value.trim().toLowerCase();
       const list = document.querySelector("#objectList");
+      const focusedAABB = currentFocusedSpace ? getSpaceAABB(currentFocusedSpace) : null;
       const objects = viewerPayload.objectIndex.filter((item) => {
         if (viewMode === "interior" && item.domain !== "architecture") return false;
         if (viewMode === "mep" && !isMepNetworkPayload(item)) return false;
         const categoryMatch = activeSystemCategory === "all" || item.bucket === activeSystemCategory;
         const levelMatch = !Array.isArray(item.location) || isLocationInActiveLevel(item.location);
+        const focusMatch = !focusedAABB || !Array.isArray(item.location) || (
+          item.location[0] >= focusedAABB[0] - 0.8 && item.location[0] <= focusedAABB[3] + 0.8 &&
+          item.location[1] >= focusedAABB[1] - 0.8 && item.location[1] <= focusedAABB[4] + 0.8 &&
+          item.location[2] >= focusedAABB[2] - 0.8 && item.location[2] <= focusedAABB[5] + 0.8
+        );
         const text = `${item.name || ""} ${item.ifcClass || ""} ${item.bucket || ""} ${item.source || ""} ${item.id || ""}`.toLowerCase();
-        return categoryMatch && levelMatch && (!query || text.includes(query));
+        return categoryMatch && levelMatch && focusMatch && (!query || text.includes(query));
       }).slice(0, 32);
 
       list.innerHTML = "";
@@ -1862,7 +1668,6 @@
       if (!interactionActive) {
         interactionActive = true;
         overlayCanvas.classList.add("interaction-lite");
-        viewer.scene.sao.enabled = false;
         if (edgesEnabled) {
           setAllModelEdges(false);
         }
@@ -1871,7 +1676,6 @@
       interactionIdleTimer = window.setTimeout(() => {
         interactionActive = false;
         overlayCanvas.classList.remove("interaction-lite");
-        viewer.scene.sao.enabled = true;
         if (edgesEnabled) {
           setAllModelEdges(true);
         }
@@ -1924,11 +1728,7 @@
         requestSemanticOverlayDraw(true);
         return;
       }
-      if (selectedObjectId) {
-        viewer.scene.setObjectsSelected([selectedObjectId], false);
-      }
       selectedObjectId = objectId;
-      viewer.scene.setObjectsSelected([objectId], true);
       viewer.cameraFlight.flyTo({
         aabb: viewer.scene.objects[objectId].aabb,
         duration: 0.55,
@@ -1943,7 +1743,6 @@
       }
       selectedObjectId = objectId;
       if (!objectId || !viewer.scene.objects[objectId]) return;
-      viewer.scene.setObjectsSelected([objectId], true);
       const entity = viewer.scene.objects[objectId];
       setText("#bridgeModeTitle", entity.name || "Selected object");
       setText("#bridgeModeText", viewMode === "interior" ? "Residential component" : "MEP component");
@@ -1951,7 +1750,7 @@
         <strong>${escapeText(entity.name || entity.id)}</strong>
         XKT 几何对象<br>
         ID: ${escapeText(entity.id)}<br>
-        状态: 已选中，可双击聚焦
+        状态: 已定位，不使用绿色选中高亮
       `;
       if (flyTo) {
         viewer.cameraFlight.flyTo({
@@ -1988,7 +1787,7 @@
       setSelectedObject(event.entity?.id || null, true);
     });
 
-    cameraControl.on("doublePickedNothing", fitAll);
+    cameraControl.on("doublePickedNothing", fitCurrentView);
 
     function loadModel(kind) {
       const cfg = modelPaths[kind];
@@ -2008,8 +1807,15 @@
         loadedKinds.add(kind);
         setText(cfg.status, `${kind}: loaded`);
         if (loadedKinds.size === Object.keys(modelPaths).length) {
-          setViewMode("interior", true);
+          if (viewerPayload) {
+            renderRooms(viewerPayload);
+            renderLevelChips(viewerPayload);
+            applyLayerVisibility();
+            renderObjectList();
+          }
+          setViewMode("interior", false);
           document.querySelector("#loading").classList.add("hidden");
+          focusInitialView();
         }
       });
       model.on("error", (event) => {
@@ -2048,71 +1854,78 @@
     }
 
     function flyToMepView(duration = 0.7) {
-      const aabb = loadedModels.mep?.aabb || viewer.scene.getAABB();
-      viewer.cameraFlight.flyTo({
-        aabb,
-        duration,
-        fitFOV: 34,
-        projection: "perspective"
-      });
+      if (currentFocusedSpace && flyToSpace(currentFocusedSpace, duration)) return;
+      if (activeLevelId !== "all" && flyToLevel(activeLevelId, duration)) return;
+    }
+
+    function flyToContextView(duration = 0.55) {
+      if (currentFocusedSpace && flyToSpace(currentFocusedSpace, duration)) return;
+      if (activeLevelId !== "all" && flyToLevel(activeLevelId, duration)) return;
+      fitAll();
+    }
+
+    function syncModeTitle() {
+      if (currentFocusedSpace) {
+        const runtime = roomRuntimeIndex.get(currentFocusedSpace.id);
+        const prefix = viewMode === "mep" ? "MEP in" : currentFocusedSpace.name || "Room";
+        setText("#bridgeModeTitle", currentFocusedSpace.longName || currentFocusedSpace.name || "Space");
+        setText("#bridgeModeText", `${prefix} · ${Number.isFinite(currentFocusedSpace.area) ? `${currentFocusedSpace.area.toFixed(1)} m²` : "BIM space"} · ${runtime?.unit || "IFC"} ${runtime?.level > 0 ? "2F" : "1F"}`);
+        return;
+      }
+      const layer = findLevelLayer(activeLevelId);
+      const levelText = layer ? `${layer.name} ${Number(layer.elevation).toFixed(2)}m` : "current view";
+      setText("#bridgeModeTitle", viewMode === "interior" ? "Residential view" : "Systems view");
+      setText("#bridgeModeText", viewMode === "interior" ? `Walkthrough · ${levelText}` : `MEP networks · ${levelText}`);
     }
 
     function fitCurrentView() {
-      if (viewMode === "interior") {
-        flyToInteriorView(0.55);
-      } else {
-        flyToMepView(0.55);
-      }
+      flyToContextView(0.55);
     }
 
-    function setViewMode(mode, flyCamera = true) {
-      viewMode = mode;
-      document.body.dataset.viewMode = mode;
-      document.querySelectorAll("[data-view-mode]").forEach((button) => {
-        button.classList.toggle("active", button.dataset.viewMode === mode);
+    function focusInitialView() {
+      if (initialViewFocused) return;
+      initialViewFocused = true;
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          flyToContextView(0.72);
+          requestSemanticOverlayDraw(true);
+        });
       });
-      if (mode === "interior" && currentFocusedSpace) {
-        const runtime = roomRuntimeIndex.get(currentFocusedSpace.id);
-        setText("#bridgeModeTitle", currentFocusedSpace.longName || currentFocusedSpace.name || "Space");
-        setText("#bridgeModeText", `${currentFocusedSpace.name || "Room"} · ${Number.isFinite(currentFocusedSpace.area) ? `${currentFocusedSpace.area.toFixed(1)} m²` : "PBR room"} · ${runtime?.unit || "BIM"} ${runtime?.level > 0 ? "2F" : "1F"}`);
-      } else {
-        setText("#bridgeModeTitle", mode === "interior" ? "Residential view" : "Systems view");
-        setText("#bridgeModeText", mode === "interior" ? "Walkthrough · Level 1" : "MEP networks · all levels");
-      }
-      pbrCanvas.classList.toggle("pbr-hidden", mode !== "interior");
-      viewer.scene.canvas.canvas.style.opacity = mode === "interior" ? "0" : "1";
-      setActivePBRSpace(mode === "interior" ? currentFocusedSpace?.id : null);
-      activeLevelId = mode === "interior" ? "level:level-1" : "all";
-      if (viewerPayload) renderLevelChips(viewerPayload);
-      modelVisibility.architecture = mode === "interior";
-      modelVisibility.mep = mode === "mep";
-      overlayEnabled = false;
-      document.querySelector("#overlayBtn").classList.toggle("active", overlayEnabled);
-      if (mode !== "interior") {
-        setAutoRotateEnabled(false);
-      }
-      applyXray(false);
-      applyEdges(false);
-      syncSidebarMode();
-      applyLayerVisibility();
-      markSemanticObjectsDirty();
-      renderObjectList();
-      if (!flyCamera) return;
-      if (mode === "interior") {
-        const preset = currentFocusedSpace ? getSpacePreset(currentFocusedSpace) : null;
-        if (preset) {
-          viewer.cameraFlight.flyTo({
-            eye: preset.eye,
-            look: preset.look,
-            up: [0, 1, 0],
-            duration: 0.7,
-            projection: "perspective"
-          });
-        } else {
-          flyToInteriorView(0.7);
+    }
+
+    function setViewMode(mode, flyCamera = false) {
+      const applyMode = () => {
+        viewMode = mode;
+        document.body.dataset.viewMode = mode;
+        document.querySelectorAll("button[data-view-mode]").forEach((button) => {
+          const active = button.dataset.viewMode === mode;
+          button.classList.toggle("active", active);
+          button.setAttribute("aria-pressed", String(active));
+        });
+        syncModeTitle();
+        viewer.scene.canvas.canvas.style.opacity = "1";
+        if (viewerPayload) renderLevelChips(viewerPayload);
+        modelVisibility.architecture = mode === "interior";
+        modelVisibility.mep = mode === "mep";
+        overlayEnabled = false;
+        document.querySelector("#overlayBtn").classList.toggle("active", overlayEnabled);
+        if (mode !== "interior") {
+          setAutoRotateEnabled(false);
         }
-      } else {
-        flyToMepView(0.7);
+        applyXray(false);
+        applyEdges(false);
+        syncSidebarMode();
+        applyLayerVisibility();
+        markSemanticObjectsDirty();
+        renderObjectList();
+      };
+      if (!flyCamera) {
+        runWithLockedCamera(applyMode);
+        return;
+      }
+      applyMode();
+      if (currentFocusedSpace) {
+        flyToSpace(currentFocusedSpace, 0.48);
       }
     }
 
@@ -2141,6 +1954,20 @@
       return z >= layer.min && z < layer.max;
     }
 
+    function aabbIntersects(a, b, padding = 0) {
+      if (!a || !b) return true;
+      return !(
+        a[3] < b[0] - padding || a[0] > b[3] + padding ||
+        a[4] < b[1] - padding || a[1] > b[4] + padding ||
+        a[5] < b[2] - padding || a[2] > b[5] + padding
+      );
+    }
+
+    function objectIsInFocusedSpace(object) {
+      if (!currentFocusedSpace || !object?.aabb) return true;
+      return aabbIntersects(object.aabb, getSpaceAABB(currentFocusedSpace), 0.8);
+    }
+
     function applyLayerVisibility() {
       const scene = viewer.scene;
       Object.entries(loadedModels).forEach(([kind, model]) => {
@@ -2150,6 +1977,7 @@
           const object = scene.objects[id];
           const visible = modelEnabled
             && objectIsInActiveLevel(object)
+            && objectIsInFocusedSpace(object)
             && !(viewMode === "interior" && kind === "architecture" && isRoofCoverObject(object))
             && !(viewMode === "mep" && kind === "mep" && !isMepNetworkObject(object));
           if (object) object.visible = visible;
@@ -2172,6 +2000,7 @@
       applyObjectPresentation();
       requestSemanticOverlayDraw(true);
       document.querySelector("#xrayBtn").classList.toggle("active", enabled);
+      document.querySelector("#xrayBtn").setAttribute("aria-pressed", String(enabled));
     }
 
     function setAllModelEdges(enabled) {
@@ -2186,13 +2015,19 @@
       edgesEnabled = enabled;
       setAllModelEdges(enabled && !interactionActive);
       document.querySelector("#edgesBtn").classList.toggle("active", enabled);
+      document.querySelector("#edgesBtn").setAttribute("aria-pressed", String(enabled));
     }
 
     function setAutoRotateEnabled(enabled) {
       autoRotateEnabled = enabled && viewMode === "interior";
       document.querySelector("#autoRotateBtn").classList.toggle("active", autoRotateEnabled);
+      document.querySelector("#autoRotateBtn").setAttribute("aria-pressed", String(autoRotateEnabled));
       document.body.classList.toggle("showcase", autoRotateEnabled);
-      setText("#bridgeModeText", autoRotateEnabled ? "Auto tour · residential view" : (viewMode === "interior" ? "Walkthrough · Level 1" : "MEP networks · all levels"));
+      if (autoRotateEnabled) {
+        setText("#bridgeModeText", "Auto tour · residential view");
+      } else {
+        syncModeTitle();
+      }
       if (autoRotateEnabled) {
         lastTickTime = 0;
       }
@@ -2212,11 +2047,11 @@
       const evening = Math.max(0, t - 0.62) / 0.38;
       const morning = Math.max(0, 0.26 - t) / 0.26;
       const rootStyle = document.documentElement.style;
-      ambientLight.intensity = 0.72 + noon * 0.24 - evening * 0.08;
-      keyLight.intensity = 0.5 + noon * 0.24 + evening * 0.08;
-      fillLight.intensity = 0.24 + (1 - noon) * 0.12;
-      windowLight.intensity = 0.2 + noon * 0.24 + morning * 0.08;
-      interiorBounceLight.intensity = 0.12 + evening * 0.16 + morning * 0.08;
+      ambientLight.intensity = 0.95 + noon * 0.2 - evening * 0.04;
+      keyLight.intensity = 0.62 + noon * 0.28 + evening * 0.04;
+      fillLight.intensity = 0.36 + (1 - noon) * 0.12;
+      windowLight.intensity = 0.34 + noon * 0.28 + morning * 0.1;
+      interiorBounceLight.intensity = 0.18 + evening * 0.12 + morning * 0.08;
       keyLight.color = [
         1,
         0.92 - evening * 0.08 + noon * 0.04,
@@ -2237,24 +2072,15 @@
         0.82 + noon * 0.1 - evening * 0.04,
         0.58 + noon * 0.16 - evening * 0.12
       ];
-      rootStyle.setProperty("--grade-brightness", String(1.0 + noon * 0.035 - evening * 0.01));
-      rootStyle.setProperty("--grade-contrast", String(1.035 + noon * 0.025));
-      rootStyle.setProperty("--grade-saturation", String(1.035 + noon * 0.035 + evening * 0.035));
+      rootStyle.setProperty("--grade-brightness", String(0.99 + noon * 0.035 - evening * 0.01));
+      rootStyle.setProperty("--grade-contrast", String(1.01 + noon * 0.025));
+      rootStyle.setProperty("--grade-saturation", String(0.94 + noon * 0.04 + evening * 0.025));
       rootStyle.setProperty("--sun-x", `${16 + t * 62}%`);
       rootStyle.setProperty("--sun-y", `${22 + Math.sin(t * Math.PI) * 16}%`);
-      rootStyle.setProperty("--sun-alpha", String(0.08 + noon * 0.12 + evening * 0.06));
-      rootStyle.setProperty("--bloom-alpha", String(0.055 + noon * 0.08));
-      rootStyle.setProperty("--warm-alpha", String(0.06 + evening * 0.18 + noon * 0.03));
-      rootStyle.setProperty("--cool-alpha", String(0.06 + morning * 0.12));
-      if (pbrSunLight && pbrBounceLight && pbrHemiLight) {
-        pbrRenderer.toneMappingExposure = 1.02 + noon * 0.12 - evening * 0.04;
-        pbrHemiLight.intensity = 1.4 + noon * 0.36;
-        pbrSunLight.intensity = 1.55 + noon * 0.9 + morning * 0.28;
-        pbrSunLight.color.setRGB(1, 0.9 + noon * 0.08 - evening * 0.08, 0.72 + noon * 0.16 - evening * 0.1);
-        pbrSunLight.position.set(-4 + t * 8, 5.2, -3 + Math.sin(t * Math.PI) * 2.6);
-        pbrBounceLight.intensity = 0.9 + evening * 1.1 + morning * 0.4;
-        pbrBounceLight.color.setRGB(1, 0.78 + noon * 0.1, 0.55 + noon * 0.18);
-      }
+      rootStyle.setProperty("--sun-alpha", String(0.04 + noon * 0.1 + evening * 0.035));
+      rootStyle.setProperty("--bloom-alpha", String(0.12 + noon * 0.08));
+      rootStyle.setProperty("--warm-alpha", String(0.035 + evening * 0.12 + noon * 0.02));
+      rootStyle.setProperty("--cool-alpha", String(0.1 + morning * 0.12));
       setText("#timeLabel", formatTime(Number(value)));
     }
 
@@ -2288,7 +2114,7 @@
       }
     }, { passive: false });
 
-    document.querySelectorAll("[data-view-mode]").forEach((button) => {
+    document.querySelectorAll("button[data-view-mode]").forEach((button) => {
       button.addEventListener("click", () => setViewMode(button.dataset.viewMode, false));
     });
 
@@ -2300,6 +2126,7 @@
     document.querySelector("#overlayBtn").addEventListener("click", () => {
       overlayEnabled = !overlayEnabled;
       document.querySelector("#overlayBtn").classList.toggle("active", overlayEnabled);
+      document.querySelector("#overlayBtn").setAttribute("aria-pressed", String(overlayEnabled));
       requestSemanticOverlayDraw(true);
     });
     document.querySelector("#objectSearch").addEventListener("input", () => {
@@ -2311,7 +2138,6 @@
     });
     window.addEventListener("resize", () => {
       resizeOverlay();
-      pbrRenderer.setSize(window.innerWidth, window.innerHeight, false);
       requestSemanticOverlayDraw(true);
     });
     viewer.scene.on("tick", () => {
@@ -2327,9 +2153,7 @@
         lastCameraSignature = signature;
         requestSemanticOverlayDraw(false);
       }
-      syncPBRCamera();
     });
-    buildPBRHome();
     updateDaylight(document.querySelector("#timeSlider").value);
     await loadSpatialMeta();
     loadModel("architecture");
