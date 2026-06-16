@@ -2482,6 +2482,59 @@
       gap: 7px;
     }
 
+    .bp3d-real-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 4;
+      background: #1a1d22;
+      display: none;
+      flex-direction: column;
+    }
+    .bp3d-real-overlay.active { display: flex; }
+    .bp3d-real-overlay canvas {
+      flex: 1;
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    .bp3d-real-status {
+      position: absolute;
+      left: 14px;
+      top: 14px;
+      z-index: 5;
+      padding: 6px 10px;
+      border-radius: 4px;
+      font: 700 11px/1.2 Inter, system-ui, sans-serif;
+      letter-spacing: 0.05em;
+      color: #f0f3f5;
+      background: rgba(20, 24, 30, 0.7);
+      backdrop-filter: blur(8px);
+      pointer-events: none;
+      max-width: calc(100% - 28px);
+    }
+    .bp3d-real-toggle {
+      position: absolute;
+      right: 12px;
+      top: 12px;
+      z-index: 7;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 12px;
+      border: 1px solid rgba(31, 42, 45, 0.22);
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.92);
+      color: #25303a;
+      font: 700 11px/1 Inter, system-ui, sans-serif;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      cursor: pointer;
+      box-shadow: 0 6px 16px rgba(20, 30, 40, 0.16);
+      backdrop-filter: blur(8px);
+    }
+    .bp3d-real-toggle:hover { background: #ffffff; }
+    .bp3d-real-toggle.active { background: #25303a; color: #f4f7f9; border-color: #25303a; }
+
     .bp3d-save-grid .dsl-meta {
       min-height: 58px;
       background: linear-gradient(180deg, #ffffff, #edf1f4);
@@ -2841,6 +2894,11 @@
               <div class="blueprint-render" id="blueprintRender" aria-label="3D rendered viewer">
                 <canvas id="viewer"></canvas>
                 <canvas id="semanticOverlay"></canvas>
+                <button type="button" class="bp3d-real-toggle" id="bp3dRealToggle" title="Switch between xeokit XKT and IFC + PBR rendering">PBR · IFC</button>
+                <div class="bp3d-real-overlay" id="bp3dRealOverlay">
+                  <canvas id="bp3dRealCanvas"></canvas>
+                  <span class="bp3d-real-status" id="bp3dRealStatus">Loading IFC…</span>
+                </div>
                 <div class="render-badge">
                   <span id="renderBadgeLabel">3D Render</span>
                   <strong id="renderBadgeValue">House JSON preview</strong>
@@ -2956,6 +3014,15 @@
   </nav>
 
   <div class="loading" id="loading">正在加载 1:1 BIM 模型…</div>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "./node_modules/three/build/three.module.js",
+      "three/addons/": "./node_modules/three/examples/jsm/"
+    }
+  }
+  </script>
 
   <script type="module">
     import {
@@ -4775,12 +4842,77 @@
           document.querySelector("#loading").classList.add("hidden");
           viewer.scene.sao.enabled = true;
           focusInitialView();
+          setupBp3dRealToggle();
         }
       });
       model.on("error", (event) => {
         setText(cfg.status, `${kind}: ${event}`);
         setText("#storyLoadStatus", "Error");
       });
+    }
+
+    let bp3dRealApi = null;
+    let bp3dRealLoading = false;
+    let bp3dRealEnabled = false;
+    const BP3D_REAL_IFCS = [
+      { url: "./samples/duplex-apartment/raw/Duplex_A_20110907.ifc", label: "Architecture" },
+      { url: "./samples/duplex-apartment/raw/Duplex_M_20111024_ROOMS_AND_SPACES.ifc", label: "Rooms" },
+      { url: "./samples/duplex-apartment/raw/Duplex_MEP_20110907.ifc", label: "Mechanical" },
+      { url: "./samples/duplex-apartment/raw/Duplex_Electrical_20121207.ifc", label: "Electrical" },
+      { url: "./samples/duplex-apartment/raw/Duplex_Plumbing_20121113.ifc", label: "Plumbing" }
+    ];
+
+    function setupBp3dRealToggle() {
+      const btn = document.querySelector("#bp3dRealToggle");
+      if (!btn || btn.dataset.bound === "1") return;
+      btn.dataset.bound = "1";
+      btn.addEventListener("click", () => toggleBp3dReal());
+    }
+
+    async function toggleBp3dReal() {
+      const overlay = document.querySelector("#bp3dRealOverlay");
+      const btn = document.querySelector("#bp3dRealToggle");
+      const statusEl = document.querySelector("#bp3dRealStatus");
+      if (!overlay || !btn) return;
+      if (bp3dRealEnabled) {
+        bp3dRealEnabled = false;
+        overlay.classList.remove("active");
+        btn.classList.remove("active");
+        btn.textContent = "PBR · IFC";
+        return;
+      }
+      bp3dRealEnabled = true;
+      overlay.classList.add("active");
+      btn.classList.add("active");
+      btn.textContent = "Back to XKT";
+      if (bp3dRealLoading || bp3dRealApi) return;
+      bp3dRealLoading = true;
+      try {
+        statusEl.textContent = "Initializing web-ifc…";
+        const mod = await import("./scripts/bp3d-real-renderer.js");
+        const canvas = document.querySelector("#bp3dRealCanvas");
+        bp3dRealApi = await mod.createRealRenderer(canvas);
+        const t0 = performance.now();
+        let total = 0;
+        for (const cfg of BP3D_REAL_IFCS) {
+          statusEl.textContent = `Loading ${cfg.label}…`;
+          try {
+            const res = await bp3dRealApi.loadIfc(cfg.url, cfg.label);
+            total += res.count;
+          } catch (err) {
+            console.warn("[bp3d-real]", cfg.label, "failed:", err);
+          }
+        }
+        bp3dRealApi.fit();
+        const dt = ((performance.now() - t0) / 1000).toFixed(1);
+        statusEl.textContent = `${total} meshes · ${dt}s · drag to orbit, wheel to zoom`;
+        setTimeout(() => { if (statusEl) statusEl.style.opacity = "0.6"; }, 4000);
+      } catch (err) {
+        console.error("[bp3d-real] init failed:", err);
+        statusEl.textContent = "Failed to load IFC. See console.";
+      } finally {
+        bp3dRealLoading = false;
+      }
     }
 
     function fitAll() {
