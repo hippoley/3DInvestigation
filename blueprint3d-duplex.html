@@ -2163,7 +2163,6 @@
     body.bp3d-mode .topbar,
     body.bp3d-mode .schema,
     body.bp3d-mode .toolbar,
-    body.bp3d-mode .render-grade,
     body.bp3d-mode #navCubeCanvas {
       display: none !important;
     }
@@ -4774,6 +4773,7 @@
           setText("#storyLoadStatus", "Ready");
           setViewMode("interior", false);
           document.querySelector("#loading").classList.add("hidden");
+          viewer.scene.sao.enabled = true;
           focusInitialView();
         }
       });
