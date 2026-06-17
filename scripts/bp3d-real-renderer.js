@@ -267,6 +267,10 @@ export async function createRealRenderer(canvas) {
     } else if (msg.type === "done") {
       pendingJobs.delete(msg.jobId);
       root.add(job.group);
+      // Respect the current level filter for this newly-arrived group. The
+      // system filter was already wired in loadIfc() when the group was
+      // created, so all we need here is the level pass.
+      applyLevelToGroup(job.group);
       job.resolve({ count: job.count, group: job.group });
     } else if (msg.type === "error") {
       pendingJobs.delete(msg.jobId);
@@ -307,7 +311,11 @@ export async function createRealRenderer(canvas) {
     const jobId = nextJobId++;
     const group = new THREE.Group();
     group.name = label;
-    group.userData.system = system || label.toLowerCase();
+    const systemId = system || label.toLowerCase();
+    group.userData.system = systemId;
+    // Default each system to visible. setSystemVisibility() will override.
+    if (!systemEnabled.has(systemId)) systemEnabled.set(systemId, true);
+    group.visible = systemEnabled.get(systemId);
     // Resolve to an absolute URL on the main thread. The worker lives at
     // /scripts/bp3d-ifc-worker.js, so a relative URL like "./samples/..."
     // would otherwise resolve to /scripts/samples/... inside the worker
@@ -317,6 +325,90 @@ export async function createRealRenderer(canvas) {
       pendingJobs.set(jobId, { resolve, reject, group, count: 0, label });
       ifcWorker.postMessage({ type: "load", jobId, url: absoluteUrl });
     });
+  }
+
+  // ---- Layer filters (system + level) ----
+  // Two independent visibility axes that compose multiplicatively:
+  //   mesh.visible = systemEnabled[group.userData.system] && passesLevelFilter(mesh)
+  // System visibility is applied at group level (cheap). Level visibility is
+  // per-mesh (mesh world bbox center vs [min, max] on the height axis), and is
+  // cached in mesh.userData._heightY at first evaluation.
+  const systemEnabled = new Map();   // systemId -> bool
+  let levelRange = null;             // null = pass-all, else { min, max }
+
+  function meshHeightCenter(mesh) {
+    if (mesh.userData._heightY !== undefined) return mesh.userData._heightY;
+    const bb = mesh.geometry?.boundingBox;
+    if (!bb) return 0;
+    const c = bb.getCenter(new THREE.Vector3());
+    mesh.updateMatrixWorld();
+    c.applyMatrix4(mesh.matrixWorld);
+    // Three.js Y-up convention: ground rotated to XZ plane, csGroup placed at
+    // box.min.y elsewhere in this file all assume Y is height.
+    mesh.userData._heightY = c.y;
+    return c.y;
+  }
+
+  function applyLevelToGroup(group) {
+    if (!levelRange) {
+      group.traverse((obj) => { if (obj.isMesh) obj.visible = true; });
+      return;
+    }
+    const { min, max } = levelRange;
+    group.traverse((obj) => {
+      if (!obj.isMesh) return;
+      const y = meshHeightCenter(obj);
+      obj.visible = y >= min && y < max;
+    });
+  }
+
+  function setSystemVisibility(systemId, visible) {
+    systemEnabled.set(systemId, !!visible);
+    root.children.forEach((group) => {
+      if (group.userData.system === systemId) group.visible = !!visible;
+    });
+  }
+
+  function setLevelFilter(range) {
+    // range: null | { min: number, max: number } in world Y units. ±Infinity is
+    // intentionally allowed as an open boundary (top/bottom levels). Reject
+    // only NaN or non-numeric values; collapse to pass-all on null/undefined.
+    const validBound = (n) => typeof n === "number" && !Number.isNaN(n);
+    levelRange = range && validBound(range.min) && validBound(range.max) && range.min < range.max
+      ? { min: range.min, max: range.max }
+      : null;
+    root.children.forEach(applyLevelToGroup);
+  }
+
+  function getKnownSystems() {
+    return Array.from(systemEnabled.keys());
+  }
+
+  function debugVisibilityStats() {
+    // Returns counts of meshes by group system + total visible/hidden, plus
+    // the world-Y range observed across all meshes. Used by the smoke test
+    // to validate that setLevelFilter actually mutates mesh.visible (i.e.
+    // the height-axis assumption holds) without exposing internal scene refs.
+    const stats = { total: 0, visible: 0, hidden: 0, minY: Infinity, maxY: -Infinity, perSystem: {} };
+    root.children.forEach((group) => {
+      const sys = group.userData.system || "unknown";
+      const bucket = stats.perSystem[sys] || (stats.perSystem[sys] = { total: 0, visible: 0, groupVisible: group.visible });
+      group.traverse((obj) => {
+        if (!obj.isMesh) return;
+        stats.total++;
+        bucket.total++;
+        const y = meshHeightCenter(obj);
+        if (Number.isFinite(y)) {
+          if (y < stats.minY) stats.minY = y;
+          if (y > stats.maxY) stats.maxY = y;
+        }
+        // Effective visibility = group.visible AND mesh.visible
+        const eff = group.visible && obj.visible;
+        if (eff) { stats.visible++; bucket.visible++; }
+        else { stats.hidden++; }
+      });
+    });
+    return stats;
   }
 
   function fitToScene() {
@@ -365,6 +457,10 @@ export async function createRealRenderer(canvas) {
     setExposure,
     setBloom,
     setContactShadowOpacity,
+    setSystemVisibility,
+    setLevelFilter,
+    getKnownSystems,
+    debugVisibilityStats,
     dispose() {
       running = false;
       resizeObs.disconnect();

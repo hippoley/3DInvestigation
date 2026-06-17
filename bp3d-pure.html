@@ -23,6 +23,21 @@
     #controls label { flex: 0 0 auto; opacity: 0.85; text-transform: uppercase; letter-spacing: 0.05em; }
     #controls input[type="range"] { flex: 1; accent-color: #5fb6ff; }
     #controls .val { flex: 0 0 40px; text-align: right; font-variant-numeric: tabular-nums; color: #cfe9ff; }
+    #filters { position: fixed; left: 14px; top: 56px; z-index: 5; display: flex;
+      flex-direction: column; gap: 10px; padding: 10px 12px; max-width: 280px;
+      border-radius: 8px; background: rgba(20, 24, 30, 0.78); backdrop-filter: blur(10px);
+      box-shadow: 0 8px 22px rgba(0, 0, 0, 0.32); }
+    #filters .group-label { opacity: 0.6; text-transform: uppercase; letter-spacing: 0.08em;
+      font-size: 10px; font-weight: 800; }
+    #filters .chips { display: flex; flex-wrap: wrap; gap: 5px; }
+    #filters .chip { padding: 4px 9px; border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.04); color: rgba(240, 243, 245, 0.86);
+      border-radius: 999px; font: 700 11px/1.2 inherit; letter-spacing: 0.04em;
+      cursor: pointer; transition: background 120ms, border-color 120ms; }
+    #filters .chip:hover { background: rgba(255, 255, 255, 0.08); }
+    #filters .chip.active { background: rgba(95, 182, 255, 0.22);
+      border-color: rgba(95, 182, 255, 0.6); color: #eaf5ff; }
+    #filters .chip[data-disabled="1"] { opacity: 0.4; cursor: not-allowed; }
     #log { position: fixed; left: 14px; bottom: 14px; z-index: 5; padding: 6px 10px;
       border-radius: 6px; background: rgba(20, 24, 30, 0.62); backdrop-filter: blur(8px);
       max-width: 50vw; font-family: ui-monospace, Consolas, monospace; font-size: 11px;
@@ -45,6 +60,16 @@
     <div class="row"><label for="exp">Exposure</label><input type="range" id="exp" min="0.4" max="2.4" step="0.02" value="1.18"><span class="val" id="expV">1.18</span></div>
     <div class="row"><label for="blm">Bloom</label><input type="range" id="blm" min="0" max="1.5" step="0.01" value="0.32"><span class="val" id="blmV">0.32</span></div>
     <div class="row"><label for="cnt">Contact</label><input type="range" id="cnt" min="0" max="1" step="0.02" value="0.78"><span class="val" id="cntV">0.78</span></div>
+  </div>
+  <div id="filters" hidden>
+    <div>
+      <div class="group-label">Level</div>
+      <div class="chips" id="levelChips"></div>
+    </div>
+    <div>
+      <div class="group-label">System</div>
+      <div class="chips" id="systemChips"></div>
+    </div>
   </div>
   <pre id="log"></pre>
 
@@ -73,6 +98,10 @@
         const canvas = document.querySelector("#canvas");
         setStatus("Initializing renderer…");
         const api = await mod.createRealRenderer(canvas);
+        // Expose for the smoke test and live debugging. Pure is by design a
+        // diagnostic surface — keeping a window handle is cheap and lets
+        // external scripts inspect mesh visibility without monkey-patching.
+        window.__bp3dApi = api;
         log("renderer created");
 
         // Slider wiring
@@ -84,6 +113,109 @@
         wire("#exp", "#expV", (v) => api.setExposure(v));
         wire("#blm", "#blmV", (v) => api.setBloom(v));
         wire("#cnt", "#cntV", (v) => api.setContactShadowOpacity(v));
+
+        // ---- Filter chips (level + system) ----
+        // Loaded in parallel with the IFC blocking phase. Level layers are
+        // computed from canonicalLevels[].elevation using the duplex.html
+        // convention: each layer occupies the half-way region to its neighbours.
+        const SYSTEM_LABELS = {
+          architecture: "Architecture",
+          spaces: "Rooms",
+          electrical: "Electrical",
+          hvac: "Mechanical",
+          plumbing: "Plumbing"
+        };
+        let activeLevel = "all";       // level id string or "all"
+        const systemActive = new Map(IFCS.map((c) => [c.system, true]));
+
+        const payloadPromise = fetch("./samples/duplex-apartment/derived/viewer-payload.json")
+          .then((r) => r.ok ? r.json() : Promise.reject(new Error(`payload ${r.status}`)))
+          .catch((e) => { log(`payload load failed: ${e.message || e}`); return null; });
+
+        function buildLevelLayers(payload) {
+          const sorted = (payload?.canonicalLevels || [])
+            .filter((l) => Number.isFinite(l.elevation))
+            .sort((a, b) => a.elevation - b.elevation);
+          return sorted.map((level, i) => {
+            const prev = sorted[i - 1], next = sorted[i + 1];
+            return {
+              id: level.id,
+              name: level.name,
+              elevation: level.elevation,
+              min: prev ? (prev.elevation + level.elevation) / 2 : -Infinity,
+              max: next ? (level.elevation + next.elevation) / 2 : Infinity
+            };
+          });
+        }
+
+        function applyLevel(layers) {
+          if (activeLevel === "all") {
+            api.setLevelFilter(null);
+            return;
+          }
+          const layer = layers.find((l) => l.id === activeLevel);
+          if (!layer) { api.setLevelFilter(null); return; }
+          api.setLevelFilter({ min: layer.min, max: layer.max });
+        }
+
+        function renderLevelChips(layers) {
+          const host = document.querySelector("#levelChips");
+          host.innerHTML = "";
+          const entries = [{ id: "all", name: "All" }, ...layers.map((l) => ({
+            id: l.id, name: `${l.name} ${l.elevation.toFixed(2)}m`
+          }))];
+          entries.forEach((entry) => {
+            const btn = document.createElement("button");
+            btn.className = "chip" + (entry.id === activeLevel ? " active" : "");
+            btn.textContent = entry.name;
+            btn.dataset.level = entry.id;
+            btn.addEventListener("click", () => {
+              activeLevel = entry.id;
+              applyLevel(layers);
+              renderLevelChips(layers);
+            });
+            host.appendChild(btn);
+          });
+        }
+
+        function renderSystemChips(payload) {
+          const host = document.querySelector("#systemChips");
+          host.innerHTML = "";
+          // Keep the order Architecture → Rooms → Electrical → Mechanical → Plumbing
+          // to match the loading order; counts are taken from sourceSystemCounts
+          // when available (note: viewer-payload uses "mep"/"rooms_spaces" while
+          // the renderer uses "hvac"/"spaces" — handled inline).
+          const counts = payload?.sourceSystemCounts || {};
+          const countAlias = { hvac: "mep", spaces: "rooms_spaces" };
+          IFCS.forEach((cfg) => {
+            const sys = cfg.system;
+            const lookup = countAlias[sys] || sys;
+            const count = counts[lookup];
+            const btn = document.createElement("button");
+            btn.className = "chip" + (systemActive.get(sys) ? " active" : "");
+            btn.textContent = count
+              ? `${SYSTEM_LABELS[sys] || cfg.label} ${count}`
+              : (SYSTEM_LABELS[sys] || cfg.label);
+            btn.dataset.system = sys;
+            btn.addEventListener("click", () => {
+              const next = !systemActive.get(sys);
+              systemActive.set(sys, next);
+              api.setSystemVisibility(sys, next);
+              btn.classList.toggle("active", next);
+            });
+            host.appendChild(btn);
+          });
+        }
+
+        let levelLayers = [];
+        payloadPromise.then((payload) => {
+          if (!payload) return;
+          levelLayers = buildLevelLayers(payload);
+          document.querySelector("#filters").hidden = false;
+          renderLevelChips(levelLayers);
+          renderSystemChips(payload);
+          log(`payload loaded · ${levelLayers.length} levels, ${(payload.canonicalSpaces || []).length} spaces`);
+        });
 
         const sorted = [...IFCS].sort((a, b) => a.priority - b.priority);
         const blocking = sorted.filter(c => c.priority === 0);
