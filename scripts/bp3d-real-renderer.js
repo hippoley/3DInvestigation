@@ -292,6 +292,7 @@ export async function createRealRenderer(canvas) {
     }
     const mesh = new THREE.Mesh(bg, mat);
     mesh.userData.ifcType = msg.ifcType;
+    mesh.userData.expressID = msg.expressID ?? null;
     const t = msg.transform;
     // web-ifc returns column-major; .fromArray(...) followed by transpose() converts to Three's convention.
     const matrix = new THREE.Matrix4().fromArray([
@@ -449,6 +450,23 @@ export async function createRealRenderer(canvas) {
   }
   function setPostProcessing(enabled) { useComposer = !!enabled; }
 
+  // ---- Sun position control ----
+  // Updates Sky shader sun direction + directional light + re-generates IBL.
+  function setSunPosition(elevationDeg, azimuthDeg) {
+    const p = THREE.MathUtils.degToRad(90 - elevationDeg);
+    const t = THREE.MathUtils.degToRad(azimuthDeg);
+    sun.setFromSphericalCoords(1, p, t);
+    skyU["sunPosition"].value.copy(sun);
+    // Regenerate IBL from updated sky. This is relatively heavy (~50ms) so
+    // callers should debounce rapid changes (slider input events).
+    const newEnv = pmrem.fromScene(scene, 0.04).texture;
+    if (scene.environment) scene.environment.dispose();
+    scene.environment = newEnv;
+    // Move directional light to match sun
+    const fitDist = sunLight.position.length() || 80;
+    sunLight.position.copy(sun).multiplyScalar(fitDist);
+  }
+
   // ---- Raycaster picking ----
   // pointerdown/pointerup with 5px drag threshold so orbit doesn't trigger pick.
   const raycaster = new THREE.Raycaster();
@@ -504,6 +522,7 @@ export async function createRealRenderer(canvas) {
         onSelectCallback({
           mesh: hit.object,
           ifcType: hit.object.userData.ifcType || null,
+          expressID: hit.object.userData.expressID || null,
           system: hit.object.parent?.userData?.system || null,
           position: hit.point.clone()
         });
@@ -531,6 +550,7 @@ export async function createRealRenderer(canvas) {
     getKnownSystems,
     debugVisibilityStats,
     setPostProcessing,
+    setSunPosition,
     onSelect,
     clearSelection,
     dispose() {

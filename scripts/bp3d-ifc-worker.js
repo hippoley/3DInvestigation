@@ -38,6 +38,7 @@ function streamMeshes(jobId, modelID) {
   let count = 0;
   ifcApi.StreamAllMeshes(modelID, (flatMesh) => {
     const ifcType = ifcApi.GetLineType(modelID, flatMesh.expressID);
+    const expressID = flatMesh.expressID;
     const placed = flatMesh.geometries;
     for (let i = 0; i < placed.size(); i++) {
       const g = placed.get(i);
@@ -63,7 +64,7 @@ function streamMeshes(jobId, modelID) {
         ? { x: g.color.x, y: g.color.y, z: g.color.z, w: g.color.w }
         : null;
       self.postMessage(
-        { type: "mesh", jobId, ifcType, positions, normals, indices, transform, color },
+        { type: "mesh", jobId, ifcType, expressID, positions, normals, indices, transform, color },
         [positions.buffer, normals.buffer, indices.buffer, transform.buffer]
       );
       count++;

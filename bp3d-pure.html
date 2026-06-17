@@ -68,8 +68,10 @@
     <div class="row"><label for="exp">Exposure</label><input type="range" id="exp" min="0.4" max="2.4" step="0.02" value="1.18"><span class="val" id="expV">1.18</span></div>
     <div class="row"><label for="blm">Bloom</label><input type="range" id="blm" min="0" max="1.5" step="0.01" value="0.32"><span class="val" id="blmV">0.32</span></div>
     <div class="row"><label for="cnt">Contact</label><input type="range" id="cnt" min="0" max="1" step="0.02" value="0.78"><span class="val" id="cntV">0.78</span></div>
+    <div class="row"><label for="sun">Sun</label><input type="range" id="sun" min="5" max="80" step="1" value="32"><span class="val" id="sunV">32°</span></div>
     <div class="row"><label for="pfx">PostFX</label><input type="checkbox" id="pfx"><span class="val" id="pfxV" style="flex:0 0 auto;font-size:10px;opacity:0.6">OFF</span></div>
   </div>
+  <div id="infoCard" hidden></div>
   <div id="filters" hidden>
     <div>
       <div class="group-label">Level</div>
@@ -127,6 +129,18 @@
         wire("#blm", "#blmV", (v) => api.setBloom(v));
         wire("#cnt", "#cntV", (v) => api.setContactShadowOpacity(v));
 
+        // Sun elevation slider — azimuth fixed at 155°, only elevation changes.
+        // Debounce IBL regeneration to avoid stalling on rapid slider input.
+        let sunTimer = null;
+        const sunSlider = document.querySelector("#sun");
+        const sunVal = document.querySelector("#sunV");
+        sunSlider.addEventListener("input", () => {
+          const elev = parseFloat(sunSlider.value);
+          sunVal.textContent = `${elev}°`;
+          clearTimeout(sunTimer);
+          sunTimer = setTimeout(() => api.setSunPosition(elev, 155), 150);
+        });
+
         // PostFX toggle
         const pfxCheck = document.querySelector("#pfx");
         const pfxLabel = document.querySelector("#pfxV");
@@ -162,6 +176,7 @@
           $cardBody.innerHTML = [
             `<div class="ic-row"><b>Type</b> ${typeName}</div>`,
             `<div class="ic-row"><b>System</b> ${info.system || "—"}</div>`,
+            info.expressID ? `<div class="ic-row"><b>ExpressID</b> ${info.expressID}</div>` : "",
             pos ? `<div class="ic-row"><b>Position</b> (${pos.x.toFixed(2)}, ${pos.y.toFixed(2)}, ${pos.z.toFixed(2)})</div>` : ""
           ].join("");
           $card.style.display = "block";
