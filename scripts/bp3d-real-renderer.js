@@ -6,7 +6,6 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { Sky } from "three/addons/objects/Sky.js";
 import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
-import { SAOPass } from "three/addons/postprocessing/SAOPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import { SMAAPass } from "three/addons/postprocessing/SMAAPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
@@ -197,21 +196,19 @@ export async function createRealRenderer(canvas) {
   }
 
   // ---- Post-processing pipeline ----
-  // Tuned for ArchViz-y look: subtle SAO for crevice darkening, tight Bloom only on
-  // truly bright emissive (lights, sky), SMAA over MSAA for stable edges with deferred-style passes.
+  // Tuned for ArchViz-y look: contact shadows (already wired above) provide
+  // ground-level AO; Bloom only on truly bright emissive (lights, sky); SMAA
+  // over MSAA for stable edges.
+  //
+  // NOTE: SAOPass DISABLED — Three.js r165's SAOPass renders all model pixels
+  // as black when the scene has 4000+ meshes. The depth/normal pre-render
+  // appears to overflow internal buffers or produce degenerate SAO values.
+  // Contact shadows + subtle hemisphere light provide equivalent visual
+  // grounding without the catastrophic failure mode. If we want per-object
+  // crevice AO back, replace SAOPass with N8AOPass (pmndrs/postprocessing)
+  // which handles large scenes correctly.
   const composer = new EffectComposer(renderer);
   composer.addPass(new RenderPass(scene, camera));
-  const sao = new SAOPass(scene, camera);
-  sao.params.saoBias = 0.25;
-  sao.params.saoIntensity = 0.06;        // up from 0.04 — crevices get more readable
-  sao.params.saoScale = 4;
-  sao.params.saoKernelRadius = 18;       // down from 28 — sharper contact AO, less "fog"
-  sao.params.saoMinResolution = 0;
-  sao.params.saoBlur = true;
-  sao.params.saoBlurRadius = 6;
-  sao.params.saoBlurStdDev = 3.5;
-  sao.params.saoBlurDepthCutoff = 0.01;
-  composer.addPass(sao);
   // strength 0.32 (was 0.42), threshold 0.92 (was 0.85): only true emissives bloom.
   const bloom = new UnrealBloomPass(new THREE.Vector2(1024, 1024), 0.32, 0.7, 0.92);
   composer.addPass(bloom);
@@ -231,10 +228,12 @@ export async function createRealRenderer(canvas) {
   resizeObs.observe(canvas);
 
   let running = true;
+  let useComposer = false; // Disabled: Bloom/SMAA/Output chain produces black in headless+some GPUs. Investigating.
   function tick() {
     if (!running) return;
     controls.update();
-    composer.render();
+    if (useComposer) { composer.render(); }
+    else { renderer.render(scene, camera); }
     requestAnimationFrame(tick);
   }
   requestAnimationFrame(tick);
@@ -447,6 +446,7 @@ export async function createRealRenderer(canvas) {
     csPlane.material.opacity = Math.max(0, Math.min(1, v));
     csPlane.visible = v > 0.001;
   }
+  function setPostProcessing(enabled) { useComposer = !!enabled; }
 
   return {
     loadIfc,
@@ -461,6 +461,7 @@ export async function createRealRenderer(canvas) {
     setLevelFilter,
     getKnownSystems,
     debugVisibilityStats,
+    setPostProcessing,
     dispose() {
       running = false;
       resizeObs.disconnect();
