@@ -14,11 +14,11 @@ import { VerticalBlurShader } from "three/addons/shaders/VerticalBlurShader.js";
 import { makePbrMaterials, pickMaterial } from "./bp3d-materials.js";
 
 export async function createRealRenderer(canvas) {
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, alpha: false, powerPreference: "high-performance" });
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, powerPreference: "high-performance" });
   renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.18;
+  renderer.toneMappingExposure = 1.22;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.VSMShadowMap;
 
@@ -56,7 +56,7 @@ export async function createRealRenderer(canvas) {
   controls.maxPolarAngle = Math.PI * 0.495;
 
   // ---- Lights ----
-  const sunLight = new THREE.DirectionalLight(0xfff1d6, 3.4);
+  const sunLight = new THREE.DirectionalLight(0xfff1d6, 3.8);
   sunLight.position.copy(sun).multiplyScalar(80);
   sunLight.castShadow = true;
   sunLight.shadow.mapSize.set(2048, 2048);
@@ -67,10 +67,10 @@ export async function createRealRenderer(canvas) {
   scene.add(sunLight);
   scene.add(sunLight.target);
 
-  const fill = new THREE.DirectionalLight(0xb8d4ee, 0.9);
+  const fill = new THREE.DirectionalLight(0xb8d4ee, 1.1);
   fill.position.set(20, 15, -25);
   scene.add(fill);
-  const hemi = new THREE.HemisphereLight(0xeaf2ff, 0x88827a, 0.65);
+  const hemi = new THREE.HemisphereLight(0xeaf2ff, 0x88827a, 0.75);
   scene.add(hemi);
 
   // ---- Ground (procedural, receives shadows) ----
@@ -291,6 +291,7 @@ export async function createRealRenderer(canvas) {
       mat.opacity = Math.max(0.25, msg.color.w);
     }
     const mesh = new THREE.Mesh(bg, mat);
+    mesh.userData.ifcType = msg.ifcType;
     const t = msg.transform;
     // web-ifc returns column-major; .fromArray(...) followed by transpose() converts to Three's convention.
     const matrix = new THREE.Matrix4().fromArray([
@@ -448,6 +449,74 @@ export async function createRealRenderer(canvas) {
   }
   function setPostProcessing(enabled) { useComposer = !!enabled; }
 
+  // ---- Raycaster picking ----
+  // pointerdown/pointerup with 5px drag threshold so orbit doesn't trigger pick.
+  const raycaster = new THREE.Raycaster();
+  const pointer = new THREE.Vector2();
+  let selectedMesh = null;
+  let selectedOriginalEmissive = null;
+  let onSelectCallback = null;
+
+  const HIGHLIGHT_COLOR = new THREE.Color(0x00bcd4);
+  let _ptrDown = null; // { x, y } screen coords at pointerdown
+
+  function clearSelection() {
+    if (selectedMesh && selectedMesh.material) {
+      if (selectedMesh.material.emissive) {
+        selectedMesh.material.emissive.copy(selectedOriginalEmissive || new THREE.Color(0));
+      }
+      selectedMesh.material.emissiveIntensity = 0;
+    }
+    const wasSel = !!selectedMesh;
+    selectedMesh = null;
+    selectedOriginalEmissive = null;
+    if (wasSel && onSelectCallback) onSelectCallback(null);
+  }
+
+  function highlightMesh(mesh) {
+    clearSelection();
+    if (!mesh || !mesh.material) return;
+    selectedMesh = mesh;
+    selectedOriginalEmissive = mesh.material.emissive ? mesh.material.emissive.clone() : new THREE.Color(0);
+    if (mesh.material.emissive) mesh.material.emissive.copy(HIGHLIGHT_COLOR);
+    mesh.material.emissiveIntensity = 0.4;
+  }
+
+  function onPointerDown(event) {
+    _ptrDown = { x: event.clientX, y: event.clientY };
+  }
+  function onPointerUp(event) {
+    if (!_ptrDown) return;
+    const dx = event.clientX - _ptrDown.x;
+    const dy = event.clientY - _ptrDown.y;
+    _ptrDown = null;
+    if (dx * dx + dy * dy > 25) return; // moved > 5px — orbit drag, skip
+
+    const rect = canvas.getBoundingClientRect();
+    pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+    raycaster.setFromCamera(pointer, camera);
+    const hits = raycaster.intersectObjects(root.children, true);
+    const hit = hits.find((h) => h.object.isMesh && h.object.visible);
+    if (hit && hit.object !== selectedMesh) {
+      highlightMesh(hit.object);
+      if (onSelectCallback) {
+        onSelectCallback({
+          mesh: hit.object,
+          ifcType: hit.object.userData.ifcType || null,
+          system: hit.object.parent?.userData?.system || null,
+          position: hit.point.clone()
+        });
+      }
+    } else {
+      clearSelection();
+    }
+  }
+  canvas.addEventListener("pointerdown", onPointerDown);
+  canvas.addEventListener("pointerup", onPointerUp);
+
+  function onSelect(callback) { onSelectCallback = callback; }
+
   return {
     loadIfc,
     clearAll,
@@ -462,8 +531,12 @@ export async function createRealRenderer(canvas) {
     getKnownSystems,
     debugVisibilityStats,
     setPostProcessing,
+    onSelect,
+    clearSelection,
     dispose() {
       running = false;
+      canvas.removeEventListener("pointerdown", onPointerDown);
+      canvas.removeEventListener("pointerup", onPointerUp);
       resizeObs.disconnect();
       clearAll();
       try { ifcWorker.terminate(); } catch {}

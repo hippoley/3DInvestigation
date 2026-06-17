@@ -38,6 +38,14 @@
     #filters .chip.active { background: rgba(95, 182, 255, 0.22);
       border-color: rgba(95, 182, 255, 0.6); color: #eaf5ff; }
     #filters .chip[data-disabled="1"] { opacity: 0.4; cursor: not-allowed; }
+    #infocard { position: fixed; right: 14px; top: 56px; z-index: 6; padding: 12px 14px;
+      min-width: 200px; max-width: 320px; border-radius: 8px;
+      background: rgba(20, 24, 30, 0.86); backdrop-filter: blur(10px);
+      box-shadow: 0 8px 22px rgba(0, 0, 0, 0.36); display: none; }
+    #infocard .ic-title { font-size: 11px; font-weight: 800; text-transform: uppercase;
+      letter-spacing: 0.06em; opacity: 0.6; margin-bottom: 6px; }
+    #infocard .ic-row { font-size: 12px; line-height: 1.55; color: rgba(240, 243, 245, 0.9); }
+    #infocard .ic-row b { color: rgba(95, 182, 255, 0.95); font-weight: 700; }
     #log { position: fixed; left: 14px; bottom: 14px; z-index: 5; padding: 6px 10px;
       border-radius: 6px; background: rgba(20, 24, 30, 0.62); backdrop-filter: blur(8px);
       max-width: 50vw; font-family: ui-monospace, Consolas, monospace; font-size: 11px;
@@ -60,7 +68,9 @@
     <div class="row"><label for="exp">Exposure</label><input type="range" id="exp" min="0.4" max="2.4" step="0.02" value="1.18"><span class="val" id="expV">1.18</span></div>
     <div class="row"><label for="blm">Bloom</label><input type="range" id="blm" min="0" max="1.5" step="0.01" value="0.32"><span class="val" id="blmV">0.32</span></div>
     <div class="row"><label for="cnt">Contact</label><input type="range" id="cnt" min="0" max="1" step="0.02" value="0.78"><span class="val" id="cntV">0.78</span></div>
+    <div class="row"><label for="pfx">PostFX</label><input type="checkbox" id="pfx"><span class="val" id="pfxV" style="flex:0 0 auto;font-size:10px;opacity:0.6">OFF</span></div>
   </div>
+  <div id="info" hidden></div>
   <div id="filters" hidden>
     <div>
       <div class="group-label">Level</div>
@@ -70,6 +80,10 @@
       <div class="group-label">System</div>
       <div class="chips" id="systemChips"></div>
     </div>
+  </div>
+  <div id="infocard">
+    <div class="ic-title">Selected</div>
+    <div class="ic-body"></div>
   </div>
   <pre id="log"></pre>
 
@@ -215,6 +229,37 @@
           renderLevelChips(levelLayers);
           renderSystemChips(payload);
           log(`payload loaded · ${levelLayers.length} levels, ${(payload.canonicalSpaces || []).length} spaces`);
+        });
+
+        // ---- Picking info card ----
+        const $infocard = document.querySelector("#infocard");
+        const $icBody = $infocard.querySelector(".ic-body");
+        const IFC_TYPE_NAMES = {
+          2391406946: "IfcWall", 3512223829: "IfcWallStandardCase",
+          1529196076: "IfcSlab", 395920057: "IfcDoor", 3304561284: "IfcWindow",
+          263784265: "IfcFurnishingElement", 331165859: "IfcStairFlight",
+          901063453: "IfcColumn", 753842376: "IfcBeam", 3612865200: "IfcPipeSegment",
+          3518393246: "IfcDuctSegment", 3758799889: "IfcCableSegment",
+          2223149337: "IfcFlowTerminal", 629592764: "IfcLightFixture"
+        };
+        api.onPick((mesh, userData, hit) => {
+          if (!mesh) {
+            $infocard.style.display = "none";
+            return;
+          }
+          $infocard.style.display = "block";
+          const parent = mesh.parent;
+          const system = parent?.userData?.system || "—";
+          const ifcType = IFC_TYPE_NAMES[userData?.ifcType] || `type ${userData?.ifcType || "?"}`;
+          const pos = hit?.point;
+          const posStr = pos ? `(${pos.x.toFixed(2)}, ${pos.y.toFixed(2)}, ${pos.z.toFixed(2)})` : "—";
+          const verts = mesh.geometry?.attributes?.position?.count || 0;
+          $icBody.innerHTML = `
+            <div class="ic-row"><b>System</b> ${system}</div>
+            <div class="ic-row"><b>IFC Type</b> ${ifcType}</div>
+            <div class="ic-row"><b>Position</b> ${posStr}</div>
+            <div class="ic-row"><b>Vertices</b> ${verts.toLocaleString()}</div>
+          `;
         });
 
         const sorted = [...IFCS].sort((a, b) => a.priority - b.priority);
