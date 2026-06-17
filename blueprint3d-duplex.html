@@ -2534,6 +2534,55 @@
     }
     .bp3d-real-toggle:hover { background: #ffffff; }
     .bp3d-real-toggle.active { background: #25303a; color: #f4f7f9; border-color: #25303a; }
+    .bp3d-real-controls {
+      position: absolute;
+      right: 12px;
+      bottom: 14px;
+      z-index: 6;
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+      padding: 10px 12px;
+      min-width: 200px;
+      border-radius: 8px;
+      background: rgba(20, 24, 30, 0.72);
+      backdrop-filter: blur(10px);
+      color: #f0f3f5;
+      font: 600 11px/1.2 Inter, system-ui, sans-serif;
+      letter-spacing: 0.04em;
+      box-shadow: 0 8px 22px rgba(0, 0, 0, 0.28);
+      pointer-events: auto;
+    }
+    .bp3d-real-overlay.active .bp3d-real-controls { display: flex; }
+    .bp3d-real-controls .row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .bp3d-real-controls label {
+      flex: 0 0 auto;
+      text-transform: uppercase;
+      opacity: 0.85;
+    }
+    .bp3d-real-controls input[type="range"] {
+      flex: 1;
+      accent-color: #5fb6ff;
+      height: 18px;
+    }
+    .bp3d-real-controls .val {
+      flex: 0 0 36px;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      color: #cfe9ff;
+    }
+    .bp3d-real-controls .toggle {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+    }
+    .bp3d-real-controls .toggle input { accent-color: #5fb6ff; }
 
     .bp3d-save-grid .dsl-meta {
       min-height: 58px;
@@ -2898,6 +2947,11 @@
                 <div class="bp3d-real-overlay" id="bp3dRealOverlay">
                   <canvas id="bp3dRealCanvas"></canvas>
                   <span class="bp3d-real-status" id="bp3dRealStatus">Loading IFC…</span>
+                  <div class="bp3d-real-controls" id="bp3dRealControls">
+                    <div class="row"><label for="bp3dExposure">Exposure</label><input type="range" id="bp3dExposure" min="0.4" max="2.4" step="0.02" value="1.18"><span class="val" id="bp3dExposureVal">1.18</span></div>
+                    <div class="row"><label for="bp3dBloom">Bloom</label><input type="range" id="bp3dBloom" min="0" max="1.5" step="0.01" value="0.42"><span class="val" id="bp3dBloomVal">0.42</span></div>
+                    <div class="row"><label for="bp3dContact">Contact</label><input type="range" id="bp3dContact" min="0" max="1" step="0.02" value="0.78"><span class="val" id="bp3dContactVal">0.78</span></div>
+                  </div>
                 </div>
                 <div class="render-badge">
                   <span id="renderBadgeLabel">3D Render</span>
@@ -4854,12 +4908,13 @@
     let bp3dRealApi = null;
     let bp3dRealLoading = false;
     let bp3dRealEnabled = false;
+    // priority 0 = blocks first paint; higher = streamed in background
     const BP3D_REAL_IFCS = [
-      { url: "./samples/duplex-apartment/raw/Duplex_A_20110907.ifc", label: "Architecture" },
-      { url: "./samples/duplex-apartment/raw/Duplex_M_20111024_ROOMS_AND_SPACES.ifc", label: "Rooms" },
-      { url: "./samples/duplex-apartment/raw/Duplex_MEP_20110907.ifc", label: "Mechanical" },
-      { url: "./samples/duplex-apartment/raw/Duplex_Electrical_20121207.ifc", label: "Electrical" },
-      { url: "./samples/duplex-apartment/raw/Duplex_Plumbing_20121113.ifc", label: "Plumbing" }
+      { url: "./samples/duplex-apartment/raw/Duplex_A_20110907.ifc",                label: "Architecture", system: "architecture", priority: 0 },
+      { url: "./samples/duplex-apartment/raw/Duplex_M_20111024_ROOMS_AND_SPACES.ifc", label: "Rooms",       system: "spaces",       priority: 1 },
+      { url: "./samples/duplex-apartment/raw/Duplex_Electrical_20121207.ifc",        label: "Electrical",  system: "electrical",   priority: 2 },
+      { url: "./samples/duplex-apartment/raw/Duplex_MEP_20110907.ifc",               label: "Mechanical",  system: "hvac",         priority: 2 },
+      { url: "./samples/duplex-apartment/raw/Duplex_Plumbing_20121113.ifc",          label: "Plumbing",    system: "plumbing",     priority: 3 }
     ];
 
     function setupBp3dRealToggle() {
@@ -4867,6 +4922,27 @@
       if (!btn || btn.dataset.bound === "1") return;
       btn.dataset.bound = "1";
       btn.addEventListener("click", () => toggleBp3dReal());
+    }
+
+    function bindBp3dRealControls() {
+      const wrap = document.querySelector("#bp3dRealControls");
+      if (!wrap || wrap.dataset.bound === "1") return;
+      wrap.dataset.bound = "1";
+      const wire = (sliderId, valId, fn, fmt = (v) => v.toFixed(2)) => {
+        const slider = document.querySelector(sliderId);
+        const out = document.querySelector(valId);
+        if (!slider || !out) return;
+        const sync = () => {
+          const v = parseFloat(slider.value);
+          out.textContent = fmt(v);
+          if (bp3dRealApi && typeof fn === "function") fn(v);
+        };
+        slider.addEventListener("input", sync);
+        sync();
+      };
+      wire("#bp3dExposure", "#bp3dExposureVal", (v) => bp3dRealApi.setExposure(v));
+      wire("#bp3dBloom", "#bp3dBloomVal", (v) => bp3dRealApi.setBloom(v));
+      wire("#bp3dContact", "#bp3dContactVal", (v) => bp3dRealApi.setContactShadowOpacity(v));
     }
 
     async function toggleBp3dReal() {
@@ -4889,24 +4965,63 @@
       bp3dRealLoading = true;
       try {
         statusEl.textContent = "Initializing web-ifc…";
+        if (statusEl) statusEl.style.opacity = "1";
         const mod = await import("./scripts/bp3d-real-renderer.js");
         const canvas = document.querySelector("#bp3dRealCanvas");
         bp3dRealApi = await mod.createRealRenderer(canvas);
+        bindBp3dRealControls();
+
+        // Phase 1 — blocking: load priority-0 IFCs (Architecture) so user sees house ASAP.
+        // Phase 2 — background: stream remaining IFCs sequentially without blocking the toggle.
+        const sorted = [...BP3D_REAL_IFCS].sort((a, b) => (a.priority ?? 9) - (b.priority ?? 9));
+        const blocking = sorted.filter((c) => (c.priority ?? 9) === 0);
+        const background = sorted.filter((c) => (c.priority ?? 9) > 0);
         const t0 = performance.now();
         let total = 0;
-        for (const cfg of BP3D_REAL_IFCS) {
+
+        for (const cfg of blocking) {
           statusEl.textContent = `Loading ${cfg.label}…`;
           try {
-            const res = await bp3dRealApi.loadIfc(cfg.url, cfg.label);
+            const res = await bp3dRealApi.loadIfc(cfg.url, cfg.label, cfg.system);
             total += res.count;
           } catch (err) {
             console.warn("[bp3d-real]", cfg.label, "failed:", err);
           }
         }
         bp3dRealApi.fit();
-        const dt = ((performance.now() - t0) / 1000).toFixed(1);
-        statusEl.textContent = `${total} meshes · ${dt}s · drag to orbit, wheel to zoom`;
-        setTimeout(() => { if (statusEl) statusEl.style.opacity = "0.6"; }, 4000);
+        try { bp3dRealApi.regenerateContactShadow(); } catch (e) { console.warn("[bp3d-real] contact shadow:", e); }
+        const dt0 = ((performance.now() - t0) / 1000).toFixed(1);
+        statusEl.textContent = background.length
+          ? `Architecture ready · ${total} meshes · ${dt0}s — streaming MEP…`
+          : `${total} meshes · ${dt0}s · drag to orbit, wheel to zoom`;
+
+        // Background phase — fire-and-forget so toggle returns immediately.
+        if (background.length) {
+          (async () => {
+            for (const cfg of background) {
+              if (!bp3dRealApi) return; // disposed mid-stream
+              try {
+                const t = performance.now();
+                statusEl.textContent = `${total} meshes loaded · streaming ${cfg.label}…`;
+                const res = await bp3dRealApi.loadIfc(cfg.url, cfg.label, cfg.system);
+                total += res.count;
+                const dts = ((performance.now() - t) / 1000).toFixed(1);
+                console.info("[bp3d-real]", cfg.label, `+${res.count} meshes in ${dts}s`);
+              } catch (err) {
+                console.warn("[bp3d-real]", cfg.label, "failed:", err);
+              }
+            }
+            // Refresh contact shadow now that the full model (including MEP) is in.
+            if (bp3dRealApi) {
+              try { bp3dRealApi.regenerateContactShadow(); } catch (e) { console.warn("[bp3d-real] contact shadow:", e); }
+            }
+            const dt = ((performance.now() - t0) / 1000).toFixed(1);
+            statusEl.textContent = `${total} meshes · ${dt}s · drag to orbit, wheel to zoom`;
+            setTimeout(() => { if (statusEl) statusEl.style.opacity = "0.6"; }, 4000);
+          })();
+        } else {
+          setTimeout(() => { if (statusEl) statusEl.style.opacity = "0.6"; }, 4000);
+        }
       } catch (err) {
         console.error("[bp3d-real] init failed:", err);
         statusEl.textContent = "Failed to load IFC. See console.";

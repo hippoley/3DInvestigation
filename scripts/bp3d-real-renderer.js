@@ -10,7 +10,8 @@ import { SAOPass } from "three/addons/postprocessing/SAOPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import { SMAAPass } from "three/addons/postprocessing/SMAAPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
-import { IfcAPI } from "../node_modules/web-ifc/web-ifc-api.js";
+import { HorizontalBlurShader } from "three/addons/shaders/HorizontalBlurShader.js";
+import { VerticalBlurShader } from "three/addons/shaders/VerticalBlurShader.js";
 import { makePbrMaterials, pickMaterial } from "./bp3d-materials.js";
 
 export async function createRealRenderer(canvas) {
@@ -86,21 +87,133 @@ export async function createRealRenderer(canvas) {
   const root = new THREE.Group();
   scene.add(root);
 
+  // ---- Contact shadows (A4) ----
+  // Renders the scene into a low-res depth render target from above, blurs
+  // it, and projects the result onto a thin transparent plane just under the
+  // model. Adds the soft "grounding" shadow that VSM directional shadows
+  // can't capture under furniture and walls.
+  const SHADOW_RES = 512;
+  const csGroup = new THREE.Group();
+  csGroup.visible = false;
+  scene.add(csGroup);
+  const csTarget = new THREE.WebGLRenderTarget(SHADOW_RES, SHADOW_RES);
+  csTarget.texture.generateMipmaps = false;
+  const csTargetBlur = new THREE.WebGLRenderTarget(SHADOW_RES, SHADOW_RES);
+  csTargetBlur.texture.generateMipmaps = false;
+  const csCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+  csCamera.rotation.x = Math.PI / 2;
+  csGroup.add(csCamera);
+  const csPlane = new THREE.Mesh(
+    new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2),
+    new THREE.MeshBasicMaterial({
+      map: csTarget.texture,
+      transparent: true,
+      opacity: 0.78,
+      depthWrite: false
+    })
+  );
+  csPlane.renderOrder = 2;
+  csGroup.add(csPlane);
+  const csBlurPlane = new THREE.Mesh(new THREE.PlaneGeometry(1, 1));
+  csBlurPlane.visible = false;
+  csGroup.add(csBlurPlane);
+  const csDepthMaterial = new THREE.MeshDepthMaterial();
+  csDepthMaterial.userData.darkness = { value: 1.6 };
+  csDepthMaterial.onBeforeCompile = (shader) => {
+    shader.uniforms.darkness = csDepthMaterial.userData.darkness;
+    shader.fragmentShader = shader.fragmentShader.replace(
+      "void main() {",
+      "uniform float darkness;\nvoid main() {"
+    ).replace(
+      "gl_FragColor = vec4( vec3( 1.0 - fragCoordZ ), opacity );",
+      "gl_FragColor = vec4( vec3( 0.0 ), ( 1.0 - fragCoordZ ) * darkness );"
+    );
+  };
+  const csHBlur = new THREE.ShaderMaterial({ ...HorizontalBlurShader });
+  csHBlur.depthTest = false;
+  const csVBlur = new THREE.ShaderMaterial({ ...VerticalBlurShader });
+  csVBlur.depthTest = false;
+  let csReady = false;
+
+  function blurContactShadow(amount) {
+    csBlurPlane.visible = true;
+    csBlurPlane.material = csHBlur;
+    csHBlur.uniforms.tDiffuse.value = csTarget.texture;
+    csHBlur.uniforms.h.value = (amount * 1) / SHADOW_RES;
+    renderer.setRenderTarget(csTargetBlur);
+    renderer.render(csBlurPlane, csCamera);
+    csBlurPlane.material = csVBlur;
+    csVBlur.uniforms.tDiffuse.value = csTargetBlur.texture;
+    csVBlur.uniforms.v.value = (amount * 1) / SHADOW_RES;
+    renderer.setRenderTarget(csTarget);
+    renderer.render(csBlurPlane, csCamera);
+    csBlurPlane.visible = false;
+  }
+
+  function regenerateContactShadow() {
+    if (!root.children.length) return;
+    const box = new THREE.Box3().setFromObject(root);
+    if (!isFinite(box.min.x)) return;
+    const size = box.getSize(new THREE.Vector3());
+    const center = box.getCenter(new THREE.Vector3());
+    const w = Math.max(0.5, size.x * 1.05);
+    const d = Math.max(0.5, size.z * 1.05);
+    csGroup.position.set(center.x, box.min.y, center.z);
+    // PlaneGeometry was baked-rotated into XZ, so the depth axis is Z (not Y).
+    // scale.set(w, d, 1) silently scales an axis with no extent; the correct
+    // mapping is (X=w, Y=1 placeholder, Z=d).
+    csPlane.scale.set(w, 1, d);
+    csBlurPlane.scale.set(w, 1, d);
+    csCamera.left = -w / 2;
+    csCamera.right = w / 2;
+    csCamera.top = d / 2;
+    csCamera.bottom = -d / 2;
+    const camHeight = Math.max(2, size.y * 1.1);
+    csCamera.near = 0;
+    csCamera.far = camHeight;
+    // Camera stays at the group origin (= floor level, since csGroup is at
+    // box.min.y) and rotation.x = π/2 makes it look UP, capturing the bottom
+    // silhouette of the model within camHeight. Previously we offset the
+    // camera UP by camHeight which put it ABOVE the model still looking up
+    // — straight into the sky — so the depth buffer captured nothing.
+    csCamera.position.set(0, 0, 0);
+    csCamera.updateProjectionMatrix();
+
+    // Render the scene's depth into csTarget, then blur twice.
+    const prevBg = scene.background;
+    const prevOverride = scene.overrideMaterial;
+    scene.background = null;
+    csGroup.visible = false;
+    scene.overrideMaterial = csDepthMaterial;
+    renderer.setRenderTarget(csTarget);
+    renderer.render(scene, csCamera);
+    scene.overrideMaterial = prevOverride;
+    blurContactShadow(2.5);
+    blurContactShadow(0.7);
+    renderer.setRenderTarget(null);
+    scene.background = prevBg;
+    csGroup.visible = true;
+    csReady = true;
+  }
+
   // ---- Post-processing pipeline ----
+  // Tuned for ArchViz-y look: subtle SAO for crevice darkening, tight Bloom only on
+  // truly bright emissive (lights, sky), SMAA over MSAA for stable edges with deferred-style passes.
   const composer = new EffectComposer(renderer);
   composer.addPass(new RenderPass(scene, camera));
   const sao = new SAOPass(scene, camera);
-  sao.params.saoBias = 0.3;
-  sao.params.saoIntensity = 0.04;
-  sao.params.saoScale = 6;
-  sao.params.saoKernelRadius = 28;
+  sao.params.saoBias = 0.25;
+  sao.params.saoIntensity = 0.06;        // up from 0.04 — crevices get more readable
+  sao.params.saoScale = 4;
+  sao.params.saoKernelRadius = 18;       // down from 28 — sharper contact AO, less "fog"
   sao.params.saoMinResolution = 0;
   sao.params.saoBlur = true;
-  sao.params.saoBlurRadius = 8;
-  sao.params.saoBlurStdDev = 4;
+  sao.params.saoBlurRadius = 6;
+  sao.params.saoBlurStdDev = 3.5;
   sao.params.saoBlurDepthCutoff = 0.01;
   composer.addPass(sao);
-  const bloom = new UnrealBloomPass(new THREE.Vector2(1024, 1024), 0.42, 0.85, 0.92);
+  // strength 0.32 (was 0.42), threshold 0.92 (was 0.85): only true emissives bloom.
+  const bloom = new UnrealBloomPass(new THREE.Vector2(1024, 1024), 0.32, 0.7, 0.92);
   composer.addPass(bloom);
   composer.addPass(new SMAAPass(1024, 1024));
   composer.addPass(new OutputPass());
@@ -126,75 +239,84 @@ export async function createRealRenderer(canvas) {
   }
   requestAnimationFrame(tick);
 
-  // ---- IFC API ----
-  const ifcApi = new IfcAPI();
-  ifcApi.SetWasmPath("./node_modules/web-ifc/", false);
-  await ifcApi.Init();
+  // ---- IFC parsing (off main thread) ----
+  // The web-ifc wasm and IFC StreamAllMeshes loop is CPU-heavy and previously
+  // blocked the render loop. We push parsing into a module worker and only
+  // do BufferGeometry assembly + material picking on the main thread, so the
+  // composer keeps drawing at 60 fps while a 30 MB Plumbing IFC streams in.
   const materials = makePbrMaterials();
-  const loadedModelIds = [];
+  const ifcWorker = new Worker(new URL("./bp3d-ifc-worker.js", import.meta.url), { type: "module" });
+  const pendingJobs = new Map();   // jobId -> { resolve, reject, group, count, label }
+  let nextJobId = 1;
+  let workerDead = false;
 
-  function placedToMesh(modelID, placedGeom, ifcType) {
-    const geom = ifcApi.GetGeometry(modelID, placedGeom.geometryExpressID);
-    const verts = ifcApi.GetVertexArray(geom.GetVertexData(), geom.GetVertexDataSize());
-    const indices = ifcApi.GetIndexArray(geom.GetIndexData(), geom.GetIndexDataSize());
-    const stride = 6;
-    const vCount = verts.length / stride;
-    const positions = new Float32Array(vCount * 3);
-    const normals = new Float32Array(vCount * 3);
-    for (let v = 0; v < vCount; v++) {
-      positions[v * 3] = verts[v * stride];
-      positions[v * 3 + 1] = verts[v * stride + 1];
-      positions[v * 3 + 2] = verts[v * stride + 2];
-      normals[v * 3] = verts[v * stride + 3];
-      normals[v * 3 + 1] = verts[v * stride + 4];
-      normals[v * 3 + 2] = verts[v * stride + 5];
+  ifcWorker.addEventListener("error", (e) => {
+    workerDead = true;
+    const err = new Error(`ifc-worker error: ${e.message || e.type}`);
+    pendingJobs.forEach((job) => job.reject(err));
+    pendingJobs.clear();
+  });
+
+  ifcWorker.addEventListener("message", (ev) => {
+    const msg = ev.data;
+    if (!msg || !pendingJobs.has(msg.jobId)) return;
+    const job = pendingJobs.get(msg.jobId);
+    if (msg.type === "mesh") {
+      job.group.add(buildMeshFromPayload(msg));
+      job.count++;
+    } else if (msg.type === "done") {
+      pendingJobs.delete(msg.jobId);
+      root.add(job.group);
+      job.resolve({ count: job.count, group: job.group });
+    } else if (msg.type === "error") {
+      pendingJobs.delete(msg.jobId);
+      job.reject(new Error(msg.message));
     }
+  });
+
+  function buildMeshFromPayload(msg) {
     const bg = new THREE.BufferGeometry();
-    bg.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-    bg.setAttribute("normal", new THREE.BufferAttribute(normals, 3));
-    bg.setIndex(new THREE.BufferAttribute(new Uint32Array(indices), 1));
+    bg.setAttribute("position", new THREE.BufferAttribute(msg.positions, 3));
+    bg.setAttribute("normal", new THREE.BufferAttribute(msg.normals, 3));
+    bg.setIndex(new THREE.BufferAttribute(msg.indices, 1));
     bg.computeBoundingBox();
     bg.computeBoundingSphere();
-    let mat = pickMaterial(materials, ifcType);
-    if (placedGeom.color && placedGeom.color.w !== undefined && placedGeom.color.w < 0.95 && mat !== materials.window) {
+    let mat = pickMaterial(materials, msg.ifcType);
+    if (msg.color && msg.color.w !== undefined && msg.color.w < 0.95 && mat !== materials.window) {
       mat = mat.clone();
       mat.transparent = true;
-      mat.opacity = Math.max(0.25, placedGeom.color.w);
+      mat.opacity = Math.max(0.25, msg.color.w);
     }
     const mesh = new THREE.Mesh(bg, mat);
-    const m = placedGeom.flatTransformation;
+    const t = msg.transform;
+    // web-ifc returns column-major; .fromArray(...) followed by transpose() converts to Three's convention.
     const matrix = new THREE.Matrix4().fromArray([
-      m[0], m[4], m[8], m[12],
-      m[1], m[5], m[9], m[13],
-      m[2], m[6], m[10], m[14],
-      m[3], m[7], m[11], m[15]
+      t[0], t[4], t[8],  t[12],
+      t[1], t[5], t[9],  t[13],
+      t[2], t[6], t[10], t[14],
+      t[3], t[7], t[11], t[15]
     ]).transpose();
     mesh.applyMatrix4(matrix);
     mesh.castShadow = true;
     mesh.receiveShadow = true;
-    geom.delete();
     return mesh;
   }
 
-  async function loadIfc(url, label = url) {
-    const resp = await fetch(url);
-    if (!resp.ok) throw new Error(`fetch ${url} -> ${resp.status}`);
-    const buf = await resp.arrayBuffer();
-    const modelID = ifcApi.OpenModel(new Uint8Array(buf));
-    loadedModelIds.push(modelID);
+  function loadIfc(url, label = url, system = null) {
+    if (workerDead) return Promise.reject(new Error("ifc-worker terminated"));
+    const jobId = nextJobId++;
     const group = new THREE.Group();
     group.name = label;
-    let count = 0;
-    ifcApi.StreamAllMeshes(modelID, (flatMesh) => {
-      const ifcType = ifcApi.GetLineType(modelID, flatMesh.expressID);
-      const placed = flatMesh.geometries;
-      for (let i = 0; i < placed.size(); i++) {
-        group.add(placedToMesh(modelID, placed.get(i), ifcType));
-        count++;
-      }
+    group.userData.system = system || label.toLowerCase();
+    // Resolve to an absolute URL on the main thread. The worker lives at
+    // /scripts/bp3d-ifc-worker.js, so a relative URL like "./samples/..."
+    // would otherwise resolve to /scripts/samples/... inside the worker
+    // and 404. Passing a fully-qualified URL avoids any base-URL drift.
+    const absoluteUrl = new URL(url, location.href).href;
+    return new Promise((resolve, reject) => {
+      pendingJobs.set(jobId, { resolve, reject, group, count: 0, label });
+      ifcWorker.postMessage({ type: "load", jobId, url: absoluteUrl });
     });
-    root.add(group);
-    return { count, modelID };
   }
 
   function fitToScene() {
@@ -218,27 +340,39 @@ export async function createRealRenderer(canvas) {
   }
 
   function clearAll() {
+    // Reject any in-flight worker jobs so awaiters don't hang.
+    pendingJobs.forEach((job) => job.reject(new Error("renderer cleared")));
+    pendingJobs.clear();
     while (root.children.length) {
       const c = root.children.pop();
       c.traverse?.((n) => { n.geometry?.dispose?.(); });
     }
-    loadedModelIds.forEach((id) => { try { ifcApi.CloseModel(id); } catch {} });
-    loadedModelIds.length = 0;
   }
 
   function setExposure(v) { renderer.toneMappingExposure = v; }
   function setBloom(v) { bloom.strength = v; }
+  function setContactShadowOpacity(v) {
+    csPlane.material.opacity = Math.max(0, Math.min(1, v));
+    csPlane.visible = v > 0.001;
+  }
 
   return {
     loadIfc,
     clearAll,
     fit: fitToScene,
+    regenerateContactShadow,
+    isContactShadowReady: () => csReady,
     setExposure,
     setBloom,
+    setContactShadowOpacity,
     dispose() {
       running = false;
       resizeObs.disconnect();
       clearAll();
+      try { ifcWorker.terminate(); } catch {}
+      workerDead = true;
+      try { csTarget.dispose(); csTargetBlur.dispose(); } catch {}
+      try { csHBlur.dispose(); csVBlur.dispose(); csDepthMaterial.dispose(); } catch {}
       composer.dispose();
       renderer.dispose();
       pmrem.dispose();

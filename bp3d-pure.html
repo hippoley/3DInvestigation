@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <title>BP3D · Real Renderer (Pure Test)</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    html, body { margin: 0; padding: 0; height: 100%; background: #1a1d22; color: #f0f3f5;
+      font: 600 12px/1.3 Inter, system-ui, -apple-system, sans-serif; overflow: hidden; }
+    #canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+    #status { position: fixed; left: 14px; top: 14px; z-index: 5; padding: 8px 12px;
+      border-radius: 6px; background: rgba(20, 24, 30, 0.78); backdrop-filter: blur(10px);
+      letter-spacing: 0.04em; font-weight: 700; max-width: calc(100% - 28px); }
+    #status.warn { background: rgba(120, 40, 30, 0.85); }
+    #title { position: fixed; right: 14px; top: 14px; z-index: 5; padding: 6px 10px;
+      border-radius: 6px; background: rgba(20, 24, 30, 0.62); backdrop-filter: blur(8px);
+      font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; opacity: 0.85; }
+    #controls { position: fixed; right: 14px; bottom: 14px; z-index: 6; display: flex;
+      flex-direction: column; gap: 8px; padding: 10px 12px; min-width: 220px;
+      border-radius: 8px; background: rgba(20, 24, 30, 0.78); backdrop-filter: blur(10px);
+      box-shadow: 0 8px 22px rgba(0, 0, 0, 0.32); }
+    #controls .row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    #controls label { flex: 0 0 auto; opacity: 0.85; text-transform: uppercase; letter-spacing: 0.05em; }
+    #controls input[type="range"] { flex: 1; accent-color: #5fb6ff; }
+    #controls .val { flex: 0 0 40px; text-align: right; font-variant-numeric: tabular-nums; color: #cfe9ff; }
+    #log { position: fixed; left: 14px; bottom: 14px; z-index: 5; padding: 6px 10px;
+      border-radius: 6px; background: rgba(20, 24, 30, 0.62); backdrop-filter: blur(8px);
+      max-width: 50vw; font-family: ui-monospace, Consolas, monospace; font-size: 11px;
+      opacity: 0.85; white-space: pre; max-height: 30vh; overflow: auto; }
+  </style>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "./node_modules/three/build/three.module.js",
+      "three/addons/": "./node_modules/three/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+  <span id="title">BP3D · Pure</span>
+  <div id="status">Initializing…</div>
+  <div id="controls">
+    <div class="row"><label for="exp">Exposure</label><input type="range" id="exp" min="0.4" max="2.4" step="0.02" value="1.18"><span class="val" id="expV">1.18</span></div>
+    <div class="row"><label for="blm">Bloom</label><input type="range" id="blm" min="0" max="1.5" step="0.01" value="0.32"><span class="val" id="blmV">0.32</span></div>
+    <div class="row"><label for="cnt">Contact</label><input type="range" id="cnt" min="0" max="1" step="0.02" value="0.78"><span class="val" id="cntV">0.78</span></div>
+  </div>
+  <pre id="log"></pre>
+
+  <script type="module">
+    const IFCS = [
+      { url: "./samples/duplex-apartment/raw/Duplex_A_20110907.ifc",                label: "Architecture", system: "architecture", priority: 0 },
+      { url: "./samples/duplex-apartment/raw/Duplex_M_20111024_ROOMS_AND_SPACES.ifc", label: "Rooms",       system: "spaces",       priority: 1 },
+      { url: "./samples/duplex-apartment/raw/Duplex_Electrical_20121207.ifc",        label: "Electrical",  system: "electrical",   priority: 2 },
+      { url: "./samples/duplex-apartment/raw/Duplex_MEP_20110907.ifc",               label: "Mechanical",  system: "hvac",         priority: 2 },
+      { url: "./samples/duplex-apartment/raw/Duplex_Plumbing_20121113.ifc",          label: "Plumbing",    system: "plumbing",     priority: 3 }
+    ];
+    const $status = document.querySelector("#status");
+    const $log = document.querySelector("#log");
+    const setStatus = (txt, warn = false) => { $status.textContent = txt; $status.classList.toggle("warn", warn); };
+    const log = (txt) => { $log.textContent += txt + "\n"; $log.scrollTop = $log.scrollHeight; console.info("[bp3d-pure]", txt); };
+
+    window.addEventListener("error", (e) => log(`ERROR: ${e.message}`));
+    window.addEventListener("unhandledrejection", (e) => log(`PROMISE-REJ: ${e.reason && e.reason.message ? e.reason.message : e.reason}`));
+
+    (async () => {
+      try {
+        setStatus("Loading renderer module…");
+        const mod = await import("./scripts/bp3d-real-renderer.js");
+        log("renderer module loaded");
+
+        const canvas = document.querySelector("#canvas");
+        setStatus("Initializing renderer…");
+        const api = await mod.createRealRenderer(canvas);
+        log("renderer created");
+
+        // Slider wiring
+        const wire = (id, valId, fn) => {
+          const s = document.querySelector(id), v = document.querySelector(valId);
+          const sync = () => { const x = parseFloat(s.value); v.textContent = x.toFixed(2); fn(x); };
+          s.addEventListener("input", sync); sync();
+        };
+        wire("#exp", "#expV", (v) => api.setExposure(v));
+        wire("#blm", "#blmV", (v) => api.setBloom(v));
+        wire("#cnt", "#cntV", (v) => api.setContactShadowOpacity(v));
+
+        const sorted = [...IFCS].sort((a, b) => a.priority - b.priority);
+        const blocking = sorted.filter(c => c.priority === 0);
+        const background = sorted.filter(c => c.priority > 0);
+        const t0 = performance.now();
+        let total = 0;
+
+        // Phase 1: blocking — Architecture so user sees house ASAP
+        for (const cfg of blocking) {
+          setStatus(`Loading ${cfg.label}…`);
+          try {
+            const t = performance.now();
+            const res = await api.loadIfc(cfg.url, cfg.label, cfg.system);
+            total += res.count;
+            log(`${cfg.label} +${res.count} meshes in ${((performance.now() - t) / 1000).toFixed(1)}s`);
+          } catch (err) {
+            log(`${cfg.label} FAILED: ${err.message || err}`);
+          }
+        }
+        api.fit();
+        try { api.regenerateContactShadow(); log("contact shadow regenerated (phase 1)"); }
+        catch (e) { log(`contact shadow err: ${e.message || e}`); }
+        const dt0 = ((performance.now() - t0) / 1000).toFixed(1);
+        setStatus(background.length
+          ? `Architecture ready · ${total} meshes · ${dt0}s — streaming MEP…`
+          : `${total} meshes · ${dt0}s · drag to orbit`);
+
+        // Phase 2: background streaming
+        for (const cfg of background) {
+          try {
+            const t = performance.now();
+            setStatus(`${total} meshes · streaming ${cfg.label}…`);
+            const res = await api.loadIfc(cfg.url, cfg.label, cfg.system);
+            total += res.count;
+            log(`${cfg.label} +${res.count} meshes in ${((performance.now() - t) / 1000).toFixed(1)}s`);
+          } catch (err) {
+            log(`${cfg.label} FAILED: ${err.message || err}`);
+          }
+        }
+        try { api.regenerateContactShadow(); log("contact shadow regenerated (phase 2)"); }
+        catch (e) { log(`contact shadow err: ${e.message || e}`); }
+        const dt = ((performance.now() - t0) / 1000).toFixed(1);
+        setStatus(`${total} meshes · ${dt}s · drag to orbit, wheel to zoom`);
+      } catch (err) {
+        console.error(err);
+        setStatus(`Failed: ${err.message || err}`, true);
+        log(`FATAL: ${err.message || err}\n${err.stack || ""}`);
+      }
+    })();
+  </script>
+</body>
+</html>

@@ -166,27 +166,104 @@ export function makePbrMaterials() {
   const metalRough = makeMetalRoughnessTexture();
 
   return {
-    wall: new THREE.MeshPhysicalMaterial({ map: wallMap, color: 0xffffff, roughness: 0.86, metalness: 0 }),
+    // Plaster wall: subtle micro-variation from the texture, no metallic, slight envMap pickup
+    wall: new THREE.MeshPhysicalMaterial({
+      map: wallMap, color: 0xffffff, roughness: 0.86, metalness: 0,
+      envMapIntensity: 0.55
+    }),
+    // Wood floor: anisotropic specular along grain + soft clearcoat for that polished-wood look
     floor: new THREE.MeshPhysicalMaterial({
       map: woodMap, normalMap: woodNormal, normalScale: new THREE.Vector2(0.6, 0.6),
-      color: 0xffffff, roughness: 0.55, metalness: 0.04, clearcoat: 0.22, clearcoatRoughness: 0.55
+      color: 0xffffff, roughness: 0.5, metalness: 0.04,
+      clearcoat: 0.28, clearcoatRoughness: 0.5,
+      anisotropy: 0.55, anisotropyRotation: 0,
+      envMapIntensity: 0.9
     }),
-    ceiling: new THREE.MeshPhysicalMaterial({ map: ceilingMap, color: 0xffffff, roughness: 0.92, metalness: 0 }),
-    door: new THREE.MeshPhysicalMaterial({ map: woodMap.clone(), color: 0x8a6240, roughness: 0.45, metalness: 0.05 }),
-    window: new THREE.MeshPhysicalMaterial({ color: 0xc4dde6, roughness: 0.04, metalness: 0, transmission: 0.9, thickness: 0.18, transparent: true, opacity: 0.55, ior: 1.45, attenuationColor: 0xc8e0e8, attenuationDistance: 4 }),
-    furniture: new THREE.MeshPhysicalMaterial({ color: 0xa28b6e, roughness: 0.62, metalness: 0.05, clearcoat: 0.15 }),
-    covering: new THREE.MeshPhysicalMaterial({ map: ceilingMap, color: 0xffffff, roughness: 0.85, metalness: 0 }),
-    stair: new THREE.MeshPhysicalMaterial({ map: woodMap.clone(), color: 0x6e6457, roughness: 0.6, metalness: 0.06 }),
-    railing: new THREE.MeshPhysicalMaterial({ color: 0x3a4148, roughness: 0.32, metalness: 0.85, roughnessMap: metalRough }),
-    column: new THREE.MeshPhysicalMaterial({ color: 0x9c958a, roughness: 0.7, metalness: 0.05 }),
-    pipe: new THREE.MeshPhysicalMaterial({ color: 0xc4c2bd, roughness: 0.28, metalness: 0.92, roughnessMap: metalRough, anisotropy: 0.3 }),
-    duct: new THREE.MeshPhysicalMaterial({ color: 0x8a9098, roughness: 0.42, metalness: 0.65, roughnessMap: metalRough }),
-    cable: new THREE.MeshPhysicalMaterial({ color: 0xcf6a26, roughness: 0.6, metalness: 0.2 }),
-    flowTerm: new THREE.MeshPhysicalMaterial({ color: 0xeef0f2, roughness: 0.28, metalness: 0.18, clearcoat: 0.3 }),
-    sanitary: new THREE.MeshPhysicalMaterial({ color: 0xfafaf8, roughness: 0.12, metalness: 0.04, clearcoat: 0.55, clearcoatRoughness: 0.18 }),
-    airTerm: new THREE.MeshPhysicalMaterial({ color: 0xc8ccd0, roughness: 0.38, metalness: 0.7, roughnessMap: metalRough }),
-    light: new THREE.MeshPhysicalMaterial({ color: 0xfff4d0, roughness: 0.25, metalness: 0.6, emissive: 0xffd070, emissiveIntensity: 0.55 }),
-    valve: new THREE.MeshPhysicalMaterial({ color: 0xb04434, roughness: 0.42, metalness: 0.6 }),
+    ceiling: new THREE.MeshPhysicalMaterial({
+      map: ceilingMap, color: 0xffffff, roughness: 0.92, metalness: 0,
+      envMapIntensity: 0.5
+    }),
+    door: new THREE.MeshPhysicalMaterial({
+      map: woodMap.clone(), color: 0x8a6240, roughness: 0.45, metalness: 0.05,
+      clearcoat: 0.18, clearcoatRoughness: 0.4
+    }),
+    // Physically-correct glass: transmission handles transparency (no opacity/transparent flags),
+    // realistic IOR 1.52, slight aqueous tint via attenuation, small dispersion for edge color split.
+    window: new THREE.MeshPhysicalMaterial({
+      color: 0xeef6f8,
+      roughness: 0.05, metalness: 0,
+      transmission: 1.0, thickness: 0.05,
+      ior: 1.52,
+      attenuationColor: 0xeaf3f7, attenuationDistance: 12,
+      dispersion: 0.05,
+      specularIntensity: 1.0,
+      envMapIntensity: 1.4,
+      side: THREE.DoubleSide
+    }),
+    // Upholstery / generic furniture: matte with very faint sheen for fabric feel
+    furniture: new THREE.MeshPhysicalMaterial({
+      color: 0xa28b6e, roughness: 0.7, metalness: 0.02,
+      clearcoat: 0.08, clearcoatRoughness: 0.6,
+      sheen: 0.4, sheenColor: 0x705540, sheenRoughness: 0.7
+    }),
+    covering: new THREE.MeshPhysicalMaterial({
+      map: ceilingMap, color: 0xffffff, roughness: 0.85, metalness: 0,
+      envMapIntensity: 0.5
+    }),
+    stair: new THREE.MeshPhysicalMaterial({
+      map: woodMap.clone(), color: 0x6e6457, roughness: 0.55, metalness: 0.05,
+      clearcoat: 0.2, clearcoatRoughness: 0.5,
+      anisotropy: 0.35
+    }),
+    // Brushed steel railing — strong anisotropy gives the streak highlight
+    railing: new THREE.MeshPhysicalMaterial({
+      color: 0x3a4148, roughness: 0.3, metalness: 0.92, roughnessMap: metalRough,
+      anisotropy: 0.7, anisotropyRotation: Math.PI / 2,
+      envMapIntensity: 1.1
+    }),
+    column: new THREE.MeshPhysicalMaterial({
+      color: 0x9c958a, roughness: 0.7, metalness: 0.05
+    }),
+    // Copper-ish plumbing: high metalness + brushed anisotropy along pipe length
+    pipe: new THREE.MeshPhysicalMaterial({
+      color: 0xc4c2bd, roughness: 0.26, metalness: 0.94, roughnessMap: metalRough,
+      anisotropy: 0.6, anisotropyRotation: Math.PI / 2,
+      envMapIntensity: 1.15
+    }),
+    // Galvanised duct: medium metalness, brushed
+    duct: new THREE.MeshPhysicalMaterial({
+      color: 0x8a9098, roughness: 0.4, metalness: 0.7, roughnessMap: metalRough,
+      anisotropy: 0.45, anisotropyRotation: Math.PI / 2,
+      envMapIntensity: 0.9
+    }),
+    cable: new THREE.MeshPhysicalMaterial({
+      color: 0xcf6a26, roughness: 0.62, metalness: 0.18,
+      sheen: 0.2, sheenColor: 0x8b3818
+    }),
+    flowTerm: new THREE.MeshPhysicalMaterial({
+      color: 0xeef0f2, roughness: 0.26, metalness: 0.2,
+      clearcoat: 0.4, clearcoatRoughness: 0.25
+    }),
+    // Porcelain sanitary: strong clearcoat = wet glaze sheen
+    sanitary: new THREE.MeshPhysicalMaterial({
+      color: 0xfafaf8, roughness: 0.1, metalness: 0.02,
+      clearcoat: 0.85, clearcoatRoughness: 0.08,
+      envMapIntensity: 1.1
+    }),
+    airTerm: new THREE.MeshPhysicalMaterial({
+      color: 0xc8ccd0, roughness: 0.36, metalness: 0.72, roughnessMap: metalRough,
+      anisotropy: 0.4, anisotropyRotation: Math.PI / 2
+    }),
+    // Light fixture: glow + warm metal frame
+    light: new THREE.MeshPhysicalMaterial({
+      color: 0xfff4d0, roughness: 0.28, metalness: 0.55,
+      emissive: 0xffd070, emissiveIntensity: 0.85,
+      clearcoat: 0.2
+    }),
+    valve: new THREE.MeshPhysicalMaterial({
+      color: 0xb04434, roughness: 0.4, metalness: 0.6,
+      clearcoat: 0.15
+    }),
     fallback: new THREE.MeshStandardMaterial({ color: 0xc4c4c0, roughness: 0.7, metalness: 0.1 })
   };
 }
