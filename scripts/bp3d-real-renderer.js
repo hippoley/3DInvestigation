@@ -4,6 +4,7 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { PointerLockControls } from "three/addons/controls/PointerLockControls.js";
+import { Reflector } from "three/addons/objects/Reflector.js";
 import { Sky } from "three/addons/objects/Sky.js";
 import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
@@ -88,6 +89,24 @@ export async function createRealRenderer(canvas) {
   ground.position.y = -0.06;
   ground.receiveShadow = true;
   scene.add(ground);
+
+  // ---- Floor Reflector (planar mirror for polished floor effect) ----
+  // A semi-transparent reflective plane at Level 1 floor height. Gives
+  // marble/tile floors a wet, polished look — high visual impact, cheap cost.
+  const reflectorGeom = new THREE.PlaneGeometry(20, 30);
+  const floorReflector = new Reflector(reflectorGeom, {
+    color: 0x889aa5,
+    textureWidth: 512,
+    textureHeight: 512,
+    clipBias: 0.003
+  });
+  floorReflector.rotation.x = -Math.PI / 2;
+  floorReflector.position.set(4.4, 0.01, 8.9); // centered on building plan
+  floorReflector.material.transparent = true;
+  floorReflector.material.opacity = 0.15; // subtle — not a mirror, just a sheen
+  floorReflector.renderOrder = 1;
+  scene.add(floorReflector);
+  let reflectorEnabled = true;
 
   const root = new THREE.Group();
   scene.add(root);
@@ -589,6 +608,11 @@ export async function createRealRenderer(canvas) {
     csPlane.material.opacity = Math.max(0, Math.min(1, v));
     csPlane.visible = v > 0.001;
   }
+  function setFloorReflection(opacity) {
+    floorReflector.material.opacity = Math.max(0, Math.min(0.5, opacity));
+    floorReflector.visible = opacity > 0.001;
+    reflectorEnabled = opacity > 0.001;
+  }
   function setPostProcessing(enabled) { useComposer = !!enabled; }
 
   // ---- Sun position control ----
@@ -716,6 +740,7 @@ export async function createRealRenderer(canvas) {
     setExposure,
     setBloom,
     setContactShadowOpacity,
+    setFloorReflection,
     setSystemVisibility,
     setLevelFilter,
     getKnownSystems,
