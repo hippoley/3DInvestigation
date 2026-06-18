@@ -307,8 +307,10 @@ export async function createRealRenderer(canvas) {
       t[3], t[7], t[11], t[15]
     ]).transpose();
     mesh.applyMatrix4(matrix);
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
+    // IfcSpace volumes are invisible helper geometry — skip shadow casting
+    const isSpace = msg.ifcType === 3856911033 || msg.ifcType === 652456506;
+    mesh.castShadow = !isSpace;
+    mesh.receiveShadow = !isSpace;
     return mesh;
   }
 
@@ -339,7 +341,9 @@ export async function createRealRenderer(canvas) {
   // System visibility is applied at group level (cheap). Level visibility is
   // per-mesh (mesh world bbox center vs [min, max] on the height axis), and is
   // cached in mesh.userData._heightY at first evaluation.
-  const systemEnabled = new Map();   // systemId -> bool
+  // "spaces" (IfcSpace room volumes) hidden by default — they are ghost volumes
+  // that obscure real geometry when rendered opaque.
+  const systemEnabled = new Map([["spaces", false]]);   // systemId -> bool
   let levelRange = null;             // null = pass-all, else { min, max }
 
   function meshHeightCenter(mesh) {
@@ -415,6 +419,30 @@ export async function createRealRenderer(canvas) {
       });
     });
     return stats;
+  }
+
+  function debugGroupBboxes() {
+    // Returns per-group (per IFC file) bounding box info for alignment diagnosis.
+    const results = [];
+    root.children.forEach((group) => {
+      const box = new THREE.Box3().setFromObject(group);
+      if (!isFinite(box.min.x)) return;
+      const center = box.getCenter(new THREE.Vector3());
+      const size = box.getSize(new THREE.Vector3());
+      results.push({
+        name: group.name,
+        system: group.userData.system,
+        meshCount: 0,
+        center: { x: +center.x.toFixed(3), y: +center.y.toFixed(3), z: +center.z.toFixed(3) },
+        size: { x: +size.x.toFixed(3), y: +size.y.toFixed(3), z: +size.z.toFixed(3) },
+        min: { x: +box.min.x.toFixed(3), y: +box.min.y.toFixed(3), z: +box.min.z.toFixed(3) },
+        max: { x: +box.max.x.toFixed(3), y: +box.max.y.toFixed(3), z: +box.max.z.toFixed(3) }
+      });
+      let mc = 0;
+      group.traverse((o) => { if (o.isMesh) mc++; });
+      results[results.length - 1].meshCount = mc;
+    });
+    return results;
   }
 
   function fitToScene() {
@@ -576,6 +604,7 @@ export async function createRealRenderer(canvas) {
     setLevelFilter,
     getKnownSystems,
     debugVisibilityStats,
+    debugGroupBboxes,
     setPostProcessing,
     setSunPosition,
     flyToInterior,

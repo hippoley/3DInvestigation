@@ -19,7 +19,8 @@ const IFC = {
   AIR_TERMINAL: 1634111441, SPACE_HEATER: 1999602285,
   LIGHT_FIXTURE: 629592764, LAMP: 76236018, OUTLET: 3694346114,
   ELECTRIC_APPLIANCE: 1904799276, FIRE_TERMINAL: 1305183839,
-  VALVE: 4207607924, FLOW_FITTING: 4278956645
+  VALVE: 4207607924, FLOW_FITTING: 4278956645,
+  SPACE: 3856911033, SPACE_TYPE: 652456506
 };
 
 function noise2(x, y, seed = 0) {
@@ -264,6 +265,12 @@ export function makePbrMaterials() {
       color: 0xb04434, roughness: 0.4, metalness: 0.6,
       clearcoat: 0.15
     }),
+    // IfcSpace: ghost volume showing room boundaries — nearly invisible
+    space: new THREE.MeshPhysicalMaterial({
+      color: 0x88bbdd, roughness: 0.9, metalness: 0,
+      transparent: true, opacity: 0.08, depthWrite: false,
+      side: THREE.DoubleSide
+    }),
     fallback: new THREE.MeshStandardMaterial({ color: 0xc4c4c0, roughness: 0.7, metalness: 0.1 })
   };
 }
@@ -286,6 +293,7 @@ export function pickMaterial(m, t) {
     case IFC.AIR_TERMINAL: return m.airTerm;
     case IFC.LIGHT_FIXTURE: case IFC.LAMP: return m.light;
     case IFC.VALVE: return m.valve;
+    case IFC.SPACE: case IFC.SPACE_TYPE: return m.space;
     case IFC.SPACE_HEATER: case IFC.FLOW_TERMINAL: case IFC.OUTLET:
     case IFC.ELECTRIC_APPLIANCE: case IFC.FIRE_TERMINAL: case IFC.FLOW_FITTING:
       return m.flowTerm;

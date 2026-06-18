@@ -209,7 +209,7 @@
           plumbing: "Plumbing"
         };
         let activeLevel = "all";       // level id string or "all"
-        const systemActive = new Map(IFCS.map((c) => [c.system, true]));
+        const systemActive = new Map(IFCS.map((c) => [c.system, c.system !== "spaces"]));
 
         const payloadPromise = fetch("./samples/duplex-apartment/derived/viewer-payload.json")
           .then((r) => r.ok ? r.json() : Promise.reject(new Error(`payload ${r.status}`)))
