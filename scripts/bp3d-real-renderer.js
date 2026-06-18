@@ -3,6 +3,7 @@
 // Zero external assets — everything generated at runtime.
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { PointerLockControls } from "three/addons/controls/PointerLockControls.js";
 import { Sky } from "three/addons/objects/Sky.js";
 import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
@@ -212,10 +213,14 @@ export async function createRealRenderer(canvas) {
   // grounding without the catastrophic failure mode. If we want per-object
   // crevice AO back, replace SAOPass with N8AOPass (pmndrs/postprocessing)
   // which handles large scenes correctly.
+  // Composer uses canvas actual size (set below in resize observer).
+  // Initial size placeholder is overwritten immediately.
   const composer = new EffectComposer(renderer);
   composer.addPass(new RenderPass(scene, camera));
-  // strength 0.32 (was 0.42), threshold 0.92 (was 0.85): only true emissives bloom.
-  const bloom = new UnrealBloomPass(new THREE.Vector2(1024, 1024), 0.32, 0.7, 0.92);
+  // Bloom: threshold 0.85 ensures only emissive surfaces (light fixtures,
+  // lamps) produce glow. Strength 0.38 is subtle — enough for atmosphere
+  // without washing out the scene.
+  const bloom = new UnrealBloomPass(new THREE.Vector2(1024, 1024), 0.38, 0.6, 0.85);
   composer.addPass(bloom);
   composer.addPass(new SMAAPass(1024, 1024));
   composer.addPass(new OutputPass());
@@ -233,10 +238,15 @@ export async function createRealRenderer(canvas) {
   resizeObs.observe(canvas);
 
   let running = true;
-  let useComposer = false; // Disabled: Bloom/SMAA/Output chain produces black in headless+some GPUs. Investigating.
+  // PostFX enabled by default for real browsers. The prior "black screen" was
+  // a headless-only issue. Users can toggle via the checkbox.
+  let useComposer = true;
+  const clock = new THREE.Clock();
   function tick() {
     if (!running) return;
-    controls.update();
+    const delta = clock.getDelta();
+    if (fpsActive) { updateFPS(delta); }
+    else { controls.update(); }
     if (useComposer) { composer.render(); }
     else { renderer.render(scene, camera); }
     requestAnimationFrame(tick);
@@ -497,6 +507,82 @@ export async function createRealRenderer(canvas) {
     }
   }
 
+  // ---- FPS Walkthrough Mode ----
+  // PointerLockControls for first-person camera. WASD movement with simple
+  // bbox-based boundary clamping (keeps player inside the building).
+  const fpsControls = new PointerLockControls(camera, canvas);
+  let fpsActive = false;
+  const fpsVelocity = new THREE.Vector3();
+  const fpsDirection = new THREE.Vector3();
+  const FPS_SPEED = 3.5; // m/s
+  const FPS_EYE_HEIGHT = 1.6;
+  const keysDown = new Set();
+  let fpsBounds = null; // { min: Vector3, max: Vector3 }
+
+  canvas.addEventListener("keydown", (e) => keysDown.add(e.code));
+  canvas.addEventListener("keyup", (e) => keysDown.delete(e.code));
+  // Also reset keys on blur to prevent stuck keys
+  window.addEventListener("blur", () => keysDown.clear());
+
+  fpsControls.addEventListener("lock", () => {
+    fpsActive = true;
+    controls.enabled = false;
+    // Compute building bounds for collision
+    if (root.children.length) {
+      const box = new THREE.Box3().setFromObject(root);
+      fpsBounds = { min: box.min.clone(), max: box.max.clone() };
+    }
+  });
+  fpsControls.addEventListener("unlock", () => {
+    fpsActive = false;
+    controls.enabled = true;
+    keysDown.clear();
+  });
+
+  function updateFPS(delta) {
+    if (!fpsActive) return;
+    // Direction from WASD
+    fpsDirection.set(0, 0, 0);
+    if (keysDown.has("KeyW") || keysDown.has("ArrowUp")) fpsDirection.z -= 1;
+    if (keysDown.has("KeyS") || keysDown.has("ArrowDown")) fpsDirection.z += 1;
+    if (keysDown.has("KeyA") || keysDown.has("ArrowLeft")) fpsDirection.x -= 1;
+    if (keysDown.has("KeyD") || keysDown.has("ArrowRight")) fpsDirection.x += 1;
+    if (fpsDirection.lengthSq() > 0) fpsDirection.normalize();
+
+    // Move along camera facing direction
+    fpsVelocity.set(0, 0, 0);
+    const forward = new THREE.Vector3();
+    camera.getWorldDirection(forward);
+    forward.y = 0; forward.normalize();
+    const right = new THREE.Vector3().crossVectors(forward, camera.up).normalize();
+    fpsVelocity.addScaledVector(forward, -fpsDirection.z * FPS_SPEED * delta);
+    fpsVelocity.addScaledVector(right, fpsDirection.x * FPS_SPEED * delta);
+
+    camera.position.add(fpsVelocity);
+    // Clamp to building bounds (simple collision)
+    if (fpsBounds) {
+      const pad = 0.3;
+      camera.position.x = Math.max(fpsBounds.min.x + pad, Math.min(fpsBounds.max.x - pad, camera.position.x));
+      camera.position.z = Math.max(fpsBounds.min.z + pad, Math.min(fpsBounds.max.z - pad, camera.position.z));
+    }
+  }
+
+  function enterFPS(levelElevation = 0) {
+    // Position camera inside the building and lock pointer
+    if (!root.children.length) return;
+    const box = new THREE.Box3().setFromObject(root);
+    const center = box.getCenter(new THREE.Vector3());
+    camera.position.set(center.x, levelElevation + FPS_EYE_HEIGHT, center.z);
+    camera.near = 0.05;
+    camera.far = 200;
+    camera.updateProjectionMatrix();
+    fpsControls.lock();
+  }
+
+  function exitFPS() {
+    fpsControls.unlock();
+  }
+
   function setExposure(v) { renderer.toneMappingExposure = v; }
   function setBloom(v) { bloom.strength = v; }
   function setContactShadowOpacity(v) {
@@ -589,6 +675,36 @@ export async function createRealRenderer(canvas) {
   canvas.addEventListener("pointerdown", onPointerDown);
   canvas.addEventListener("pointerup", onPointerUp);
 
+  // ---- Day/Night atmosphere ----
+  // Controls sun elevation, indoor warm fill, and ambient color temperature
+  // in one coordinated "time of day" value from 0 (noon) to 1 (night).
+  let dayNightMix = 0; // 0 = day, 1 = night
+  function setTimeOfDay(t) {
+    dayNightMix = Math.max(0, Math.min(1, t));
+    // Sun elevation: 32° at noon → 2° at dusk
+    const elev = THREE.MathUtils.lerp(32, 2, dayNightMix);
+    setSunPosition(elev, 155);
+    // Background: day sky → dark blue
+    const dayBg = new THREE.Color(0xb6c5d2);
+    const nightBg = new THREE.Color(0x1a2030);
+    scene.background = dayBg.clone().lerp(nightBg, dayNightMix);
+    // Fog color follows background
+    scene.fog.color.copy(scene.background);
+    // Hemisphere light: bright sky → dim warm
+    hemi.intensity = THREE.MathUtils.lerp(1.1, 0.25, dayNightMix);
+    hemi.color.set(dayNightMix < 0.5 ? 0xeaf2ff : 0xffe8c0);
+    // Ambient: brighter at night to simulate indoor lights
+    ambient.intensity = THREE.MathUtils.lerp(0.15, 0.35, dayNightMix);
+    ambient.color.set(dayNightMix > 0.5 ? 0xffeedd : 0xffffff);
+    // Sun intensity drops at night
+    sunLight.intensity = THREE.MathUtils.lerp(3.8, 0.3, dayNightMix);
+    // Fill light warms up at night
+    fill.intensity = THREE.MathUtils.lerp(1.2, 0.5, dayNightMix);
+    fill.color.set(dayNightMix > 0.5 ? 0xffe0b0 : 0xb8d4ee);
+    // Exposure slight bump at night for indoor visibility
+    renderer.toneMappingExposure = THREE.MathUtils.lerp(1.22, 1.4, dayNightMix);
+  }
+
   function onSelect(callback) { onSelectCallback = callback; }
 
   return {
@@ -607,7 +723,11 @@ export async function createRealRenderer(canvas) {
     debugGroupBboxes,
     setPostProcessing,
     setSunPosition,
+    setTimeOfDay,
     flyToInterior,
+    enterFPS,
+    exitFPS,
+    isFPS: () => fpsActive,
     onSelect,
     clearSelection,
     dispose() {
@@ -616,6 +736,7 @@ export async function createRealRenderer(canvas) {
       canvas.removeEventListener("pointerup", onPointerUp);
       resizeObs.disconnect();
       clearAll();
+      try { fpsControls.dispose(); } catch {}
       try { ifcWorker.terminate(); } catch {}
       workerDead = true;
       try { csTarget.dispose(); csTargetBlur.dispose(); } catch {}

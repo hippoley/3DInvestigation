@@ -66,20 +66,24 @@
   </script>
 </head>
 <body>
-  <canvas id="canvas"></canvas>
+  <canvas id="canvas" tabindex="0"></canvas>
   <span id="title">BP3D · Pure</span>
   <div id="status">Initializing…</div>
   <div id="controls">
     <div class="row"><label for="exp">Exposure</label><input type="range" id="exp" min="0.4" max="2.4" step="0.02" value="1.18"><span class="val" id="expV">1.18</span></div>
-    <div class="row"><label for="blm">Bloom</label><input type="range" id="blm" min="0" max="1.5" step="0.01" value="0.32"><span class="val" id="blmV">0.32</span></div>
+    <div class="row"><label for="blm">Bloom</label><input type="range" id="blm" min="0" max="1.5" step="0.01" value="0.38"><span class="val" id="blmV">0.38</span></div>
     <div class="row"><label for="cnt">Contact</label><input type="range" id="cnt" min="0" max="1" step="0.02" value="0.78"><span class="val" id="cntV">0.78</span></div>
     <div class="row"><label for="sun">Sun</label><input type="range" id="sun" min="5" max="80" step="1" value="32"><span class="val" id="sunV">32°</span></div>
+    <div class="row"><label for="tod">Day/Night</label><input type="range" id="tod" min="0" max="1" step="0.01" value="0"><span class="val" id="todV">Day</span></div>
     <div class="row" style="gap:4px">
       <button type="button" id="btnOverview" class="ctrl-btn">Overview</button>
       <button type="button" id="btnInterior" class="ctrl-btn">Enter L1</button>
       <button type="button" id="btnInterior2" class="ctrl-btn">Enter L2</button>
     </div>
-    <div class="row"><label for="pfx">PostFX</label><input type="checkbox" id="pfx"><span class="val" id="pfxV" style="flex:0 0 auto;font-size:10px;opacity:0.6">OFF</span></div>
+    <div class="row" style="gap:4px">
+      <button type="button" id="btnFPS" class="ctrl-btn">🚶 FPS Walk</button>
+    </div>
+    <div class="row"><label for="pfx">PostFX</label><input type="checkbox" id="pfx" checked><span class="val" id="pfxV" style="flex:0 0 auto;font-size:10px;opacity:0.6">ON</span></div>
   </div>
   <div id="infoCard" hidden></div>
   <div id="filters" hidden>
@@ -163,6 +167,23 @@
         document.querySelector("#btnOverview").addEventListener("click", () => api.fit());
         document.querySelector("#btnInterior").addEventListener("click", () => api.flyToInterior(0));   // Level 1
         document.querySelector("#btnInterior2").addEventListener("click", () => api.flyToInterior(3.1)); // Level 2
+
+        // FPS Walk button
+        document.querySelector("#btnFPS").addEventListener("click", () => {
+          if (api.isFPS()) { api.exitFPS(); }
+          else { api.enterFPS(0); } // enter at Level 1
+        });
+
+        // Day/Night slider
+        const todSlider = document.querySelector("#tod");
+        const todVal = document.querySelector("#todV");
+        let todTimer = null;
+        todSlider.addEventListener("input", () => {
+          const v = parseFloat(todSlider.value);
+          todVal.textContent = v < 0.3 ? "Day" : v < 0.7 ? "Dusk" : "Night";
+          clearTimeout(todTimer);
+          todTimer = setTimeout(() => api.setTimeOfDay(v), 100);
+        });
 
         // ---- Picking → infocard ----
         const IFC_TYPE_NAMES = {
