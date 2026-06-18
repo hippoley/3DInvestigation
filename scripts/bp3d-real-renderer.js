@@ -103,7 +103,7 @@ export async function createRealRenderer(canvas) {
   floorReflector.rotation.x = -Math.PI / 2;
   floorReflector.position.set(4.4, 0.01, 8.9); // centered on building plan
   floorReflector.material.transparent = true;
-  floorReflector.material.opacity = 0.15; // subtle — not a mirror, just a sheen
+  floorReflector.material.opacity = 0.30; // clearly visible polished floor sheen
   floorReflector.renderOrder = 1;
   scene.add(floorReflector);
   let reflectorEnabled = true;
@@ -236,10 +236,9 @@ export async function createRealRenderer(canvas) {
   // Initial size placeholder is overwritten immediately.
   const composer = new EffectComposer(renderer);
   composer.addPass(new RenderPass(scene, camera));
-  // Bloom: threshold 0.85 ensures only emissive surfaces (light fixtures,
-  // lamps) produce glow. Strength 0.38 is subtle — enough for atmosphere
-  // without washing out the scene.
-  const bloom = new UnrealBloomPass(new THREE.Vector2(1024, 1024), 0.38, 0.6, 0.85);
+  // Bloom: low threshold (0.55) so light fixtures with emissiveIntensity 2.5
+  // clearly glow. strength 0.6 for a visible warm halo effect.
+  const bloom = new UnrealBloomPass(new THREE.Vector2(1024, 1024), 0.6, 0.5, 0.55);
   composer.addPass(bloom);
   composer.addPass(new SMAAPass(1024, 1024));
   composer.addPass(new OutputPass());

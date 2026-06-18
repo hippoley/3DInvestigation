@@ -255,10 +255,11 @@ export function makePbrMaterials() {
       color: 0xc8ccd0, roughness: 0.36, metalness: 0.72, roughnessMap: metalRough,
       anisotropy: 0.4, anisotropyRotation: Math.PI / 2
     }),
-    // Light fixture: glow + warm metal frame
+    // Light fixture: bright glow + warm metal frame. High emissive ensures
+    // the Bloom pass picks these up (needs to exceed threshold after tonemapping).
     light: new THREE.MeshPhysicalMaterial({
       color: 0xfff4d0, roughness: 0.28, metalness: 0.55,
-      emissive: 0xffd070, emissiveIntensity: 0.85,
+      emissive: 0xffdd88, emissiveIntensity: 2.5,
       clearcoat: 0.2
     }),
     valve: new THREE.MeshPhysicalMaterial({
