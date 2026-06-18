@@ -83,11 +83,12 @@ self.onmessage = async (ev) => {
     const resp = await fetch(url);
     if (!resp.ok) throw new Error(`fetch ${url} -> ${resp.status}`);
     const buf = await resp.arrayBuffer();
-    // COORDINATE_TO_ORIGIN: re-centre the model so geometry coords stay near
-    // (0,0,0). Many real IFC files (this duplex included) use site/world
-    // coordinates millions of metres from origin, which would put everything
-    // outside the camera's far plane after fitToScene picks up that bbox.
-    const modelID = ifcApi.OpenModel(new Uint8Array(buf), { COORDINATE_TO_ORIGIN: true });
+    // NOTE: COORDINATE_TO_ORIGIN removed. Previously each IFC file was
+    // independently centred to (0,0,0), which broke alignment between
+    // disciplines (Architecture, MEP, Plumbing, Electrical all got
+    // different offsets). This duplex project's raw coords are within
+    // ~50 m of origin, so precision is not a concern.
+    const modelID = ifcApi.OpenModel(new Uint8Array(buf));
     const count = streamMeshes(jobId, modelID);
     try { ifcApi.CloseModel(modelID); } catch {}
     self.postMessage({ type: "done", jobId, count });

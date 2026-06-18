@@ -23,6 +23,11 @@
     #controls label { flex: 0 0 auto; opacity: 0.85; text-transform: uppercase; letter-spacing: 0.05em; }
     #controls input[type="range"] { flex: 1; accent-color: #5fb6ff; }
     #controls .val { flex: 0 0 40px; text-align: right; font-variant-numeric: tabular-nums; color: #cfe9ff; }
+    .ctrl-btn { flex: 1; padding: 5px 6px; border: 1px solid rgba(255,255,255,0.15);
+      background: rgba(255,255,255,0.06); color: #e0e8ed; border-radius: 5px;
+      font: 700 10px/1.2 inherit; text-transform: uppercase; letter-spacing: 0.05em;
+      cursor: pointer; transition: background 120ms; }
+    .ctrl-btn:hover { background: rgba(95, 182, 255, 0.18); }
     #filters { position: fixed; left: 14px; top: 56px; z-index: 5; display: flex;
       flex-direction: column; gap: 10px; padding: 10px 12px; max-width: 280px;
       border-radius: 8px; background: rgba(20, 24, 30, 0.78); backdrop-filter: blur(10px);
@@ -69,6 +74,11 @@
     <div class="row"><label for="blm">Bloom</label><input type="range" id="blm" min="0" max="1.5" step="0.01" value="0.32"><span class="val" id="blmV">0.32</span></div>
     <div class="row"><label for="cnt">Contact</label><input type="range" id="cnt" min="0" max="1" step="0.02" value="0.78"><span class="val" id="cntV">0.78</span></div>
     <div class="row"><label for="sun">Sun</label><input type="range" id="sun" min="5" max="80" step="1" value="32"><span class="val" id="sunV">32°</span></div>
+    <div class="row" style="gap:4px">
+      <button type="button" id="btnOverview" class="ctrl-btn">Overview</button>
+      <button type="button" id="btnInterior" class="ctrl-btn">Enter L1</button>
+      <button type="button" id="btnInterior2" class="ctrl-btn">Enter L2</button>
+    </div>
     <div class="row"><label for="pfx">PostFX</label><input type="checkbox" id="pfx"><span class="val" id="pfxV" style="flex:0 0 auto;font-size:10px;opacity:0.6">OFF</span></div>
   </div>
   <div id="infoCard" hidden></div>
@@ -148,6 +158,11 @@
           api.setPostProcessing(pfxCheck.checked);
           pfxLabel.textContent = pfxCheck.checked ? "ON" : "OFF";
         });
+
+        // Camera view buttons
+        document.querySelector("#btnOverview").addEventListener("click", () => api.fit());
+        document.querySelector("#btnInterior").addEventListener("click", () => api.flyToInterior(0));   // Level 1
+        document.querySelector("#btnInterior2").addEventListener("click", () => api.flyToInterior(3.1)); // Level 2
 
         // ---- Picking → infocard ----
         const IFC_TYPE_NAMES = {

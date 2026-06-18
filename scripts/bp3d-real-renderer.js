@@ -23,7 +23,8 @@ export async function createRealRenderer(canvas) {
   renderer.shadowMap.type = THREE.VSMShadowMap;
 
   const scene = new THREE.Scene();
-  scene.fog = new THREE.FogExp2(0xc4cdd2, 0.012);
+  // Reduced fog density for better indoor visibility (was 0.012).
+  scene.fog = new THREE.FogExp2(0xc4cdd2, 0.006);
 
   // ---- Procedural Sky + IBL via PMREM ----
   const sky = new Sky();
@@ -67,11 +68,15 @@ export async function createRealRenderer(canvas) {
   scene.add(sunLight);
   scene.add(sunLight.target);
 
-  const fill = new THREE.DirectionalLight(0xb8d4ee, 1.1);
+  const fill = new THREE.DirectionalLight(0xb8d4ee, 1.2);
   fill.position.set(20, 15, -25);
   scene.add(fill);
-  const hemi = new THREE.HemisphereLight(0xeaf2ff, 0x88827a, 0.75);
+  // Hemisphere light provides essential indoor fill (sky → ground gradient).
+  const hemi = new THREE.HemisphereLight(0xeaf2ff, 0x9e9688, 1.1);
   scene.add(hemi);
+  // Soft ambient makes sure no crevice is pitch-black indoors.
+  const ambient = new THREE.AmbientLight(0xffffff, 0.15);
+  scene.add(ambient);
 
   // ---- Ground (procedural, receives shadows) ----
   const ground = new THREE.Mesh(
@@ -432,6 +437,28 @@ export async function createRealRenderer(canvas) {
     sunLight.target.updateMatrixWorld();
   }
 
+  // Fly camera into the interior of the building at a given level elevation.
+  // Positions the camera at eye-height (1.6 m above level) near the plan
+  // centroid, looking toward the opposite corner — gives a "walkthrough" feel.
+  function flyToInterior(levelElevation = 0) {
+    if (!root.children.length) return;
+    const box = new THREE.Box3().setFromObject(root);
+    if (!isFinite(box.min.x)) return;
+    const center = box.getCenter(new THREE.Vector3());
+    const size = box.getSize(new THREE.Vector3());
+    const eyeY = levelElevation + 1.6;
+    // Position slightly off-center for perspective depth
+    const cx = center.x + size.x * 0.15;
+    const cz = center.z + size.z * 0.15;
+    camera.position.set(cx, eyeY, cz);
+    // Look toward the far corner
+    controls.target.set(center.x - size.x * 0.3, eyeY - 0.2, center.z - size.z * 0.3);
+    camera.near = 0.05;
+    camera.far = Math.max(200, size.length() * 4);
+    camera.updateProjectionMatrix();
+    controls.update();
+  }
+
   function clearAll() {
     // Reject any in-flight worker jobs so awaiters don't hang.
     pendingJobs.forEach((job) => job.reject(new Error("renderer cleared")));
@@ -551,6 +578,7 @@ export async function createRealRenderer(canvas) {
     debugVisibilityStats,
     setPostProcessing,
     setSunPosition,
+    flyToInterior,
     onSelect,
     clearSelection,
     dispose() {
