@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>ArchViz Style Demo</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;background:#111;overflow:hidden;
+  font-family:Inter,"PingFang SC",system-ui,sans-serif;color:#f0f0f0}
+
+#canvas{position:fixed;inset:0;width:100%;height:100%}
+
+/* ── HUD ─────────────────────────────────────────────────── */
+#hud{
+  position:fixed;top:16px;left:16px;z-index:10;
+  display:flex;flex-direction:column;gap:10px;
+  pointer-events:none;
+}
+#hud>*{pointer-events:auto}
+
+.panel{
+  background:rgba(12,12,14,.78);
+  -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
+  border:1px solid rgba(255,255,255,.10);border-radius:10px;
+  padding:12px 14px;min-width:200px;
+}
+.panel h3{font-size:10px;letter-spacing:.08em;text-transform:uppercase;
+  color:rgba(255,255,255,.4);margin-bottom:8px}
+
+.btn-row{display:flex;gap:6px;flex-wrap:wrap}
+button{
+  background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);
+  border-radius:6px;color:#e8e8e8;font-size:12px;padding:5px 10px;
+  cursor:pointer;transition:background .15s,border-color .15s;
+}
+button:hover{background:rgba(255,255,255,.15)}
+button.active{background:rgba(99,160,255,.25);border-color:rgba(99,160,255,.6);color:#acd0ff}
+
+/* ── Status bar ─────────────────────────────────────────── */
+#status{
+  position:fixed;bottom:16px;left:50%;transform:translateX(-50%);
+  background:rgba(12,12,14,.78);
+  -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
+  border:1px solid rgba(255,255,255,.10);border-radius:8px;
+  padding:7px 16px;font-size:12px;color:rgba(255,255,255,.55);
+  z-index:10;pointer-events:none;transition:opacity .3s;
+}
+#status.hidden{opacity:0}
+
+/* ── Loading overlay ────────────────────────────────────── */
+#loading{
+  position:fixed;inset:0;z-index:50;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:rgba(10,10,12,.92);gap:14px;
+}
+#loading.done{display:none}
+.spinner{
+  width:36px;height:36px;border:3px solid rgba(255,255,255,.12);
+  border-top-color:#6ca0ff;border-radius:50%;animation:spin .8s linear infinite;
+  will-change:transform;
+}
+@keyframes spin{to{rotate:1turn}}
+#loadText{font-size:13px;color:rgba(255,255,255,.5)}
+#loadBar{width:260px;height:3px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden}
+#loadFill{height:100%;width:0%;background:#6ca0ff;border-radius:2px;transition:width .3s}
+</style>
+</head>
+<body>
+
+<canvas id="canvas"></canvas>
+
+<!-- Loading overlay -->
+<div id="loading">
+  <div class="spinner"></div>
+  <div id="loadText">初始化渲染器…</div>
+  <div id="loadBar"><div id="loadFill"></div></div>
+</div>
+
+<!-- HUD Controls -->
+<div id="hud">
+
+  <div class="panel">
+    <h3>风格 Style</h3>
+    <div class="btn-row" id="styleRow">
+      <button type="button" data-style="japandi"  class="active">Japandi</button>
+      <button type="button" data-style="luxury">轻奢</button>
+      <button type="button" data-style="volcanic">火山岩</button>
+      <button type="button" data-style="smart">极简</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>灯光 Lighting</h3>
+    <div class="btn-row" id="lightRow">
+      <button type="button" data-light="daylight" class="active">白天</button>
+      <button type="button" data-light="night">夜晚</button>
+      <button type="button" data-light="showroom">展厅</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>楼层 Floor</h3>
+    <div class="btn-row" id="floorRow">
+      <button type="button" data-floor="all"  class="active">全部</button>
+      <button type="button" data-floor="1">F1</button>
+      <button type="button" data-floor="2">F2</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>漫游 Tour</h3>
+    <div class="btn-row">
+      <button type="button" id="btnTourOverview">总览</button>
+      <button type="button" id="btnTourGround">首层</button>
+      <button type="button" id="btnTourUpper">二层</button>
+      <button type="button" id="btnTourDetails">细节</button>
+      <button type="button" id="btnTourStop">■ 停止</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>系统 Systems</h3>
+    <div class="btn-row" id="sysRow">
+      <button type="button" data-sys="architecture" class="active">建筑</button>
+      <button type="button" data-sys="mep" class="active">MEP</button>
+    </div>
+  </div>
+
+</div>
+
+<div id="status">加载中…</div>
+
+<script type="module">
+import { createRealRenderer } from './scripts/bp3d-real-renderer.js';
+
+const canvas  = document.getElementById('canvas');
+const loading = document.getElementById('loading');
+const loadText= document.getElementById('loadText');
+const loadFill= document.getElementById('loadFill');
+const statusEl= document.getElementById('status');
+
+let renderer = null;
+// Floor level bounds for the Duplex model (Y in world units)
+const FLOOR_BOUNDS = {
+  1: { min: -0.5, max:  4.2 },
+  2: { min:  4.2, max: 10.0 },
+};
+
+function setStatus(msg, autohide = true) {
+  statusEl.textContent = msg;
+  statusEl.classList.remove('hidden');
+  if (autohide) setTimeout(() => statusEl.classList.add('hidden'), 2500);
+}
+
+function setProgress(pct, msg) {
+  loadFill.style.width = pct + '%';
+  if (msg) loadText.textContent = msg;
+}
+
+// ── Button helpers ────────────────────────────────────────
+function activateBtn(row, key, attr) {
+  document.querySelectorAll(`#${row} [${attr}]`).forEach(b => {
+    b.classList.toggle('active', b.getAttribute(attr) === key);
+  });
+}
+
+// ── Style switcher ───────────────────────────────────────
+document.querySelectorAll('[data-style]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (!renderer) return;
+    const s = btn.dataset.style;
+    renderer.setStyle(s);
+    activateBtn('styleRow', s, 'data-style');
+    setStatus(`风格: ${btn.textContent}`);
+  });
+});
+
+// ── Light preset switcher ────────────────────────────────
+document.querySelectorAll('[data-light]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (!renderer) return;
+    const p = btn.dataset.light;
+    renderer.setLightPreset(p);
+    activateBtn('lightRow', p, 'data-light');
+    setStatus(`灯光: ${btn.textContent}`);
+  });
+});
+
+// ── Floor filter ─────────────────────────────────────────
+document.querySelectorAll('[data-floor]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (!renderer) return;
+    const f = btn.dataset.floor;
+    if (f === 'all') renderer.setLevelFilter(null);
+    else renderer.setLevelFilter(FLOOR_BOUNDS[parseInt(f)]);
+    activateBtn('floorRow', f, 'data-floor');
+    setStatus(`楼层: ${btn.textContent}`);
+  });
+});
+
+// ── Tour buttons ─────────────────────────────────────────
+const tourMap = {
+  btnTourOverview: 'overview',
+  btnTourGround:   'groundFloor',
+  btnTourUpper:    'upperFloor',
+  btnTourDetails:  'details',
+};
+Object.entries(tourMap).forEach(([id, name]) => {
+  document.getElementById(id).addEventListener('click', () => {
+    if (!renderer) return;
+    renderer.startTour(name, {
+      onComplete: () => setStatus('漫游结束'),
+    });
+    setStatus(`漫游: ${document.getElementById(id).textContent}`, false);
+  });
+});
+document.getElementById('btnTourStop').addEventListener('click', () => {
+  renderer?.stopTour();
+  setStatus('漫游已停止');
+});
+
+// ── System visibility ─────────────────────────────────────
+document.querySelectorAll('[data-sys]').forEach(btn => {
+  btn.classList.add('active'); // start both enabled
+  let on = true;
+  btn.addEventListener('click', () => {
+    if (!renderer) return;
+    on = !on;
+    btn.classList.toggle('active', on);
+    renderer.setSystemVisibility(btn.dataset.sys, on);
+    setStatus(`${btn.textContent}: ${on ? '显示' : '隐藏'}`);
+  });
+});
+
+// ── Bootstrap renderer + load IFC ────────────────────────
+(async () => {
+  try {
+    setProgress(5, '初始化渲染器…');
+    renderer = await createRealRenderer(canvas);
+    setProgress(20, '加载建筑模型…');
+
+    await renderer.loadIfc(
+      'samples/duplex-apartment/raw/Duplex_A_20110907.ifc',
+      'architecture'
+    );
+    setProgress(60, '建筑加载完成，适配视角…');
+    renderer.fit();
+    renderer.regenerateContactShadow();
+
+    setProgress(80, '加载 MEP 系统…');
+    renderer.loadIfc(
+      'samples/duplex-apartment/raw/Duplex_MEP_20110907.ifc',
+      'mep'
+    ).then(() => {
+      setProgress(100, '完成');
+      setStatus('加载完成');
+    }).catch(() => {
+      setStatus('MEP 加载失败，已跳过');
+    });
+
+    setProgress(90, '渲染就绪');
+    loading.classList.add('done');
+    setStatus('Duplex 模型已加载 · 使用左侧面板切换风格与灯光');
+
+  } catch (err) {
+    loadText.textContent = '加载失败: ' + err.message;
+    console.error(err);
+  }
+})();
+</script>
+</body>
+</html>

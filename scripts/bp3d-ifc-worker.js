@@ -1,6 +1,7 @@
 // Module worker: web-ifc parsing off the main thread.
 // Receives { type: 'load', jobId, url }
-// Streams back { type: 'mesh', jobId, ifcType, positions, normals, indices, transform, color }
+// Streams back { type: 'mesh', jobId, ifcType, expressID, furnitureMeta,
+//                positions, normals, indices, transform, color }
 // then { type: 'done', jobId, count } or { type: 'error', jobId, message }.
 //
 // Typed arrays (positions / normals / indices / transform) are transferred,
@@ -10,6 +11,37 @@ import { IfcAPI } from "../node_modules/web-ifc/web-ifc-api.js";
 
 let ifcApi = null;
 let initPromise = null;
+const IFC_FURNISHING = 263784265;
+
+function unwrapIfcValue(value) {
+  if (value == null) return null;
+  if (typeof value !== "object") return value;
+  if ("value" in value) return value.value;
+  if ("_internalValue" in value) return value._internalValue;
+  if ("_representationValue" in value) return value._representationValue;
+  return null;
+}
+
+function getFurnitureMeta(modelID, expressID, ifcType, cache) {
+  if (ifcType !== IFC_FURNISHING) return null;
+  if (cache.has(expressID)) return cache.get(expressID);
+  let meta = null;
+  try {
+    const line = ifcApi.GetLine(modelID, expressID, false, false);
+    const name = unwrapIfcValue(line && line.Name);
+    const objectType = unwrapIfcValue(line && line.ObjectType);
+    const tag = unwrapIfcValue(line && line.Tag);
+    if (name || objectType || tag) {
+      meta = {
+        name: name || null,
+        objectType: objectType || null,
+        tag: tag || null
+      };
+    }
+  } catch {}
+  cache.set(expressID, meta);
+  return meta;
+}
 
 function ensureInit() {
   if (initPromise) return initPromise;
@@ -36,9 +68,11 @@ function ensureInit() {
 
 function streamMeshes(jobId, modelID) {
   let count = 0;
+  const furnitureMetaCache = new Map();
   ifcApi.StreamAllMeshes(modelID, (flatMesh) => {
     const ifcType = ifcApi.GetLineType(modelID, flatMesh.expressID);
     const expressID = flatMesh.expressID;
+    const furnitureMeta = getFurnitureMeta(modelID, expressID, ifcType, furnitureMetaCache);
     const placed = flatMesh.geometries;
     for (let i = 0; i < placed.size(); i++) {
       const g = placed.get(i);
@@ -64,7 +98,7 @@ function streamMeshes(jobId, modelID) {
         ? { x: g.color.x, y: g.color.y, z: g.color.z, w: g.color.w }
         : null;
       self.postMessage(
-        { type: "mesh", jobId, ifcType, expressID, positions, normals, indices, transform, color },
+        { type: "mesh", jobId, ifcType, expressID, furnitureMeta, positions, normals, indices, transform, color },
         [positions.buffer, normals.buffer, indices.buffer, transform.buffer]
       );
       count++;

@@ -341,6 +341,73 @@
       box-shadow: 0 0 0 3px rgba(35, 104, 209, 0.08);
     }
 
+    .layer-switch {
+      display: flex;
+      gap: 5px;
+      align-items: center;
+      padding: 4px;
+      border: 1px solid rgba(36, 48, 69, 0.1);
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.6);
+    }
+
+    .layer-switch button {
+      min-height: 30px;
+      padding: 0 13px;
+      border-radius: 7px;
+      border-color: transparent;
+      background: transparent;
+      font-size: 12px;
+      font-weight: 720;
+      color: var(--muted);
+      transition: background 150ms ease, color 150ms ease;
+    }
+
+    .layer-switch button:hover {
+      color: var(--ink);
+      border-color: transparent;
+      background: rgba(255, 255, 255, 0.78);
+    }
+
+    .layer-switch button.active {
+      color: var(--blue);
+      border-color: rgba(35, 104, 209, 0.22);
+      background: rgba(235, 244, 255, 0.96);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.72);
+    }
+
+    /* MEP 模式：右侧面板标题加青色提示线 */
+    body[data-view-mode="mep"] .schema h2 {
+      border-bottom-color: rgba(8, 151, 169, 0.28);
+      color: #0670a0;
+    }
+
+    /* 独立可见的图层切换条 — 挂在 schema 顶部内侧 */
+    .layer-strip {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      padding: 6px 8px;
+      border: 1px solid rgba(36, 48, 69, 0.08);
+      border-radius: 9px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.88), rgba(244,248,252,0.8));
+    }
+
+    .layer-strip span {
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .layer-strip .layer-switch {
+      padding: 3px;
+      background: rgba(240,244,248,0.7);
+    }
+
     .toolbar {
       left: 50%;
       bottom: 18px;
@@ -644,6 +711,10 @@
       font-size: 11px;
       font-weight: 800;
       text-transform: uppercase;
+    }
+
+    .mode-hidden {
+      display: none !important;
     }
 
     .chips {
@@ -2573,6 +2644,13 @@
 
   <section class="panel schema" aria-label="schema summary">
     <h2>空间与系统索引</h2>
+    <div class="layer-strip" aria-label="图层切换">
+      <span>图层</span>
+      <div class="layer-switch" role="group" aria-label="视图模式">
+        <button type="button" id="layerArchBtn" class="active" data-view-mode="interior" aria-pressed="true">建筑</button>
+        <button type="button" id="layerMepBtn" data-view-mode="mep" aria-pressed="false">MEP</button>
+      </div>
+    </div>
     <ul class="schema-list" id="schemaList"></ul>
     <div class="dsl-card" aria-label="blueprint3d route">
       <strong>Blueprint3D / House JSON</strong>
@@ -2907,14 +2985,27 @@
     }
 
     function getSpaceLevel(space) {
+      // Priority 1: use AABB-derived level layers (most accurate — computed from IFC elevation data)
+      const aabb = getSpaceAABB(space);
+      if (aabb?.length === 6) {
+        const z = (aabb[1] + aabb[4]) / 2;
+        const layer = levelLayers.find((item) => z >= item.min && z < item.max);
+        if (layer) {
+          // Return 0 for the lowest layer, 3.1 for higher ones
+          const layerIndex = levelLayers.indexOf(layer);
+          return layerIndex > 0 ? 3.1 : 0;
+        }
+      }
+      // Priority 2: name prefix match (e.g. "2A-Bedroom", "Space:A2")
       const name = String(space?.name || space?.id || "").toLowerCase();
       const floorMatch = name.match(/^[ab]?(\d)/i) || name.match(/space:[ab](\d)/i);
       if (floorMatch && floorMatch[1] === "2") return 3.1;
-      const validLocation = (space?.locations || []).find((point) => {
+      // Priority 3: location z — use ≥3.0m threshold so Level-1 rooms (z≈0.9–2.8m) are NOT misclassified
+      const level2Location = (space?.locations || []).find((point) => {
         const z = Number(point?.[2]);
-        return Number.isFinite(z) && z > 0.8 && z < 4.2;
+        return Number.isFinite(z) && z >= 3.0;
       });
-      return validLocation ? 3.1 : 0;
+      return level2Location ? 3.1 : 0;
     }
 
     function buildSpaceRuntimeIndex(meta) {
@@ -4530,7 +4621,14 @@
         viewMode = mode;
         document.body.dataset.viewMode = mode;
         setStoryDismissed(storyDismissed);
+        // Sync bottom toolbar buttons
         document.querySelectorAll(".toolbar button[data-view-mode]").forEach((button) => {
+          const active = button.dataset.viewMode === mode;
+          button.classList.toggle("active", active);
+          button.setAttribute("aria-pressed", String(active));
+        });
+        // Sync layer-strip buttons in the schema panel
+        document.querySelectorAll(".layer-switch button[data-view-mode]").forEach((button) => {
           const active = button.dataset.viewMode === mode;
           button.classList.toggle("active", active);
           button.setAttribute("aria-pressed", String(active));
@@ -4583,8 +4681,12 @@
       if (activeLevelId === "all") return true;
       const layer = findLevelLayer(activeLevelId);
       if (!layer || !object?.aabb) return true;
-      const z = (object.aabb[1] + object.aabb[4]) / 2;
-      return z >= layer.min && z < layer.max;
+      // Use AABB intersection (not centre-point) so walls/slabs that span
+      // the boundary between two floors are still visible in each floor view.
+      // A 0.12m tolerance prevents thin floor-slabs from disappearing.
+      const aabbMin = object.aabb[1]; // world-Y bottom
+      const aabbMax = object.aabb[4]; // world-Y top
+      return aabbMax >= layer.min - 0.12 && aabbMin < layer.max + 0.12;
     }
 
     function aabbIntersects(a, b, padding = 0) {
@@ -4771,6 +4873,10 @@
     }, { passive: false });
 
     document.querySelectorAll(".toolbar button[data-view-mode]").forEach((button) => {
+      button.addEventListener("click", () => setViewMode(button.dataset.viewMode, false));
+    });
+    // Layer-strip buttons in the schema panel (建筑 / MEP)
+    document.querySelectorAll(".layer-switch button[data-view-mode]").forEach((button) => {
       button.addEventListener("click", () => setViewMode(button.dataset.viewMode, false));
     });
 

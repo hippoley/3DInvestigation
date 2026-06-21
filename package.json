@@ -12,6 +12,7 @@
   "dependencies": {
     "@xeokit/xeokit-sdk": "^2.6.111",
     "blueprint3d": "^0.0.1-1",
+    "gsap": "3.15.0",
     "playwright": "^1.52.0",
     "three": "^0.165.0",
     "web-ifc": "^0.0.77"

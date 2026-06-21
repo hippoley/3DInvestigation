@@ -28,6 +28,7 @@
       font: 700 10px/1.2 inherit; text-transform: uppercase; letter-spacing: 0.05em;
       cursor: pointer; transition: background 120ms; }
     .ctrl-btn:hover { background: rgba(95, 182, 255, 0.18); }
+    .ctrl-btn.active { background: rgba(95, 182, 255, 0.28); border-color: rgba(95, 182, 255, 0.55); color: #eaf5ff; }
     #filters { position: fixed; left: 14px; top: 56px; z-index: 5; display: flex;
       flex-direction: column; gap: 10px; padding: 10px 12px; max-width: 280px;
       border-radius: 8px; background: rgba(20, 24, 30, 0.78); backdrop-filter: blur(10px);
@@ -60,7 +61,8 @@
   {
     "imports": {
       "three": "./node_modules/three/build/three.module.js",
-      "three/addons/": "./node_modules/three/examples/jsm/"
+      "three/addons/": "./node_modules/three/examples/jsm/",
+      "gsap": "./node_modules/gsap/index.js"
     }
   }
   </script>
@@ -72,8 +74,8 @@
   <div id="controls">
     <div class="row"><label for="exp">Exposure</label><input type="range" id="exp" min="0.4" max="2.4" step="0.02" value="1.18"><span class="val" id="expV">1.18</span></div>
     <div class="row"><label for="blm">Bloom</label><input type="range" id="blm" min="0" max="1.5" step="0.01" value="0.60"><span class="val" id="blmV">0.60</span></div>
-    <div class="row"><label for="cnt">Contact</label><input type="range" id="cnt" min="0" max="1" step="0.02" value="0.78"><span class="val" id="cntV">0.78</span></div>
-    <div class="row"><label for="ref">Reflect</label><input type="range" id="ref" min="0" max="0.4" step="0.01" value="0.30"><span class="val" id="refV">0.30</span></div>
+    <div class="row"><label for="cnt">Contact</label><input type="range" id="cnt" min="0" max="1" step="0.02" value="0.46"><span class="val" id="cntV">0.46</span></div>
+    <div class="row"><label for="ref">Reflect</label><input type="range" id="ref" min="0" max="0.4" step="0.01" value="0"><span class="val" id="refV">0.00</span></div>
     <div class="row"><label for="sun">Sun</label><input type="range" id="sun" min="5" max="80" step="1" value="32"><span class="val" id="sunV">32°</span></div>
     <div class="row"><label for="tod">Day/Night</label><input type="range" id="tod" min="0" max="1" step="0.01" value="0"><span class="val" id="todV">Day</span></div>
     <div class="row" style="gap:4px">
@@ -84,7 +86,34 @@
     <div class="row" style="gap:4px">
       <button type="button" id="btnFPS" class="ctrl-btn">🚶 FPS Walk</button>
     </div>
-    <div class="row"><label for="pfx">PostFX</label><input type="checkbox" id="pfx" checked><span class="val" id="pfxV" style="flex:0 0 auto;font-size:10px;opacity:0.6">ON</span></div>
+    <div class="row"><label for="pfx">PostFX</label><input type="checkbox" id="pfx"><span class="val" id="pfxV" style="flex:0 0 auto;font-size:10px;opacity:0.6">OFF</span></div>
+    <div class="row" style="gap:4px">
+      <button type="button" id="btnStyleJapandi" class="ctrl-btn">Japandi</button>
+      <button type="button" id="btnStyleLuxury" class="ctrl-btn active">轻奢</button>
+      <button type="button" id="btnStyleVolcanic" class="ctrl-btn">火山岩</button>
+      <button type="button" id="btnStyleSmart" class="ctrl-btn">极简</button>
+    </div>
+    <div class="row" style="gap:4px">
+      <button type="button" id="btnLightDay" class="ctrl-btn">☀ Day</button>
+      <button type="button" id="btnLightNight" class="ctrl-btn">🌙 Night</button>
+      <button type="button" id="btnLightShow" class="ctrl-btn">⬡ Show</button>
+      <button type="button" id="btnLightIndoor" class="ctrl-btn active">🏠 Indoor</button>
+    </div>
+    <div class="row" style="gap:4px">
+      <button type="button" id="btnTour1" class="ctrl-btn">▶ Tour</button>
+      <button type="button" id="btnTourStop" class="ctrl-btn">■ Stop</button>
+    </div>
+    <div class="row"><label style="opacity:0.6;font-size:10px;text-transform:uppercase;letter-spacing:.05em">GLB Models</label></div>
+    <div class="row" style="gap:4px;flex-wrap:wrap">
+      <button type="button" class="ctrl-btn glb-btn" data-glb="SheenChair" data-label="Sheen Chair">椅</button>
+      <button type="button" class="ctrl-btn glb-btn" data-glb="GlamVelvetSofa" data-label="Velvet Sofa">沙发</button>
+      <button type="button" class="ctrl-btn glb-btn" data-glb="SheenWoodLeatherSofa" data-label="Wood Sofa">木沙发</button>
+      <button type="button" class="ctrl-btn glb-btn" data-glb="ToyCar" data-label="Toy Car">玩具车</button>
+      <button type="button" class="ctrl-btn glb-btn" data-glb="AntiqueCamera" data-label="Camera">相机</button>
+    </div>
+    <div class="row" style="gap:4px">
+      <button type="button" id="btnGlbClear" class="ctrl-btn">✕ 清除 GLB</button>
+    </div>
   </div>
   <div id="infoCard" hidden></div>
   <div id="filters" hidden>
@@ -101,7 +130,7 @@
     <div class="ic-title">Selected</div>
     <div class="ic-body"></div>
   </div>
-  <pre id="log"></pre>
+  <pre id="log" hidden></pre>
 
   <script type="module">
     const IFCS = [
@@ -113,8 +142,20 @@
     ];
     const $status = document.querySelector("#status");
     const $log = document.querySelector("#log");
-    const setStatus = (txt, warn = false) => { $status.textContent = txt; $status.classList.toggle("warn", warn); };
-    const log = (txt) => { $log.textContent += txt + "\n"; $log.scrollTop = $log.scrollHeight; console.info("[bp3d-pure]", txt); };
+    const DEBUG_LOGS = false;
+    const setStatus = (txt, warn = false) => {
+      const hasText = !!(txt && txt.trim());
+      $status.hidden = !hasText;
+      $status.textContent = hasText ? txt : "";
+      $status.classList.toggle("warn", hasText && warn);
+    };
+    const log = (txt) => {
+      if (!DEBUG_LOGS) return;
+      $log.hidden = false;
+      $log.textContent += txt + "\n";
+      $log.scrollTop = $log.scrollHeight;
+      console.info("[bp3d-pure]", txt);
+    };
 
     window.addEventListener("error", (e) => log(`ERROR: ${e.message}`));
     window.addEventListener("unhandledrejection", (e) => log(`PROMISE-REJ: ${e.reason && e.reason.message ? e.reason.message : e.reason}`));
@@ -133,6 +174,26 @@
         // external scripts inspect mesh visibility without monkey-patching.
         window.__bp3dApi = api;
         log("renderer created");
+        let styleTextureUpgradeTimer = null;
+        function applyStyle(styleName, options = {}) {
+          clearTimeout(styleTextureUpgradeTimer);
+          api.setStyle(styleName, options);
+        }
+        function scheduleActiveStyleTextureUpgrade(delayMs = 300) {
+          clearTimeout(styleTextureUpgradeTimer);
+          const runUpgrade = () => {
+            styleTextureUpgradeTimer = null;
+            const activeStyle = api.getActiveStyle?.() || "luxury";
+            try {
+              api.setStyle(activeStyle, { loadTextures: true });
+              log(`style textures hydrated: ${activeStyle}`);
+            } catch (err) {
+              log(`style texture hydrate failed: ${err.message || err}`);
+            }
+          };
+          styleTextureUpgradeTimer = window.setTimeout(runUpgrade, delayMs);
+        }
+        applyStyle("luxury", { loadTextures: false }); // keep startup fast; hydrate textures once the scene settles
 
         // Slider wiring
         const wire = (id, valId, fn) => {
@@ -157,9 +218,10 @@
           sunTimer = setTimeout(() => api.setSunPosition(elev, 155), 150);
         });
 
-        // PostFX toggle
+        // PostFX toggle — checkbox starts unchecked, so disable composer on init
         const pfxCheck = document.querySelector("#pfx");
         const pfxLabel = document.querySelector("#pfxV");
+        api.setPostProcessing(pfxCheck.checked); // sync renderer to initial state (OFF)
         pfxCheck.addEventListener("change", () => {
           api.setPostProcessing(pfxCheck.checked);
           pfxLabel.textContent = pfxCheck.checked ? "ON" : "OFF";
@@ -174,6 +236,97 @@
         document.querySelector("#btnFPS").addEventListener("click", () => {
           if (api.isFPS()) { api.exitFPS(); }
           else { api.enterFPS(0); } // enter at Level 1
+        });
+
+        // Style buttons
+        const styleButtons = ['Japandi', 'Luxury', 'Volcanic', 'Smart'];
+        styleButtons.forEach(s => {
+          document.getElementById('btnStyle' + s)?.addEventListener('click', () => {
+            applyStyle(s.toLowerCase(), { loadTextures: true });
+            styleButtons.forEach(b => document.getElementById('btnStyle' + b)?.classList.remove('active'));
+            document.getElementById('btnStyle' + s)?.classList.add('active');
+          });
+        });
+
+        // Light preset buttons
+        document.getElementById('btnLightDay')?.addEventListener('click', () => {
+          api.setLightPreset('daylight');
+          ['Day', 'Night', 'Show', 'Indoor'].forEach(l => document.getElementById('btnLight' + l)?.classList.remove('active'));
+          document.getElementById('btnLightDay')?.classList.add('active');
+        });
+        document.getElementById('btnLightNight')?.addEventListener('click', () => {
+          api.setLightPreset('night');
+          ['Day', 'Night', 'Show', 'Indoor'].forEach(l => document.getElementById('btnLight' + l)?.classList.remove('active'));
+          document.getElementById('btnLightNight')?.classList.add('active');
+        });
+        document.getElementById('btnLightShow')?.addEventListener('click', () => {
+          api.setLightPreset('showroom');
+          ['Day', 'Night', 'Show', 'Indoor'].forEach(l => document.getElementById('btnLight' + l)?.classList.remove('active'));
+          document.getElementById('btnLightShow')?.classList.add('active');
+        });
+        document.getElementById('btnLightIndoor')?.addEventListener('click', () => {
+          api.setLightPreset('indoor');
+          ['Day', 'Night', 'Show', 'Indoor'].forEach(l => document.getElementById('btnLight' + l)?.classList.remove('active'));
+          document.getElementById('btnLightIndoor')?.classList.add('active');
+        });
+
+        // Tour buttons
+        document.getElementById('btnTour1')?.addEventListener('click', () => api.startTour('overview'));
+        document.getElementById('btnTourStop')?.addEventListener('click', () => api.stopTour?.());
+
+        // ---- GLB model toggle buttons ----
+        // Each button loads/unloads a specific .glb from assets/models/furniture/.
+        // The loaded group name matches the file name (without extension) so we can
+        // removeGlb() by name on a second click.
+        const glbLoaded = new Map(); // modelName -> group reference
+        const GLB_BASE = 'assets/models/furniture';
+        // Spread positions so multiple models don't stack on top of each other
+        const GLB_OFFSETS = {
+          SheenChair:          [  2, 0,  2 ],
+          GlamVelvetSofa:      [ -3, 0,  0 ],
+          SheenWoodLeatherSofa:[ -3, 0,  3 ],
+          ToyCar:              [  2, 0, -2 ],
+          AntiqueCamera:       [  0, 0.5, -2 ],
+        };
+
+        document.querySelectorAll('.glb-btn').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            const modelName = btn.dataset.glb;
+            if (glbLoaded.has(modelName)) {
+              // Second click — unload
+              api.removeGlb(glbLoaded.get(modelName));
+              glbLoaded.delete(modelName);
+              btn.classList.remove('active');
+              log(`GLB removed: ${modelName}`);
+            } else {
+              // First click — load
+              btn.classList.add('active');
+              btn.disabled = true;
+              try {
+                const offset = GLB_OFFSETS[modelName] || [0, 0, 0];
+                const result = await api.loadGlb(
+                  `${GLB_BASE}/${modelName}.glb`,
+                  { name: modelName, position: offset, scale: [1, 1, 1] }
+                );
+                glbLoaded.set(modelName, result.group);
+                log(`GLB loaded: ${modelName}`);
+              } catch (err) {
+                btn.classList.remove('active');
+                log(`GLB load failed: ${modelName} — ${err.message}`);
+              } finally {
+                btn.disabled = false;
+              }
+            }
+          });
+        });
+
+        document.getElementById('btnGlbClear')?.addEventListener('click', () => {
+          glbLoaded.forEach((group, name) => {
+            api.removeGlb(group);
+            document.querySelector(`.glb-btn[data-glb="${name}"]`)?.classList.remove('active');
+          });
+          glbLoaded.clear();
+          log('All GLB models removed');
         });
 
         // Day/Night slider
@@ -202,22 +355,50 @@
           3053780830: "SanitaryTerminal", 2016517767: "Roof",
           1973544240: "Covering", 2262370178: "Railing"
         };
+        const FURNITURE_MATERIAL_NAMES = {
+          furniture: "Soft Upholstery",
+          furnitureBed: "Bed & Bedding",
+          furnitureHard: "Casework",
+          furnitureTop: "Stone Top",
+          furnitureDarkWood: "Dark Wood",
+          furnitureLightWood: "Light Wood",
+          furnitureMetal: "Metal Frame"
+        };
+        const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (ch) => ({
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          '"': "&quot;",
+          "'": "&#39;"
+        }[ch]));
         const $card = document.querySelector("#infocard");
         const $cardBody = $card.querySelector(".ic-body");
-        api.onSelect((info) => {
+        function renderSelectionCard(info) {
+          window.__bp3dLastSelectionInfo = info || null;
           if (!info) {
             $card.style.display = "none";
             return;
           }
           const typeName = IFC_TYPE_NAMES[info.ifcType] || `IFC#${info.ifcType || "?"}`;
           const pos = info.position;
+          const furnitureSurface = info.furnitureMaterialKey
+            ? (FURNITURE_MATERIAL_NAMES[info.furnitureMaterialKey] || info.furnitureMaterialKey)
+            : null;
           $cardBody.innerHTML = [
-            `<div class="ic-row"><b>Type</b> ${typeName}</div>`,
-            `<div class="ic-row"><b>System</b> ${info.system || "—"}</div>`,
+            `<div class="ic-row"><b>Type</b> ${escapeHtml(typeName)}</div>`,
+            `<div class="ic-row"><b>System</b> ${escapeHtml(info.system || "—")}</div>`,
             info.expressID ? `<div class="ic-row"><b>ExpressID</b> ${info.expressID}</div>` : "",
+            furnitureSurface ? `<div class="ic-row"><b>Surface</b> ${escapeHtml(furnitureSurface)}</div>` : "",
+            info.furnitureName ? `<div class="ic-row"><b>Name</b> ${escapeHtml(info.furnitureName)}</div>` : "",
+            info.furnitureObjectType ? `<div class="ic-row"><b>Spec</b> ${escapeHtml(info.furnitureObjectType)}</div>` : "",
+            info.furnitureTag ? `<div class="ic-row"><b>Tag</b> ${escapeHtml(info.furnitureTag)}</div>` : "",
             pos ? `<div class="ic-row"><b>Position</b> (${pos.x.toFixed(2)}, ${pos.y.toFixed(2)}, ${pos.z.toFixed(2)})</div>` : ""
           ].join("");
           $card.style.display = "block";
+        }
+        window.__bp3dRenderInfoCard = renderSelectionCard;
+        api.onSelect((info) => {
+          renderSelectionCard(info);
         });
 
         // ---- Filter chips (level + system) ----
@@ -331,7 +512,7 @@
 
         // Phase 1: blocking — Architecture so user sees house ASAP
         for (const cfg of blocking) {
-          setStatus(`Loading ${cfg.label}…`);
+          setStatus("Loading scene…");
           try {
             const t = performance.now();
             const res = await api.loadIfc(cfg.url, cfg.label, cfg.system);
@@ -342,18 +523,14 @@
           }
         }
         api.fit();
-        try { api.regenerateContactShadow(); log("contact shadow regenerated (phase 1)"); }
-        catch (e) { log(`contact shadow err: ${e.message || e}`); }
-        const dt0 = ((performance.now() - t0) / 1000).toFixed(1);
-        setStatus(background.length
-          ? `Architecture ready · ${total} meshes · ${dt0}s — streaming MEP…`
-          : `${total} meshes · ${dt0}s · drag to orbit`);
+        scheduleActiveStyleTextureUpgrade(450);
+        setStatus(background.length ? "Loading scene…" : "");
 
         // Phase 2: background streaming
         for (const cfg of background) {
           try {
             const t = performance.now();
-            setStatus(`${total} meshes · streaming ${cfg.label}…`);
+            setStatus("Loading scene…");
             const res = await api.loadIfc(cfg.url, cfg.label, cfg.system);
             total += res.count;
             log(`${cfg.label} +${res.count} meshes in ${((performance.now() - t) / 1000).toFixed(1)}s`);
@@ -361,10 +538,13 @@
             log(`${cfg.label} FAILED: ${err.message || err}`);
           }
         }
-        try { api.regenerateContactShadow(); log("contact shadow regenerated (phase 2)"); }
-        catch (e) { log(`contact shadow err: ${e.message || e}`); }
-        const dt = ((performance.now() - t0) / 1000).toFixed(1);
-        setStatus(`${total} meshes · ${dt}s · drag to orbit, wheel to zoom`);
+        const refreshContactShadow = () => {
+          try { api.regenerateContactShadow(); log("contact shadow regenerated (idle)"); }
+          catch (e) { log(`contact shadow err: ${e.message || e}`); }
+        };
+        if ("requestIdleCallback" in window) window.requestIdleCallback(refreshContactShadow, { timeout: 4000 });
+        else setTimeout(refreshContactShadow, 800);
+        setStatus("");
       } catch (err) {
         console.error(err);
         setStatus(`Failed: ${err.message || err}`, true);

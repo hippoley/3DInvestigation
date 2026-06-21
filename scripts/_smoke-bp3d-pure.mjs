@@ -1,4 +1,3 @@
-// Smoke test for bp3d-pure.html: open the page, wait for Architecture +
 // payload to land, exercise the new system/level chips and inspect mesh
 // visibility through the renderer's debug surface. Runs against an http
 // server on http://127.0.0.1:4173. Throws (non-zero exit) on any failure.
@@ -42,13 +41,21 @@ await page.waitForFunction(() => {
 }, null, { timeout: TIMEOUT_MS });
 ok("level chips rendered");
 
-// Wait for Architecture phase to complete: status text settles to either
-// "Architecture ready ..." or final "<n> meshes ..." form.
+// Wait until the renderer handle is ready. The status overlay is intentionally
+// minimal now and may be hidden after loading, so don't assert on exact text.
+await page.waitForFunction(() => !!window.__bp3dApi, null, { timeout: TIMEOUT_MS });
+ok("initial scene ready");
+
 await page.waitForFunction(() => {
-  const t = document.querySelector("#status")?.textContent || "";
-  return /Architecture ready|drag to orbit/.test(t);
+  const look = window.__bp3dApi?.debugFurnitureMaterialLooks?.();
+  return look?.style === "luxury"
+    && !!look.surfaces?.furniture?.hasMap
+    && !!look.surfaces?.furniture?.hasNormalMap
+    && !!look.surfaces?.furnitureBed?.hasMap
+    && !!look.surfaces?.furnitureBed?.hasNormalMap
+    && !!look.surfaces?.furnitureHard?.hasMap;
 }, null, { timeout: TIMEOUT_MS });
-ok("architecture phase complete");
+ok("deferred luxury furniture textures loaded");
 
 // Inspect mesh state via the global renderer handle. We re-expose it by
 // patching the module-level variable through the page-level closure: the
@@ -71,6 +78,174 @@ console.log("meshStats:", JSON.stringify(meshStats, null, 2));
 if (meshStats.levelChipCount < 2) fail("expected at least 2 level chips (All + 1)");
 if (meshStats.systemChipCount < 1) fail("expected at least 1 system chip");
 if (!meshStats.activeLevel) fail("no active level chip after init");
+
+const furnitureLookCheck = await page.evaluate(() => {
+  const api = window.__bp3dApi;
+  if (!api) return { ok: false, reason: "window.__bp3dApi missing" };
+  if (typeof api.debugFurnitureMaterialLooks !== "function") {
+    return { ok: false, reason: "debugFurnitureMaterialLooks missing" };
+  }
+  return { ok: true, look: api.debugFurnitureMaterialLooks() };
+});
+if (!furnitureLookCheck.ok) fail(furnitureLookCheck.reason);
+else {
+  const furniture = furnitureLookCheck.look?.surfaces?.furniture;
+  const furnitureBed = furnitureLookCheck.look?.surfaces?.furnitureBed;
+  const furnitureHard = furnitureLookCheck.look?.surfaces?.furnitureHard;
+  if (!furniture || !furnitureBed || !furnitureHard) fail("missing furniture look snapshot");
+  else {
+    if (!furniture.hasMap || !furnitureBed.hasMap || !furnitureHard.hasMap) fail("upholstery/bed/casework texture hydration did not finish");
+    else ok("upholstery, bed and casework textures hydrated on initial luxury style");
+    if (furniture.color === furnitureHard.color) fail("upholstery and casework colors collapsed to the same value");
+    else ok("upholstery and casework keep distinct base colors");
+    if (furnitureBed.color === furniture.color) fail("bed and sofa colors collapsed to the same value");
+    else ok("bed and sofa keep distinct base colors");
+    if ((furniture.roughness ?? 0) <= (furnitureHard.roughness ?? 0) + 0.25) {
+      fail(`upholstery roughness no longer meaningfully above casework (${furniture.roughness} vs ${furnitureHard.roughness})`);
+    } else ok("upholstery stays materially rougher than casework");
+    if ((furnitureBed.roughness ?? 0) < (furniture.roughness ?? 0) + 0.04) {
+      fail(`bed roughness no longer meaningfully above sofa (${furnitureBed.roughness} vs ${furniture.roughness})`);
+    } else ok("bed stays softer/more matte than sofa");
+    if ((furniture.sheen ?? 0) < 0.45) fail(`upholstery sheen too low (${furniture.sheen})`);
+    else ok("upholstery keeps a visible fabric sheen response");
+    if ((furnitureBed.sheen ?? 1) >= (furniture.sheen ?? 0) - 0.20) {
+      fail(`bed sheen drifted too close to sofa sheen (${furnitureBed.sheen} vs ${furniture.sheen})`);
+    } else ok("bed keeps a calmer sheen than sofa upholstery");
+    if ((furnitureHard.clearcoat ?? 0) <= (furniture.clearcoat ?? 0) + 0.30) {
+      fail(`casework clearcoat no longer meaningfully above upholstery (${furnitureHard.clearcoat} vs ${furniture.clearcoat ?? 0})`);
+    } else ok("casework keeps a stronger lacquer clearcoat than upholstery");
+    if (!furniture.hasNormalMap || !furnitureBed.hasNormalMap || !furnitureHard.hasNormalMap) {
+      fail("upholstery/bed/casework normal maps did not hydrate");
+    } else ok("upholstery, bed and casework normal maps hydrated");
+    if ((furniture.mapRepeat?.[0] ?? 0) >= (furnitureBed.mapRepeat?.[0] ?? 0) - 1.0) {
+      fail(`bed fabric repeat is not meaningfully finer than sofa (${furniture.mapRepeat} vs ${furnitureBed.mapRepeat})`);
+    } else ok("bed fabric repeat is finer than sofa upholstery");
+    if ((furnitureBed.mapRepeat?.[0] ?? 0) >= (furnitureHard.mapRepeat?.[0] ?? 0) - 1.5) {
+      fail(`casework repeat is not meaningfully tighter than bed (${furnitureBed.mapRepeat} vs ${furnitureHard.mapRepeat})`);
+    } else ok("casework texture repeat stays tighter than bedding");
+    if ((furniture.normalScale?.[0] ?? 0) <= (furnitureBed.normalScale?.[0] ?? 0) + 0.45) {
+      fail(`sofa normal scale no longer clearly above bed (${furniture.normalScale} vs ${furnitureBed.normalScale})`);
+    } else ok("sofa keeps a chunkier weave normal response than bed linen");
+    if ((furnitureHard.normalScale?.[0] ?? 1) >= (furnitureBed.normalScale?.[0] ?? 0) - 0.08) {
+      fail(`casework normal scale is too close to bed (${furnitureHard.normalScale} vs ${furnitureBed.normalScale})`);
+    } else ok("casework keeps a much flatter surface normal than bedding");
+  }
+}
+
+const furnitureGeometryCheck = await page.evaluate(() => {
+  const api = window.__bp3dApi;
+  if (!api) return { ok: false, reason: "window.__bp3dApi missing" };
+  if (typeof api.debugFurnitureGeometryStats !== "function") {
+    return { ok: false, reason: "debugFurnitureGeometryStats missing" };
+  }
+  return { ok: true, stats: api.debugFurnitureGeometryStats() };
+});
+if (!furnitureGeometryCheck.ok) fail(furnitureGeometryCheck.reason);
+else {
+  const stats = furnitureGeometryCheck.stats;
+  if ((stats.total ?? 0) <= 0) fail("expected furnishing meshes for UV smoke");
+  else ok(`furniture geometry stats captured: ${stats.total}`);
+  if ((stats.withUv ?? 0) !== (stats.total ?? 0)) {
+    fail(`furniture UVs missing on ${stats.total - stats.withUv}/${stats.total} meshes :: ${JSON.stringify(stats.missingUvSamples || [])}`);
+  } else ok("all furniture meshes expose UVs");
+}
+
+const furnitureMaterialStateCheck = await page.evaluate(() => {
+  const api = window.__bp3dApi;
+  if (!api) return { ok: false, reason: "window.__bp3dApi missing" };
+  if (typeof api.debugFurnitureMaterialStateStats !== "function") {
+    return { ok: false, reason: "debugFurnitureMaterialStateStats missing" };
+  }
+  return { ok: true, stats: api.debugFurnitureMaterialStateStats() };
+});
+if (!furnitureMaterialStateCheck.ok) fail(furnitureMaterialStateCheck.reason);
+else {
+  const stats = furnitureMaterialStateCheck.stats;
+  if ((stats.total ?? 0) <= 0) fail("expected furnishing meshes for transparency smoke");
+  else ok(`furniture material state captured: ${stats.total}`);
+  ok(`furniture side stats: front=${stats.bySide?.front ?? 0} back=${stats.bySide?.back ?? 0} double=${stats.bySide?.double ?? 0} mirrored=${stats.negativeDeterminant ?? 0}`);
+  if ((stats.transparent ?? 0) !== 0 || (stats.lowOpacity ?? 0) !== 0) {
+    fail(`furniture meshes became translucent (${stats.transparent} transparent / ${stats.lowOpacity} low-opacity) :: ${JSON.stringify(stats.failingSamples || [])}`);
+  } else ok("all furniture meshes remain fully opaque");
+}
+
+const styleBucketCheck = await page.evaluate(() => {
+  const api = window.__bp3dApi;
+  if (!api) return { ok: false, reason: "window.__bp3dApi missing" };
+  if (typeof api.debugFurnitureMaterialAssignments !== "function") {
+    return { ok: false, reason: "debugFurnitureMaterialAssignments missing" };
+  }
+  const before = api.debugFurnitureMaterialAssignments();
+  api.setStyle("volcanic", { loadTextures: false });
+  const after = api.debugFurnitureMaterialAssignments();
+  api.setStyle("luxury", { loadTextures: false });
+  const restored = api.debugFurnitureMaterialAssignments();
+  return { ok: true, before, after, restored };
+});
+if (!styleBucketCheck.ok) fail(styleBucketCheck.reason);
+else {
+  const { before, after, restored } = styleBucketCheck;
+  if (before.totalFurniture <= 0) fail("expected furnishing meshes for style bucket smoke");
+  else ok(`furniture meshes detected: ${before.totalFurniture}`);
+  const sofaSamples = before.byExpected.furniture?.samples || [];
+  const bedSamples = before.byExpected.furnitureBed?.samples || [];
+  const hardSamples = [
+    ...(before.byExpected.furnitureHard?.samples || []),
+    ...(before.byExpected.furnitureDarkWood?.samples || [])
+  ];
+  const sofaText = sofaSamples.join(" ").toLowerCase();
+  const bedText = bedSamples.join(" ").toLowerCase();
+  const hardText = hardSamples.join(" ").toLowerCase();
+  if (!sofaText.includes("sofa")) fail("expected sofa sample in upholstered furniture bucket");
+  else ok("sofa samples classified into upholstered furniture bucket");
+  if (!bedText.includes("bed")) fail("expected bed sample in bed/bedding bucket");
+  else ok("bed samples classified into bed/bedding bucket");
+  if (!hardText.includes("cabinet")) fail("expected cabinet sample in cabinet/casework bucket");
+  else ok("cabinet samples classified into cabinet/casework bucket");
+  if (sofaText.includes("cabinet")) fail("cabinet sample leaked into upholstered furniture bucket");
+  else ok("cabinet samples stay out of upholstered furniture bucket");
+  if (sofaText.includes("bed") || bedText.includes("sofa")) fail("bed/sofa samples crossed buckets");
+  else ok("bed and sofa samples stay in separate buckets");
+  if (before.mismatched !== 0) fail(`initial furniture material mismatch count = ${before.mismatched}`);
+  else ok("initial furniture material buckets match expected classification");
+  if (after.mismatched !== 0) fail(`style switch remapped ${after.mismatched} furniture meshes to wrong material buckets`);
+  else ok("style switch preserved furniture material buckets");
+  if (restored.mismatched !== 0) fail(`style round-trip left ${restored.mismatched} furniture meshes mismatched`);
+  else ok("style round-trip preserved furniture material buckets");
+}
+
+const infoCardCheck = await page.evaluate(() => {
+  if (typeof window.__bp3dRenderInfoCard !== "function") {
+    return { ok: false, reason: "window.__bp3dRenderInfoCard missing" };
+  }
+  window.__bp3dRenderInfoCard({
+    ifcType: 263784265,
+    expressID: 168377,
+    system: "architecture",
+    furnitureMaterialKey: "furnitureDarkWood",
+    furnitureName: "M_Dining Table:Walnut",
+    furnitureObjectType: "Walnut",
+    furnitureTag: "168377",
+    position: { x: 1.23, y: 4.56, z: 7.89 }
+  });
+  const card = document.querySelector("#infocard");
+  const text = card?.textContent || "";
+  const display = card ? getComputedStyle(card).display : "none";
+  window.__bp3dRenderInfoCard(null);
+  const hiddenDisplay = card ? getComputedStyle(card).display : "none";
+  return { ok: true, text, display, hiddenDisplay };
+});
+if (!infoCardCheck.ok) fail(infoCardCheck.reason);
+else {
+  if (infoCardCheck.display === "none") fail("info card stayed hidden after mock furniture selection");
+  else ok("info card rendered for mock furniture selection");
+  if (!infoCardCheck.text.includes("Dark Wood")) fail("info card missing furniture surface label");
+  else ok("info card shows furniture surface label");
+  if (!infoCardCheck.text.includes("M_Dining Table:Walnut")) fail("info card missing furniture name");
+  else ok("info card shows furniture name");
+  if (infoCardCheck.hiddenDisplay !== "none") fail("info card did not hide after clearing selection");
+  else ok("info card clears on null selection");
+}
 
 // Toggle the first system chip off, then on, and ensure no console errors fire.
 // We dispatch click events directly because #status text mutates every few ms
