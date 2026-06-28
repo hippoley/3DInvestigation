@@ -100,6 +100,9 @@
     #tourEditor .te-saved-card .ctrl-btn { flex: 1 1 120px; min-height: 29px; white-space: normal; }
     #tourEditor #btnTourSavedRecoverBest { flex-basis: 100%; }
     #tourEditor .te-saved-hint { margin-top: -4px; color: rgba(235,242,247,0.55); font-size: 10px; line-height: 1.35; }
+    #tourEditor .te-project-card { background: rgba(255,209,102,0.052); border-color: rgba(255,209,102,0.18); }
+    #tourEditor .te-project-card .ctrl-btn { flex: 1 1 120px; min-height: 29px; white-space: normal; }
+    #tourEditor .te-project-hint { margin-top: -4px; color: rgba(235,242,247,0.55); font-size: 10px; line-height: 1.35; }
     #tourEditor .te-swatch { display: inline-flex; align-items: center; gap: 6px; }
     #tourEditor .te-swatch::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: #48c7ff; box-shadow: 0 0 10px rgba(72,199,255,0.6); }
     #tourEditor .te-swatch.target::before { background: #ffd166; box-shadow: 0 0 10px rgba(255,209,102,0.55); }
@@ -329,6 +332,17 @@
       </div>
       <div class="te-saved-hint">右上角 Tour 播错时，在这里选以前保存的镜头，点“恢复并绑定主 Tour”。</div>
     </div>
+    <div class="te-rail-card te-project-card">
+      <div class="te-rail-title">
+        <span>项目 Tour 文件</span>
+        <b id="tourProjectBadge">JSON</b>
+      </div>
+      <div class="te-actions">
+        <button type="button" id="btnTourLoadProjectFile" class="ctrl-btn primary">加载项目默认 Tour</button>
+        <button type="button" id="btnTourDownloadFile" class="ctrl-btn">下载当前 Tour JSON</button>
+      </div>
+      <div class="te-project-hint">项目默认文件在 assets/tours/one_take_window_product_60s.json；下载文件后可提交进仓库，避免 localStorage 丢失。</div>
+    </div>
     <div class="te-rail-card">
       <div class="te-rail-title">
         <span>Shot Controls</span>
@@ -391,6 +405,7 @@
     const CHUANGSHA_WINDOW_TAGS = ["181930", "182101"];
     const TOUR_EDITOR_KEY = "bp3d-pure:tour-editor:v8:one-take-window-product";
     const TOUR_EDITOR_KEY_PREFIX = "bp3d-pure:tour-editor:";
+    const TOUR_PROJECT_FILE_URL = "./assets/tours/one_take_window_product_60s.json";
     const TOUR_EDITOR_LEGACY_KEYS = [
       "bp3d-pure:tour-editor:v7:one-take-window-product",
       "bp3d-pure:tour-editor:v6:one-take-window-product",
@@ -1463,6 +1478,22 @@
           }
           return true;
         };
+        const applyTourState = (source = {}, fallbackName = "Imported Tour") => {
+          customTour = {
+            name: typeof source.name === "string" && source.name.trim() ? source.name.trim() : fallbackName,
+            pauseAt: Number.isFinite(source.pauseAt) ? clamp(source.pauseAt, 0, 5) : 0,
+            updatedAt: Date.now(),
+            waypoints: (Array.isArray(source.waypoints) ? source.waypoints : []).map(normalizeEditorWaypoint)
+          };
+          selectedWaypointIndex = 0;
+          selectedRailKind = "camera";
+          currentTourTime = 0;
+          $tourNameInput.value = customTour.name;
+          $tourPauseInput.value = customTour.pauseAt.toFixed(2);
+          saveTourState();
+          renderTourEditor();
+          return customTour;
+        };
         const exportTourJson = () => {
           syncTourInputs();
           updateTourJsonText();
@@ -1474,18 +1505,63 @@
           try {
             const parsed = JSON.parse($tourJsonText.value);
             const source = Array.isArray(parsed) ? { name: "Imported Tour", pauseAt: customTour.pauseAt, waypoints: parsed } : parsed;
-            customTour = {
-              name: typeof source.name === "string" && source.name.trim() ? source.name.trim() : "Imported Tour",
-              pauseAt: Number.isFinite(source.pauseAt) ? clamp(source.pauseAt, 0, 5) : 0,
-              waypoints: (Array.isArray(source.waypoints) ? source.waypoints : []).map(normalizeEditorWaypoint)
-            };
-            $tourNameInput.value = customTour.name;
-            $tourPauseInput.value = customTour.pauseAt.toFixed(2);
-            saveTourState();
-            renderTourEditor();
+            applyTourState(source, "Imported Tour");
           } catch (err) {
             $tourStudioStatus.textContent = `Import failed: ${err.message || err}`;
           }
+        };
+        const normalizeTourFilePayload = (payload = {}) => {
+          const source = payload.tour && typeof payload.tour === "object" ? payload.tour : payload;
+          return {
+            schema: "bp3d-tour/v1",
+            name: typeof source.name === "string" && source.name.trim() ? source.name.trim() : customTour.name || defaultTourState.name,
+            pauseAt: Number.isFinite(source.pauseAt) ? clamp(source.pauseAt, 0, 5) : customTour.pauseAt,
+            updatedAt: Date.now(),
+            source: source.source || "Tour Studio",
+            subject: source.subject || { type: "window", tags: CHUANGSHA_WINDOW_TAGS },
+            waypoints: (Array.isArray(source.waypoints) ? source.waypoints : []).map(normalizeEditorWaypoint)
+          };
+        };
+        const loadProjectTourFile = async (options = {}) => {
+          try {
+            const response = await fetch(`${TOUR_PROJECT_FILE_URL}?v=${Date.now()}`, { cache: "no-store" });
+            if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
+            const payload = normalizeTourFilePayload(await response.json());
+            if (!payload.waypoints.length) throw new Error("tour file has no waypoints");
+            applyTourState(payload, payload.name || "Project Tour");
+            if (options.bind !== false) bindEditorTourToMainButton();
+            if ($tourStudioStatus) {
+              $tourStudioStatus.textContent = `已加载项目 Tour 文件：${payload.name}（${payload.waypoints.length} 幕）。`;
+            }
+            return payload;
+          } catch (err) {
+            if ($tourStudioStatus) {
+              $tourStudioStatus.textContent = `项目 Tour 加载失败：${err.message || err}`;
+            }
+            return null;
+          }
+        };
+        const downloadCurrentTourFile = () => {
+          syncTourInputs();
+          const payload = normalizeTourFilePayload({
+            ...customTour,
+            source: "bp3d-pure Tour Studio export",
+            subject: { type: "window", tags: CHUANGSHA_WINDOW_TAGS }
+          });
+          const safeName = (payload.name || "bp3d-tour").toLowerCase().replace(/[^a-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "") || "bp3d-tour";
+          const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = `${safeName}.json`;
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          URL.revokeObjectURL(url);
+          if ($tourStudioStatus) {
+            $tourStudioStatus.textContent = `已下载 ${link.download}。把它放进 assets/tours/ 可作为项目 Tour 文件提交。`;
+          }
+          return payload;
         };
         const listSavedTours = () => listTourStorageKeys()
           .map((key) => parseStoredTourState(localStorage.getItem(key), key))
@@ -1558,18 +1634,7 @@
             ? parseStoredTourState(localStorage.getItem(key), key)
             : findBestStoredTourState();
           if (!source) return false;
-          customTour = {
-            name: source.name,
-            pauseAt: source.pauseAt,
-            updatedAt: Date.now(),
-            waypoints: source.waypoints
-          };
-          selectedWaypointIndex = 0;
-          selectedRailKind = "camera";
-          currentTourTime = 0;
-          $tourNameInput.value = customTour.name;
-          $tourPauseInput.value = customTour.pauseAt.toFixed(2);
-          saveTourState();
+          applyTourState(source, source.name || "Saved Tour");
           if (source.key !== TOUR_EDITOR_KEY) {
             tourButtonBinding = {
               mode: "custom-editor",
@@ -1995,6 +2060,8 @@
           refreshSavedTourSelect();
           if ($tourStudioStatus) $tourStudioStatus.textContent = "历史 Tour 列表已刷新。";
         });
+        document.getElementById("btnTourLoadProjectFile")?.addEventListener("click", () => loadProjectTourFile({ bind: true }));
+        document.getElementById("btnTourDownloadFile")?.addEventListener("click", downloadCurrentTourFile);
         document.getElementById("btnTourEditorDiagnose")?.addEventListener("click", () => updateTourStudioStatus(updateTourStudioOverlay()));
         document.getElementById("btnTourPreview")?.addEventListener("click", previewTourAtCurrentTime);
         $btnTourEditorPrev?.addEventListener("click", () => selectWaypointStep(-1));
@@ -2051,6 +2118,8 @@
           check: diagnoseCurrentTourForPlayback,
           exportJson: exportTourJson,
           importJson: importTourJson,
+          loadProjectTourFile,
+          downloadCurrentTourFile,
           savedTours: listSavedTours,
           refreshSavedTours: refreshSavedTourSelect,
           refreshMainTourStatus: updateMainTourStatusCard,

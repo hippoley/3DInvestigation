@@ -160,6 +160,27 @@ The preflight check calls renderer diagnostics and reports:
 It prevents only hard error playback for bound custom tours. Warnings remain
 playable so the user can still preview imperfect motion.
 
+### 2.7 Project Tour File
+
+Tour Studio now has a project-file path for tours in addition to browser
+localStorage.
+
+Default project tour:
+
+```text
+assets/tours/one_take_window_product_60s.json
+```
+
+UI actions:
+
+- `Load Project Default Tour`: loads the JSON file, writes it into the editor,
+  and binds it to the main `Tour` button.
+- `Download Current Tour JSON`: exports the current editor tour as a JSON file
+  so it can be committed into `assets/tours/`.
+
+This is the first step toward making tours portable across browser profiles,
+machines, and meetings.
+
 ## 3. Asset Replacement Work
 
 ### 3.1 Furniture Replacement
@@ -292,6 +313,12 @@ Recommendation:
 | `docs/duplex-restoration-audit.md` | Audit of the duplex sample as a restoration data source. |
 | `docs/duplex-simulation-viewer.md` | Simulation viewer operating notes. |
 | `docs/bp3d-window-tour-audit-2026-06-28.md` | This document; meeting audit for the window-product Tour Studio work. |
+
+### 4.5 Tour Files
+
+| File | Purpose |
+|---|---|
+| `assets/tours/one_take_window_product_60s.json` | Version-controlled default product-tour path for the replaced window screen. Can be loaded from Tour Studio. |
 
 ## 5. Tour Design Lessons Learned
 
@@ -433,10 +460,11 @@ That is useful for:
 
 ### Short Term
 
-1. Add `assets/tours/one_take_window_product_60s.json`.
-2. Add explicit `Save Tour To File` / `Load Tour From File`.
-3. Add a window product part inventory panel: frame, mesh, display, button, handle.
-4. Add a one-click "Product Commercial Preset" that loads a strong default path.
+1. Add a window product part inventory panel: frame, mesh, display, button, handle.
+2. Add a one-click "Product Commercial Preset" that can regenerate a strong
+   default path from the current product placement.
+3. Add file-picker import for arbitrary local tour JSON files.
+4. Add a lightweight tour version label in the UI.
 
 ### Medium Term
 
@@ -482,4 +510,3 @@ Suggested decision:
 - If they are source references only, keep them out of Git.
 - If they become runtime assets, move them into a documented `assets/` path and
   use Git LFS.
-
