@@ -339,8 +339,10 @@
       </div>
       <div class="te-actions">
         <button type="button" id="btnTourLoadProjectFile" class="ctrl-btn primary">加载项目默认 Tour</button>
+        <button type="button" id="btnTourImportLocalFile" class="ctrl-btn">导入本地 Tour JSON</button>
         <button type="button" id="btnTourDownloadFile" class="ctrl-btn">下载当前 Tour JSON</button>
       </div>
+      <input type="file" id="tourLocalFileInput" accept="application/json,.json" hidden />
       <div class="te-project-hint">项目默认文件在 assets/tours/one_take_window_product_60s.json；下载文件后可提交进仓库，避免 localStorage 丢失。</div>
     </div>
     <div class="te-rail-card">
@@ -597,6 +599,7 @@
         const $tourSavedCount = document.querySelector("#tourSavedCount");
         const $tourMainBadge = document.querySelector("#tourMainBadge");
         const $tourMainStatus = document.querySelector("#tourMainStatus");
+        const $tourLocalFileInput = document.querySelector("#tourLocalFileInput");
         const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
         const round2 = (v) => Math.round((Number(v) || 0) * 100) / 100;
         const escapeTourHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (ch) => ({
@@ -1563,6 +1566,27 @@
           }
           return payload;
         };
+        const importLocalTourFile = async (file) => {
+          if (!file) return null;
+          try {
+            const text = await file.text();
+            const payload = normalizeTourFilePayload(JSON.parse(text));
+            if (!payload.waypoints.length) throw new Error("tour file has no waypoints");
+            applyTourState(payload, payload.name || file.name.replace(/\.json$/i, "") || "Local Tour");
+            bindEditorTourToMainButton();
+            if ($tourStudioStatus) {
+              $tourStudioStatus.textContent = `已导入本地 Tour：${file.name}（${payload.waypoints.length} 幕）。`;
+            }
+            return payload;
+          } catch (err) {
+            if ($tourStudioStatus) {
+              $tourStudioStatus.textContent = `本地 Tour 导入失败：${err.message || err}`;
+            }
+            return null;
+          } finally {
+            if ($tourLocalFileInput) $tourLocalFileInput.value = "";
+          }
+        };
         const listSavedTours = () => listTourStorageKeys()
           .map((key) => parseStoredTourState(localStorage.getItem(key), key))
           .filter(Boolean)
@@ -2061,7 +2085,9 @@
           if ($tourStudioStatus) $tourStudioStatus.textContent = "历史 Tour 列表已刷新。";
         });
         document.getElementById("btnTourLoadProjectFile")?.addEventListener("click", () => loadProjectTourFile({ bind: true }));
+        document.getElementById("btnTourImportLocalFile")?.addEventListener("click", () => $tourLocalFileInput?.click());
         document.getElementById("btnTourDownloadFile")?.addEventListener("click", downloadCurrentTourFile);
+        $tourLocalFileInput?.addEventListener("change", () => importLocalTourFile($tourLocalFileInput.files?.[0] || null));
         document.getElementById("btnTourEditorDiagnose")?.addEventListener("click", () => updateTourStudioStatus(updateTourStudioOverlay()));
         document.getElementById("btnTourPreview")?.addEventListener("click", previewTourAtCurrentTime);
         $btnTourEditorPrev?.addEventListener("click", () => selectWaypointStep(-1));
@@ -2120,6 +2146,7 @@
           importJson: importTourJson,
           loadProjectTourFile,
           downloadCurrentTourFile,
+          importLocalTourFile,
           savedTours: listSavedTours,
           refreshSavedTours: refreshSavedTourSelect,
           refreshMainTourStatus: updateMainTourStatusCard,

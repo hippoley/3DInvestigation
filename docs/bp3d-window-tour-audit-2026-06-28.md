@@ -175,6 +175,8 @@ UI actions:
 
 - `Load Project Default Tour`: loads the JSON file, writes it into the editor,
   and binds it to the main `Tour` button.
+- `Import Local Tour JSON`: opens a local file picker and imports any compatible
+  tour JSON file into the editor.
 - `Download Current Tour JSON`: exports the current editor tour as a JSON file
   so it can be committed into `assets/tours/`.
 
@@ -463,8 +465,8 @@ That is useful for:
 1. Add a window product part inventory panel: frame, mesh, display, button, handle.
 2. Add a one-click "Product Commercial Preset" that can regenerate a strong
    default path from the current product placement.
-3. Add file-picker import for arbitrary local tour JSON files.
-4. Add a lightweight tour version label in the UI.
+3. Add a lightweight tour version label in the UI.
+4. Add project-level named takes, e.g. `hero`, `technical`, `short-demo`.
 
 ### Medium Term
 
