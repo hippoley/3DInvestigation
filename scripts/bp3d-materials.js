@@ -217,8 +217,8 @@ function makeMetalRoughnessTexture(size = 256) {
 
 export function makePbrMaterials({ loadTextures = false } = {}) {
   const woodMap    = makeWoodFloorTexture();
-  const wallMap    = makePlasterTexture(512, [243, 238, 230]);
-  const ceilingMap = makePlasterTexture(512, [248, 247, 244]);
+  const wallMap    = makePlasterTexture(512, [235, 228, 216]);
+  const ceilingMap = makePlasterTexture(512, [242, 236, 226]);
   const metalRough = makeMetalRoughnessTexture();
 
   // ── Shared helpers ──────────────────────────────────────────────────────────
@@ -238,42 +238,42 @@ export function makePbrMaterials({ loadTextures = false } = {}) {
 
     // Smooth lime plaster: micro-texture from noise map, zero metalness, soft IBL pickup
     wall: new THREE.MeshPhysicalMaterial({
-      map: wallMap, color: 0xffffff,
-      roughness: 0.86, metalness: 0,
-      envMapIntensity: 0.55
+      map: wallMap, color: 0xe7ded0,
+      roughness: 0.9, metalness: 0,
+      envMapIntensity: 0.30
     }),
 
     // Quiet warm floor: broad colour wash only, no normal/roughness/AO maps.
     // IFC slabs often have generated UVs, so detailed PBR maps alias and look dirty.
     floor: new THREE.MeshPhysicalMaterial({
       map: woodMap,
-      color: 0xf2eadf,
+      color: 0xd9c2a2,
       roughness: 0.74, metalness: 0,
       clearcoat: 0.035, clearcoatRoughness: 0.92,
       anisotropy: 0.0, anisotropyRotation: 0,
-      envMapIntensity: 0.42
+      envMapIntensity: 0.34
     }),
 
     // Flat white emulsion ceiling — very high roughness, minimal specular
     ceiling: new THREE.MeshPhysicalMaterial({
-      map: ceilingMap, color: 0xffffff,
-      roughness: 0.92, metalness: 0,
-      envMapIntensity: 0.5
+      map: ceilingMap, color: 0xeee5d8,
+      roughness: 0.94, metalness: 0,
+      envMapIntensity: 0.26
     }),
 
     // Solid oak door: warm honey tone, light clearcoat for factory-lacquered feel
     door: new THREE.MeshPhysicalMaterial({
       map: woodMap.clone(), color: 0x8a6240,
-      roughness: 0.45, metalness: 0.05,
-      clearcoat: 0.18, clearcoatRoughness: 0.40,
-      envMapIntensity: 0.6
+      roughness: 0.42, metalness: 0.04,
+      clearcoat: 0.24, clearcoatRoughness: 0.36,
+      envMapIntensity: 0.72
     }),
 
     // Covering / skirting / facade cladding: matches ceiling plaster
     covering: new THREE.MeshPhysicalMaterial({
-      map: ceilingMap, color: 0xffffff,
+      map: ceilingMap, color: 0xded4c5,
       roughness: 0.85, metalness: 0,
-      envMapIntensity: 0.5
+      envMapIntensity: 0.30
     }),
 
     // ── Glass ───────────────────────────────────────────────────────────────
@@ -282,14 +282,14 @@ export function makePbrMaterials({ loadTextures = false } = {}) {
     // dispersion 0.08 for visible prism edge on strong backlight,
     // micro-waviness GLSL injection simulates real float-glass surface imperfections
     window: makeGlassMat({
-      color: 0xd8ecf2,
-      roughness: 0.04, metalness: 0,
-      transmission: 1.0, thickness: 0.22,
+      color: 0xc6dde6,
+      roughness: 0.075, metalness: 0,
+      transmission: 0.78, thickness: 0.16,
       ior: 1.52,
-      attenuationColor: 0xc8e4ec, attenuationDistance: 5.0,
-      dispersion: 0.08,
-      specularIntensity: 1.0,
-      envMapIntensity: 1.35,
+      attenuationColor: 0xbad7e0, attenuationDistance: 3.2,
+      dispersion: 0.03,
+      specularIntensity: 1.25,
+      envMapIntensity: 1.7,
       side: THREE.DoubleSide
     }, 0.0006, 0.0005),
 
@@ -324,40 +324,40 @@ export function makePbrMaterials({ loadTextures = false } = {}) {
     // Upholstery (sofa fabric, chair cushion, headboard): denser woven soft
     // pack with broad grazing highlights rather than silky sharp flash.
     furniture: new THREE.MeshPhysicalMaterial({
-      color: 0xb4a594,
+      color: 0xbba995,
       roughness: 0.90, metalness: 0,
-      sheen: 0.50, sheenColor: 0xd8cbbe, sheenRoughness: 0.92,
-      specularIntensity: 0.20,
-      envMapIntensity: 0.14
+      sheen: 0.52, sheenColor: 0xd8c7b6, sheenRoughness: 0.92,
+      specularIntensity: 0.18,
+      envMapIntensity: 0.12
     }),
 
     // Bed / bedding (mattress, duvet, pillow, soft headboard): brighter and
     // more matte than sofa upholstery so beds read softer, loftier and calmer.
     furnitureBed: new THREE.MeshPhysicalMaterial({
-      color: 0xf3eee7,
+      color: 0xe2d2bd,
       roughness: 0.985, metalness: 0,
-      sheen: 0.05, sheenColor: 0xfffcf7, sheenRoughness: 0.99,
-      specularIntensity: 0.12,
-      envMapIntensity: 0.05
+      sheen: 0.06, sheenColor: 0xf1e5d5, sheenRoughness: 0.99,
+      specularIntensity: 0.07,
+      envMapIntensity: 0.035
     }),
 
     // Hard lacquered case goods (cabinets, bookshelves, TV unit):
     // satin sprayed finish with restrained reflections instead of mirror gloss.
     furnitureHard: new THREE.MeshPhysicalMaterial({
-      color: 0xf4efe8,
-      roughness: 0.30, metalness: 0,
-      clearcoat: 0.66, clearcoatRoughness: 0.22,
-      specularIntensity: 0.34,
-      envMapIntensity: 0.74
+      color: 0xd4c6b6,
+      roughness: 0.36, metalness: 0,
+      clearcoat: 0.32, clearcoatRoughness: 0.46,
+      specularIntensity: 0.18,
+      envMapIntensity: 0.32
     }),
 
     // Premium stone / sintered slab top (countertop, coffee-table top, island):
     // near-zero roughness + heavy clearcoat = polished Calacatta marble feel
     furnitureTop: new THREE.MeshPhysicalMaterial({
-      color: 0xe2ddd6,
-      roughness: 0.08, metalness: 0.01,
-      clearcoat: 0.88, clearcoatRoughness: 0.04,
-      envMapIntensity: 1.0
+      color: 0xd7cbbd,
+      roughness: 0.16, metalness: 0.01,
+      clearcoat: 0.46, clearcoatRoughness: 0.22,
+      envMapIntensity: 0.48
     }),
 
     // Dark walnut / smoked oak case goods (credenza, wardrobe, dining table):
@@ -388,6 +388,20 @@ export function makePbrMaterials({ loadTextures = false } = {}) {
       roughnessMap: metalRough,
       anisotropy: 0.65, anisotropyRotation: Math.PI / 2,
       envMapIntensity: 1.0
+    }),
+
+    // Sheer curtains / window screens: intentionally no fabric texture or
+    // normal map. Repeated linen maps create stripy "tape" artefacts on the
+    // long, thin curtain meshes in the duplex sample.
+    furnitureSheer: new THREE.MeshPhysicalMaterial({
+      color: 0xe7ded2,
+      roughness: 0.98, metalness: 0,
+      transparent: true, opacity: 0.38,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+      sheen: 0.08, sheenColor: 0xffffff, sheenRoughness: 0.98,
+      specularIntensity: 0.08,
+      envMapIntensity: 0.04
     }),
 
     // ── Stairs & structure ──────────────────────────────────────────────────
@@ -589,6 +603,9 @@ export function classifyFurnitureMaterial(meta = {}) {
   ].filter(Boolean).join(" "));
 
   if (!text) return "furnitureHard";
+  if (hasAny(text, ["curtain", "sheer", "voile", "drape", "drapery", "blind", "shade", "window screen", "insect screen", "fly screen", "mesh screen", "net curtain", "privacy screen"])) {
+    return "furnitureSheer";
+  }
   if (hasAny(text, ["counter top", "countertop", "table top", "tabletop", "worktop", "vanity top", "island top"])) {
     return "furnitureTop";
   }

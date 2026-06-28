@@ -31,39 +31,39 @@ const PRESETS = {
     envMap: 'assets/hdri/glasshouse_interior_4k.exr',
     sun: {
       color:     0xfff1d6,
-      intensity: 3.8,
+      intensity: 2.34,
       elevation: 32,   // degrees above horizon
       azimuth:   155,  // compass degrees (N=0, E=90)
     },
     fill: {
       color:     0xb8d4ee,
-      intensity: 1.2,
+      intensity: 0.84,
       position:  [20, 15, -25],
     },
     hemi: {
       skyColor:    0xeaf2ff,
       groundColor: 0x9e9688,
-      intensity:   1.1,
+      intensity:   0.78,
     },
     ambient: {
       color:     0xffffff,
-      intensity: 0.15,
+      intensity: 0.18,
     },
     fog: {
-      color:   0xc4cdd2,
-      density: 0.006,
+      color:   0xf7f5ef,
+      density: 0.0035,
     },
     renderer: {
-      exposure:    1.22,
-      background:  0xb6c5d2,
+      exposure:    0.92,
+      background:  0xf8f7f2,
     },
     postfx: {
-      contrast:    1.12,
-      saturation:  1.06,
-      temperature: 0.035,
-      shadowTint:  0.018,
+      contrast:    1.04,
+      saturation:  0.95,
+      temperature: 0.024,
+      shadowTint:  0.012,
       vignetteOffset:   0.78,
-      vignetteDarkness: 0.55,
+      vignetteDarkness: 0.18,
     },
   },
 
@@ -122,39 +122,39 @@ const PRESETS = {
     envMap: 'assets/hdri/glasshouse_interior_4k.exr',
     sun: {
       color:     0xffecd6,
-      intensity: 2.2,
+      intensity: 2.28,
       elevation: 22,
       azimuth:   120,
     },
     fill: {
       color:     0xfff0e0,
-      intensity: 0.9,
+      intensity: 0.82,
       position:  [-15, 10, 10],
     },
     hemi: {
       skyColor:    0xfff8f0,
       groundColor: 0xc8b898,
-      intensity:   0.8,
+      intensity:   0.76,
     },
     ambient: {
       color:     0xfff4e8,
-      intensity: 0.28,
+      intensity: 0.18,
     },
     fog: {
-      color:   0xd8cfc4,
-      density: 0.004,
+      color:   0xf7f1e8,
+      density: 0.003,
     },
     renderer: {
-      exposure:   1.32,
-      background: 0xd2c8bc,
+      exposure:   0.90,
+      background: 0xf8f5ee,
     },
     postfx: {
-      contrast:    1.14,
-      saturation:  1.08,
-      temperature: 0.045,
+      contrast:    1.04,
+      saturation:  0.95,
+      temperature: 0.024,
       shadowTint:  0.012,
       vignetteOffset:   0.75,
-      vignetteDarkness: 0.60,
+      vignetteDarkness: 0.18,
     },
   },
 
@@ -186,12 +186,12 @@ const PRESETS = {
       intensity: 0.50,
     },
     fog: {
-      color:   0xe8ecee,
-      density: 0.003,
+      color:   0xf7f7f4,
+      density: 0.0025,
     },
     renderer: {
       exposure:   1.08,
-      background: 0xdde4e8,
+      background: 0xf9f9f6,
     },
     postfx: {
       contrast:    1.08,
@@ -199,7 +199,7 @@ const PRESETS = {
       temperature: 0.010,
       shadowTint:  0.025,
       vignetteOffset:   0.88,
-      vignetteDarkness: 0.38,
+      vignetteDarkness: 0.16,
     },
   },
 };

@@ -29,10 +29,11 @@ const PRESETS = {
 
   /** Japandi — warm cream + pale ash wood + warm plaster, muted saturation */
   japandi: {
-    wall:               { color: 0xf5f0e8, roughness: 0.90, envMapIntensity: 0.45 },
+    wall:               { color: 0xf1eadf, roughness: 0.92, envMapIntensity: 0.38 },
     floor:              { color: 0xe8dfc8, roughness: 0.55, clearcoat: 0.18, clearcoatRoughness: 0.55 },
-    ceiling:            { color: 0xfaf8f4, roughness: 0.94 },
-    door:               { color: 0xc8b898, roughness: 0.50, clearcoat: 0.10 },
+    ceiling:            { color: 0xf7f3ec, roughness: 0.95, envMapIntensity: 0.34 },
+    door:               { color: 0xb89f78, roughness: 0.46, clearcoat: 0.16, envMapIntensity: 0.58 },
+    window:             { color: 0xc7dee5, roughness: 0.08, transmission: 0.76, thickness: 0.14, specularIntensity: 1.2, envMapIntensity: 1.55 },
     furniture:          { color: 0xc6b9a9, roughness: 0.90, sheen: 0.46, sheenColor: 0xe2d5c7, sheenRoughness: 0.90, specularIntensity: 0.18, envMapIntensity: 0.15 },
     furnitureBed:       { color: 0xf2ebdf, roughness: 0.985, sheen: 0.05, sheenColor: 0xfffcf7, sheenRoughness: 0.99, specularIntensity: 0.10, envMapIntensity: 0.05 },
     furnitureHard:      { color: 0xf3ede3, roughness: 0.34, clearcoat: 0.42, clearcoatRoughness: 0.28, specularIntensity: 0.28, envMapIntensity: 0.62 },
@@ -40,6 +41,7 @@ const PRESETS = {
     furnitureDarkWood:  { color: 0x2e221a, roughness: 0.52, clearcoat: 0.08 },
     furnitureLightWood: { color: 0xd4b888, roughness: 0.62, clearcoat: 0.06 },
     furnitureMetal:     { color: 0x1e2018, roughness: 0.35, metalness: 0.90, envMapIntensity: 0.9 },
+    furnitureSheer:     { color: 0xf6f0e8, roughness: 0.985, opacity: 0.36, transparent: true, depthWrite: false, sheen: 0.08, sheenColor: 0xffffff, sheenRoughness: 0.98, specularIntensity: 0.08, envMapIntensity: 0.04 },
     stair:              { color: 0xc0b090, roughness: 0.58, clearcoat: 0.14 },
     railing:            { color: 0x2a2a22, roughness: 0.38, metalness: 0.88 },
     sanitary:           { color: 0xf8f8f4, clearcoat: 0.80, roughness: 0.08 },
@@ -50,17 +52,19 @@ const PRESETS = {
 
   /** Modern Luxury — off-white + champagne metal + dark walnut + high gloss */
   luxury: {
-    wall:               { color: 0xf0ede8, roughness: 0.84, envMapIntensity: 0.65 },
-    floor:              { color: 0xf2eadf, roughness: 0.74, clearcoat: 0.035, clearcoatRoughness: 0.92, envMapIntensity: 0.42 },
-    ceiling:            { color: 0xfafaf8, roughness: 0.90 },
-    door:               { color: 0x5a4535, roughness: 0.32, clearcoat: 0.38, envMapIntensity: 0.9 },
-    furniture:          { color: 0xb5a694, roughness: 0.90, sheen: 0.56, sheenColor: 0xdccfc3, sheenRoughness: 0.88, specularIntensity: 0.20, envMapIntensity: 0.14 },
-    furnitureBed:       { color: 0xf7f1e9, roughness: 0.985, sheen: 0.05, sheenColor: 0xffffff, sheenRoughness: 0.99, specularIntensity: 0.12, envMapIntensity: 0.05 },
-    furnitureHard:      { color: 0xf7f1e8, roughness: 0.20, clearcoat: 0.78, clearcoatRoughness: 0.16, specularIntensity: 0.38, envMapIntensity: 0.92 },
-    furnitureTop:       { color: 0xeae4dc, roughness: 0.05, clearcoat: 0.95, clearcoatRoughness: 0.02, envMapIntensity: 1.4 },
+    wall:               { color: 0xe6ddcf, roughness: 0.92, envMapIntensity: 0.26 },
+    floor:              { color: 0xd8bd98, roughness: 0.76, clearcoat: 0.018, clearcoatRoughness: 0.96, envMapIntensity: 0.30 },
+    ceiling:            { color: 0xefe6d8, roughness: 0.96, envMapIntensity: 0.22 },
+    door:               { color: 0x4e392b, roughness: 0.34, clearcoat: 0.34, envMapIntensity: 0.82 },
+    window:             { color: 0xbfd8e2, roughness: 0.075, transmission: 0.74, thickness: 0.14, specularIntensity: 1.28, envMapIntensity: 1.75 },
+    furniture:          { color: 0xb9a895, roughness: 0.92, sheen: 0.58, sheenColor: 0xd8c7b6, sheenRoughness: 0.90, specularIntensity: 0.15, envMapIntensity: 0.10 },
+    furnitureBed:       { color: 0xe2d2bd, roughness: 0.99, sheen: 0.04, sheenColor: 0xf1e4d2, sheenRoughness: 0.99, specularIntensity: 0.045, envMapIntensity: 0.025 },
+    furnitureHard:      { color: 0xd1c2b1, roughness: 0.42, clearcoat: 0.24, clearcoatRoughness: 0.52, specularIntensity: 0.13, envMapIntensity: 0.25 },
+    furnitureTop:       { color: 0xd9cbb9, roughness: 0.32, clearcoat: 0.32, clearcoatRoughness: 0.34, envMapIntensity: 0.38 },
     furnitureDarkWood:  { color: 0x2a1e14, roughness: 0.38, clearcoat: 0.22, envMapIntensity: 0.7 },
     furnitureLightWood: { color: 0xc8a070, roughness: 0.52, clearcoat: 0.12, envMapIntensity: 0.6 },
     furnitureMetal:     { color: 0xc0a840, roughness: 0.18, metalness: 0.96, envMapIntensity: 1.6 }, // champagne gold
+    furnitureSheer:     { color: 0xebe1d4, roughness: 0.985, opacity: 0.30, transparent: true, depthWrite: false, sheen: 0.06, sheenColor: 0xf4eadf, sheenRoughness: 0.99, specularIntensity: 0.05, envMapIntensity: 0.025 },
     stair:              { color: 0x4a3828, roughness: 0.38, clearcoat: 0.32, envMapIntensity: 0.8 },
     railing:            { color: 0xc8b888, roughness: 0.20, metalness: 0.96, envMapIntensity: 1.5 },
     sanitary:           { color: 0xffffff, clearcoat: 0.92, clearcoatRoughness: 0.04, roughness: 0.06 },
@@ -75,6 +79,7 @@ const PRESETS = {
     floor:              { color: 0x2a2420, roughness: 0.60, clearcoat: 0.22, clearcoatRoughness: 0.55, envMapIntensity: 0.8 },
     ceiling:            { color: 0x2e2a26, roughness: 0.90 },
     door:               { color: 0x1e1a16, roughness: 0.40, clearcoat: 0.15, envMapIntensity: 0.6 },
+    window:             { color: 0x8098a0, roughness: 0.1, transmission: 0.52, thickness: 0.16, specularIntensity: 1.05, envMapIntensity: 1.25 },
     furniture:          { color: 0x5c5349, roughness: 0.88, sheen: 0.18, sheenColor: 0x7a6f63, sheenRoughness: 0.92, specularIntensity: 0.14, envMapIntensity: 0.15 },
     furnitureBed:       { color: 0xccc2b6, roughness: 0.985, sheen: 0.03, sheenColor: 0xe7ddd1, sheenRoughness: 0.99, specularIntensity: 0.09, envMapIntensity: 0.04 },
     furnitureHard:      { color: 0x26201b, roughness: 0.22, clearcoat: 0.54, clearcoatRoughness: 0.18, specularIntensity: 0.30, envMapIntensity: 0.82 },
@@ -82,6 +87,7 @@ const PRESETS = {
     furnitureDarkWood:  { color: 0x1a1410, roughness: 0.55, clearcoat: 0.05 },
     furnitureLightWood: { color: 0x6a5840, roughness: 0.68, clearcoat: 0.04 },
     furnitureMetal:     { color: 0x141412, roughness: 0.22, metalness: 0.90, envMapIntensity: 0.7 }, // matte black
+    furnitureSheer:     { color: 0x9e9588, roughness: 0.99, opacity: 0.28, transparent: true, depthWrite: false, sheen: 0.04, sheenColor: 0xd8d0c8, sheenRoughness: 0.99, specularIntensity: 0.05, envMapIntensity: 0.02 },
     stair:              { color: 0x1e1a16, roughness: 0.50, clearcoat: 0.18, envMapIntensity: 0.6 },
     railing:            { color: 0x1a1a18, roughness: 0.30, metalness: 0.90, envMapIntensity: 0.9 },
     sanitary:           { color: 0xf0ece8, clearcoat: 0.86, roughness: 0.09 },
@@ -92,10 +98,11 @@ const PRESETS = {
 
   /** Smart Clean — matte white + light gray + brushed aluminum + cool tone */
   smart: {
-    wall:               { color: 0xf8f8f8, roughness: 0.88, envMapIntensity: 0.50 },
+    wall:               { color: 0xf2f2ef, roughness: 0.91, envMapIntensity: 0.36 },
     floor:              { color: 0xf0f0f0, roughness: 0.48, clearcoat: 0.30, clearcoatRoughness: 0.50 },
-    ceiling:            { color: 0xffffff, roughness: 0.92 },
-    door:               { color: 0xe8e8e8, roughness: 0.35, clearcoat: 0.20, envMapIntensity: 0.7 },
+    ceiling:            { color: 0xfafafa, roughness: 0.94, envMapIntensity: 0.32 },
+    door:               { color: 0xd7d7d2, roughness: 0.38, clearcoat: 0.22, envMapIntensity: 0.62 },
+    window:             { color: 0xc4dbe6, roughness: 0.075, transmission: 0.78, thickness: 0.12, specularIntensity: 1.18, envMapIntensity: 1.55 },
     furniture:          { color: 0xd3d0ca, roughness: 0.89, sheen: 0.16, sheenColor: 0xf0ece7, sheenRoughness: 0.94, specularIntensity: 0.16, envMapIntensity: 0.14 },
     furnitureBed:       { color: 0xf8f7f3, roughness: 0.985, sheen: 0.03, sheenColor: 0xffffff, sheenRoughness: 0.99, specularIntensity: 0.08, envMapIntensity: 0.04 },
     furnitureHard:      { color: 0xfcfcfa, roughness: 0.22, clearcoat: 0.70, clearcoatRoughness: 0.16, specularIntensity: 0.34, envMapIntensity: 0.90 },
@@ -103,6 +110,7 @@ const PRESETS = {
     furnitureDarkWood:  { color: 0x585858, roughness: 0.45, clearcoat: 0.15 },  // treated grey ash
     furnitureLightWood: { color: 0xd8d0c0, roughness: 0.58, clearcoat: 0.08 },  // bleached birch
     furnitureMetal:     { color: 0xa8b0b8, roughness: 0.20, metalness: 0.95, envMapIntensity: 1.4 }, // brushed alu
+    furnitureSheer:     { color: 0xf6f7f5, roughness: 0.985, opacity: 0.32, transparent: true, depthWrite: false, sheen: 0.05, sheenColor: 0xffffff, sheenRoughness: 0.99, specularIntensity: 0.06, envMapIntensity: 0.03 },
     stair:              { color: 0xd0d0d0, roughness: 0.42, clearcoat: 0.22, envMapIntensity: 0.6 },
     railing:            { color: 0xa8b0b8, roughness: 0.22, metalness: 0.94, envMapIntensity: 1.4 },
     sanitary:           { color: 0xffffff, clearcoat: 0.90, roughness: 0.06 },

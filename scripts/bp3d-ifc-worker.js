@@ -1,6 +1,6 @@
 // Module worker: web-ifc parsing off the main thread.
 // Receives { type: 'load', jobId, url }
-// Streams back { type: 'mesh', jobId, ifcType, expressID, furnitureMeta,
+// Streams back { type: 'mesh', jobId, ifcType, expressID, furnitureMeta, windowMeta,
 //                positions, normals, indices, transform, color }
 // then { type: 'done', jobId, count } or { type: 'error', jobId, message }.
 //
@@ -12,6 +12,8 @@ import { IfcAPI } from "../node_modules/web-ifc/web-ifc-api.js";
 let ifcApi = null;
 let initPromise = null;
 const IFC_FURNISHING = 263784265;
+const IFC_WINDOW = 3304561284;
+const IFC_WINDOW_STANDARD_CASE = 486154966;
 
 function unwrapIfcValue(value) {
   if (value == null) return null;
@@ -36,6 +38,33 @@ function getFurnitureMeta(modelID, expressID, ifcType, cache) {
         name: name || null,
         objectType: objectType || null,
         tag: tag || null
+      };
+    }
+  } catch {}
+  cache.set(expressID, meta);
+  return meta;
+}
+
+function getWindowMeta(modelID, expressID, ifcType, cache) {
+  if (ifcType !== IFC_WINDOW && ifcType !== IFC_WINDOW_STANDARD_CASE) return null;
+  if (cache.has(expressID)) return cache.get(expressID);
+  let meta = null;
+  try {
+    const line = ifcApi.GetLine(modelID, expressID, false, false);
+    const globalId = unwrapIfcValue(line && line.GlobalId);
+    const name = unwrapIfcValue(line && line.Name);
+    const objectType = unwrapIfcValue(line && line.ObjectType);
+    const tag = unwrapIfcValue(line && line.Tag);
+    const overallHeight = unwrapIfcValue(line && line.OverallHeight);
+    const overallWidth = unwrapIfcValue(line && line.OverallWidth);
+    if (globalId || name || objectType || tag || overallHeight || overallWidth) {
+      meta = {
+        globalId: globalId || null,
+        name: name || null,
+        objectType: objectType || null,
+        tag: tag || null,
+        overallHeight: Number.isFinite(Number(overallHeight)) ? Number(overallHeight) : null,
+        overallWidth: Number.isFinite(Number(overallWidth)) ? Number(overallWidth) : null
       };
     }
   } catch {}
@@ -69,10 +98,12 @@ function ensureInit() {
 function streamMeshes(jobId, modelID) {
   let count = 0;
   const furnitureMetaCache = new Map();
+  const windowMetaCache = new Map();
   ifcApi.StreamAllMeshes(modelID, (flatMesh) => {
     const ifcType = ifcApi.GetLineType(modelID, flatMesh.expressID);
     const expressID = flatMesh.expressID;
     const furnitureMeta = getFurnitureMeta(modelID, expressID, ifcType, furnitureMetaCache);
+    const windowMeta = getWindowMeta(modelID, expressID, ifcType, windowMetaCache);
     const placed = flatMesh.geometries;
     for (let i = 0; i < placed.size(); i++) {
       const g = placed.get(i);
@@ -98,7 +129,7 @@ function streamMeshes(jobId, modelID) {
         ? { x: g.color.x, y: g.color.y, z: g.color.z, w: g.color.w }
         : null;
       self.postMessage(
-        { type: "mesh", jobId, ifcType, expressID, furnitureMeta, positions, normals, indices, transform, color },
+        { type: "mesh", jobId, ifcType, expressID, furnitureMeta, windowMeta, positions, normals, indices, transform, color },
         [positions.buffer, normals.buffer, indices.buffer, transform.buffer]
       );
       count++;

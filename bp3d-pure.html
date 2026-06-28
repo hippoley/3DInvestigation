@@ -17,18 +17,24 @@
       font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; opacity: 0.85; }
     #controls { position: fixed; right: 14px; bottom: 14px; z-index: 6; display: flex;
       flex-direction: column; gap: 8px; padding: 10px 12px; min-width: 220px;
+      max-height: min(620px, calc(100vh - 124px)); overflow: auto;
       border-radius: 8px; background: rgba(20, 24, 30, 0.78); backdrop-filter: blur(10px);
       box-shadow: 0 8px 22px rgba(0, 0, 0, 0.32); }
     #controls .row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
     #controls label { flex: 0 0 auto; opacity: 0.85; text-transform: uppercase; letter-spacing: 0.05em; }
     #controls input[type="range"] { flex: 1; accent-color: #5fb6ff; }
     #controls .val { flex: 0 0 40px; text-align: right; font-variant-numeric: tabular-nums; color: #cfe9ff; }
-    .ctrl-btn { flex: 1; padding: 5px 6px; border: 1px solid rgba(255,255,255,0.15);
+    .ctrl-btn { flex: 1; min-width: 0; padding: 5px 6px; border: 1px solid rgba(255,255,255,0.15);
       background: rgba(255,255,255,0.06); color: #e0e8ed; border-radius: 5px;
       font: 700 10px/1.2 inherit; text-transform: uppercase; letter-spacing: 0.05em;
       cursor: pointer; transition: background 120ms; }
     .ctrl-btn:hover { background: rgba(95, 182, 255, 0.18); }
     .ctrl-btn.active { background: rgba(95, 182, 255, 0.28); border-color: rgba(95, 182, 255, 0.55); color: #eaf5ff; }
+    #tourControlsRow { position: fixed; right: 14px; top: 56px; z-index: 9; width: min(320px, calc(100vw - 28px));
+      box-sizing: border-box; padding: 8px; border-radius: 8px; background: rgba(20, 24, 30, 0.88);
+      backdrop-filter: blur(12px); box-shadow: 0 10px 24px rgba(0, 0, 0, 0.34); }
+    #tourControlsRow .ctrl-btn { flex: 1 1 0; min-height: 30px; font-size: 11px; }
+    #btnTour1 { background: rgba(95, 182, 255, 0.24); border-color: rgba(95, 182, 255, 0.58); color: #f2f9ff; }
     #filters { position: fixed; left: 14px; top: 56px; z-index: 5; display: flex;
       flex-direction: column; gap: 10px; padding: 10px 12px; max-width: 280px;
       border-radius: 8px; background: rgba(20, 24, 30, 0.78); backdrop-filter: blur(10px);
@@ -44,7 +50,7 @@
     #filters .chip.active { background: rgba(95, 182, 255, 0.22);
       border-color: rgba(95, 182, 255, 0.6); color: #eaf5ff; }
     #filters .chip[data-disabled="1"] { opacity: 0.4; cursor: not-allowed; }
-    #infocard { position: fixed; right: 14px; top: 56px; z-index: 6; padding: 12px 14px;
+    #infocard { position: fixed; right: 14px; top: 104px; z-index: 6; padding: 12px 14px;
       min-width: 200px; max-width: 320px; border-radius: 8px;
       background: rgba(20, 24, 30, 0.86); backdrop-filter: blur(10px);
       box-shadow: 0 8px 22px rgba(0, 0, 0, 0.36); display: none; }
@@ -56,6 +62,123 @@
       border-radius: 6px; background: rgba(20, 24, 30, 0.62); backdrop-filter: blur(8px);
       max-width: 50vw; font-family: ui-monospace, Consolas, monospace; font-size: 11px;
       opacity: 0.85; white-space: pre; max-height: 30vh; overflow: auto; }
+    #tourEditor { position: fixed; right: 14px; top: 104px; z-index: 8; width: min(440px, calc(100vw - 28px));
+      max-height: calc(100vh - 118px); overflow: auto; padding: 12px 12px 10px;
+      border-radius: 8px; background: rgba(20, 24, 30, 0.92); backdrop-filter: blur(12px);
+      box-shadow: 0 14px 30px rgba(0, 0, 0, 0.38); }
+    #tourEditor .te-head { display: flex; align-items: start; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+    #tourEditor .te-title { font-size: 12px; font-weight: 850; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.86; }
+    #tourEditor .te-kicker { margin-top: 3px; color: rgba(235,242,247,0.58); font-size: 10px; line-height: 1.35; }
+    #tourEditor .te-close { flex: 0 0 auto; width: 28px; height: 28px; border-radius: 5px; }
+    #tourEditor .te-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    #tourEditor .te-row label { flex: 0 0 66px; opacity: 0.72; text-transform: uppercase; letter-spacing: 0.05em; }
+    #tourEditor input[type="text"], #tourEditor input[type="number"], #tourEditor select, #tourEditor textarea.te-note {
+      width: 100%; min-width: 0; border: 1px solid rgba(255,255,255,0.12); border-radius: 5px;
+      background: rgba(255,255,255,0.05); color: #e7eef4; padding: 5px 8px; font: inherit;
+      box-sizing: border-box;
+    }
+    #tourEditor input[type="number"] { text-align: right; font-variant-numeric: tabular-nums; }
+    #tourEditor select { cursor: pointer; }
+    #tourEditor textarea.te-note { min-height: 58px; resize: vertical; line-height: 1.45; }
+    #tourEditor .te-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+    #tourEditor .te-actions .ctrl-btn { flex: 0 0 auto; min-width: 0; }
+    #tourEditor .te-actions .ctrl-btn.active { background: rgba(95, 182, 255, 0.3); border-color: rgba(95, 182, 255, 0.7); }
+    #tourEditor .te-primary-actions .ctrl-btn { flex: 1 1 98px; padding-block: 7px; }
+    #tourEditor .ctrl-btn.primary { background: rgba(95, 182, 255, 0.24); border-color: rgba(95, 182, 255, 0.58); color: #f2f9ff; }
+    #tourEditor .te-rail-card { margin: 0 0 10px; padding: 8px;
+      border: 1px solid rgba(255,255,255,0.10); border-radius: 6px; background: rgba(255,255,255,0.035); }
+    #tourEditor .te-rail-title { display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      margin-bottom: 7px; color: rgba(235, 242, 247, 0.82); font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; }
+    #tourEditor .te-rail-title b { color: #ffffff; font-size: 11px; letter-spacing: 0.02em; text-transform: none; }
+    #tourEditor .te-main-card { background: rgba(134,239,172,0.052); border-color: rgba(134,239,172,0.16); }
+    #tourEditor .te-main-status { margin-bottom: 8px; color: rgba(235,242,247,0.82); font-size: 11px; line-height: 1.45; }
+    #tourEditor .te-main-status b { color: #ffffff; font-weight: 850; }
+    #tourEditor .te-main-card .ctrl-btn { flex: 1 1 120px; min-height: 29px; white-space: normal; }
+    #tourEditor .te-saved-card { background: rgba(95,182,255,0.055); border-color: rgba(95,182,255,0.18); }
+    #tourEditor .te-saved-row { display: flex; gap: 6px; margin-bottom: 8px; }
+    #tourEditor .te-saved-row select { flex: 1 1 auto; min-width: 0; }
+    #tourEditor .te-saved-card .ctrl-btn { flex: 1 1 120px; min-height: 29px; white-space: normal; }
+    #tourEditor #btnTourSavedRecoverBest { flex-basis: 100%; }
+    #tourEditor .te-saved-hint { margin-top: -4px; color: rgba(235,242,247,0.55); font-size: 10px; line-height: 1.35; }
+    #tourEditor .te-swatch { display: inline-flex; align-items: center; gap: 6px; }
+    #tourEditor .te-swatch::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: #48c7ff; box-shadow: 0 0 10px rgba(72,199,255,0.6); }
+    #tourEditor .te-swatch.target::before { background: #ffd166; box-shadow: 0 0 10px rgba(255,209,102,0.55); }
+    #tourEditor .te-timeline { display: grid; grid-template-columns: 46px 1fr 52px; align-items: center; gap: 8px; margin-bottom: 8px; }
+    #tourEditor .te-timeline input[type="range"] { width: 100%; accent-color: #ffffff; }
+    #tourEditor .te-mini { color: rgba(235, 242, 247, 0.58); font-size: 10px; line-height: 1.35; }
+    #tourEditor .te-guide { margin: 0 0 10px; padding: 7px 8px; border-radius: 6px; background: rgba(95,182,255,0.08);
+      border: 1px solid rgba(95,182,255,0.16); color: rgba(235, 246, 255, 0.78); font-size: 11px; line-height: 1.45; }
+    #tourEditor .te-guide b { color: #ffffff; }
+    #tourEditor .te-coach-card { margin: 0 0 10px; padding: 9px;
+      border: 1px solid rgba(255,255,255,0.12); border-radius: 7px; background: rgba(255,255,255,0.045); }
+    #tourEditor .te-coach-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+    #tourEditor .te-coach-top b { color: #ffffff; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #tourEditor .te-badge { flex: 0 0 auto; padding: 3px 7px; border-radius: 999px; background: rgba(95,182,255,0.18);
+      border: 1px solid rgba(95,182,255,0.32); color: #e9f7ff; font-size: 10px; font-weight: 800; }
+    #tourEditor .te-baby-steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; margin-bottom: 8px; }
+    #tourEditor .te-baby-step { padding: 5px 6px; border-radius: 5px; background: rgba(0,0,0,0.16);
+      border: 1px solid rgba(255,255,255,0.08); color: rgba(235,242,247,0.78); font-size: 10px; text-align: center; }
+    #tourEditor .te-selected { color: rgba(255,255,255,0.86); font: 11px/1.45 ui-monospace, Consolas, monospace; white-space: pre-wrap; }
+    #tourEditor .te-list { display: flex; flex-direction: column; gap: 8px; }
+    #tourEditor .te-item { padding: 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.10); background: rgba(255,255,255,0.035); cursor: pointer; }
+    #tourEditor .te-item.active { border-color: rgba(95, 182, 255, 0.72); background: rgba(95, 182, 255, 0.10);
+      box-shadow: inset 0 0 0 1px rgba(95,182,255,0.18); }
+    #tourEditor .te-item:not(.active) { padding-block: 6px; opacity: 0.72; }
+    #tourEditor .te-item:not(.active):hover { opacity: 0.9; border-color: rgba(255,255,255,0.18); }
+    #tourEditor .te-item:not(.active) .te-shot-main { margin-bottom: 0; }
+    #tourEditor .te-item:not(.active) .te-shot-title input { padding-left: 0; border-color: transparent; background: transparent; pointer-events: none; }
+    #tourEditor .te-item:not(.active) .te-guide-grid,
+    #tourEditor .te-item:not(.active) .te-compact-fields,
+    #tourEditor .te-item:not(.active) .te-item-actions,
+    #tourEditor .te-item:not(.active) .te-advanced { display: none; }
+    #tourEditor .te-shot-main { display: grid; grid-template-columns: 22px 1fr auto; align-items: center; gap: 7px; margin-bottom: 7px; }
+    #tourEditor .te-shot-title { min-width: 0; }
+    #tourEditor .te-shot-title input { font-weight: 800; }
+    #tourEditor .te-shot-meta { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 5px; color: rgba(235,242,247,0.62); font-size: 10px; }
+    #tourEditor .te-pill { display: inline-flex; align-items: center; gap: 4px; padding: 2px 5px; border-radius: 5px;
+      background: rgba(255,255,255,0.055); border: 1px solid rgba(255,255,255,0.08); }
+    #tourEditor .te-pill.score-good { border-color: rgba(134, 239, 172, 0.45); background: rgba(74, 222, 128, 0.11); color: rgba(220, 252, 231, 0.96); }
+    #tourEditor .te-pill.score-mid { border-color: rgba(250, 204, 21, 0.42); background: rgba(250, 204, 21, 0.10); color: rgba(254, 249, 195, 0.95); }
+    #tourEditor .te-pill.score-bad { border-color: rgba(248, 113, 113, 0.46); background: rgba(248, 113, 113, 0.12); color: rgba(254, 226, 226, 0.96); }
+    #tourEditor .te-compact-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; margin-bottom: 7px; }
+    #tourEditor .te-compact-fields.four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    #tourEditor .te-compact-fields label { display: flex; flex-direction: column; gap: 3px; color: rgba(235,242,247,0.52); font-size: 9px; text-transform: uppercase; letter-spacing: 0.06em; }
+    #tourEditor .te-guide-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin-bottom: 7px; }
+    #tourEditor .te-guide-field { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+    #tourEditor .te-guide-field span { color: rgba(235,242,247,0.56); font-size: 10px; font-weight: 750; }
+    #tourEditor .te-score-inline { margin-bottom: 7px; padding: 7px 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.038); font-size: 10px; line-height: 1.45; color: rgba(235,242,247,0.78); }
+    #tourEditor .te-score-inline.good { border-color: rgba(74, 222, 128, 0.22); background: rgba(74, 222, 128, 0.08); }
+    #tourEditor .te-score-inline.mid { border-color: rgba(250, 204, 21, 0.22); background: rgba(250, 204, 21, 0.08); }
+    #tourEditor .te-score-inline.bad { border-color: rgba(248, 113, 113, 0.26); background: rgba(248, 113, 113, 0.08); }
+    #tourEditor .te-score-title { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; font-weight: 700; }
+    #tourEditor .te-score-body { opacity: 0.92; }
+    #tourEditor .te-item-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    #tourEditor .te-item-head .idx { flex: 0 0 auto; font-weight: 800; opacity: 0.6; }
+    #tourEditor .te-item-head input[type="text"] { flex: 1 1 auto; }
+    #tourEditor .te-item-head input[type="number"] { flex: 0 0 58px; }
+    #tourEditor .te-item-labels { display: grid; grid-template-columns: 22px 1fr 58px 58px; gap: 8px;
+      margin: 0 0 4px; color: rgba(240, 243, 245, 0.48); font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
+    #tourEditor .te-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-bottom: 8px; }
+    #tourEditor .te-grid .group { display: flex; flex-direction: column; gap: 4px; }
+    #tourEditor .te-grid .group span { opacity: 0.5; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
+    #tourEditor .te-grid .row3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
+    #tourEditor .te-item-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+    #tourEditor .te-item-actions .ctrl-btn { flex: 0 0 auto; min-width: 0; padding-inline: 8px; }
+    #tourEditor .te-advanced { margin-top: 7px; padding-top: 7px; border-top: 1px solid rgba(255,255,255,0.08); }
+    #tourEditor .te-advanced[hidden] { display: none; }
+    #tourEditor .te-row.compact label { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 6px; }
+    #tourEditor .te-status { margin: 0 0 10px; padding: 7px 8px; border-radius: 6px;
+      background: rgba(255,255,255,0.045); color: rgba(235, 242, 247, 0.78);
+      font: 11px/1.45 ui-monospace, Consolas, monospace; white-space: pre-wrap; }
+    #tourEditor .te-json { width: 100%; min-height: 92px; box-sizing: border-box; resize: vertical;
+      border: 1px solid rgba(255,255,255,0.12); border-radius: 6px; background: rgba(0,0,0,0.22);
+      color: #e7eef4; padding: 7px 8px; font: 11px/1.4 ui-monospace, Consolas, monospace; }
+    #tourEditor .te-json[hidden] { display: none; }
+    #tourEditor .te-subtitle { margin: 10px 0 6px; color: rgba(240, 243, 245, 0.48);
+      font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; }
+    #tourEditor .te-subtitle-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 10px 0 6px; }
+    #tourEditor .te-subtitle-row .te-subtitle { margin: 0; }
   </style>
   <script type="importmap">
   {
@@ -71,9 +194,14 @@
   <canvas id="canvas" tabindex="0"></canvas>
   <span id="title">BP3D · Pure</span>
   <div id="status">Initializing…</div>
+  <div class="row" id="tourControlsRow" style="gap:4px">
+    <button type="button" id="btnTour1" class="ctrl-btn">▶ Tour</button>
+    <button type="button" id="btnTourEdit" class="ctrl-btn">Edit</button>
+    <button type="button" id="btnTourStop" class="ctrl-btn">■ Stop</button>
+  </div>
   <div id="controls">
-    <div class="row"><label for="exp">Exposure</label><input type="range" id="exp" min="0.4" max="2.4" step="0.02" value="1.18"><span class="val" id="expV">1.18</span></div>
-    <div class="row"><label for="blm">Bloom</label><input type="range" id="blm" min="0" max="1.5" step="0.01" value="0.60"><span class="val" id="blmV">0.60</span></div>
+    <div class="row"><label for="exp">Exposure</label><input type="range" id="exp" min="0.4" max="2.4" step="0.02" value="0.90"><span class="val" id="expV">0.90</span></div>
+    <div class="row"><label for="blm">Bloom</label><input type="range" id="blm" min="0" max="1.5" step="0.01" value="0"><span class="val" id="blmV">0.00</span></div>
     <div class="row"><label for="cnt">Contact</label><input type="range" id="cnt" min="0" max="1" step="0.02" value="0.46"><span class="val" id="cntV">0.46</span></div>
     <div class="row"><label for="ref">Reflect</label><input type="range" id="ref" min="0" max="0.4" step="0.01" value="0"><span class="val" id="refV">0.00</span></div>
     <div class="row"><label for="sun">Sun</label><input type="range" id="sun" min="5" max="80" step="1" value="32"><span class="val" id="sunV">32°</span></div>
@@ -86,7 +214,7 @@
     <div class="row" style="gap:4px">
       <button type="button" id="btnFPS" class="ctrl-btn">🚶 FPS Walk</button>
     </div>
-    <div class="row"><label for="pfx">PostFX</label><input type="checkbox" id="pfx"><span class="val" id="pfxV" style="flex:0 0 auto;font-size:10px;opacity:0.6">OFF</span></div>
+    <div class="row"><label for="pfx">PostFX</label><input type="checkbox" id="pfx" checked><span class="val" id="pfxV" style="flex:0 0 auto;font-size:10px;opacity:0.6">ON</span></div>
     <div class="row" style="gap:4px">
       <button type="button" id="btnStyleJapandi" class="ctrl-btn">Japandi</button>
       <button type="button" id="btnStyleLuxury" class="ctrl-btn active">轻奢</button>
@@ -100,8 +228,12 @@
       <button type="button" id="btnLightIndoor" class="ctrl-btn active">🏠 Indoor</button>
     </div>
     <div class="row" style="gap:4px">
-      <button type="button" id="btnTour1" class="ctrl-btn">▶ Tour</button>
-      <button type="button" id="btnTourStop" class="ctrl-btn">■ Stop</button>
+      <button type="button" id="btnSelectWindows" class="ctrl-btn">选窗户</button>
+      <button type="button" id="btnClearWindows" class="ctrl-btn">清窗户</button>
+    </div>
+    <div class="row" style="gap:4px">
+      <button type="button" id="btnReplaceChuangshaWindows" class="ctrl-btn">换纱窗</button>
+      <button type="button" id="btnRestoreChuangshaWindows" class="ctrl-btn">还原纱窗</button>
     </div>
     <div class="row"><label style="opacity:0.6;font-size:10px;text-transform:uppercase;letter-spacing:.05em">GLB Models</label></div>
     <div class="row" style="gap:4px;flex-wrap:wrap">
@@ -113,6 +245,10 @@
     </div>
     <div class="row" style="gap:4px">
       <button type="button" id="btnGlbClear" class="ctrl-btn">✕ 清除 GLB</button>
+    </div>
+    <div class="row" style="gap:4px">
+      <button type="button" id="btnReplaceFurniture" class="ctrl-btn">替换家具</button>
+      <button type="button" id="btnRestoreFurniture" class="ctrl-btn">还原家具</button>
     </div>
   </div>
   <div id="infoCard" hidden></div>
@@ -130,6 +266,116 @@
     <div class="ic-title">Selected</div>
     <div class="ic-body"></div>
   </div>
+  <div id="tourEditor" hidden>
+    <div class="te-head">
+      <div>
+        <div class="te-title">Tour Studio</div>
+        <div class="te-kicker">一张张镜头卡，把产品拍清楚</div>
+      </div>
+      <button type="button" id="btnTourEditorClose" class="ctrl-btn te-close">X</button>
+    </div>
+    <div class="te-guide" id="tourStudioGuide"><b>先选第几幕，再选拍什么。</b> 蓝点是相机，黄点是看哪里。不会就按“加一幕”。</div>
+    <div class="te-coach-card">
+      <div class="te-coach-top">
+        <span class="te-badge" id="tourGuideStep">Shot 0 / 0</span>
+        <b id="tourGuideTitle">No shot selected</b>
+      </div>
+      <div class="te-baby-steps">
+        <div class="te-baby-step">1 拍什么</div>
+        <div class="te-baby-step">2 看哪里</div>
+        <div class="te-baby-step">3 远近</div>
+        <div class="te-baby-step">4 怎么走</div>
+      </div>
+      <div class="te-actions">
+        <button type="button" id="btnTourEditorPrev" class="ctrl-btn">上一幕</button>
+        <button type="button" id="btnTourEditorNext" class="ctrl-btn">下一幕</button>
+        <button type="button" id="btnTourEditorCopy" class="ctrl-btn">复制这一幕</button>
+        <button type="button" id="btnTourEditorAutoTime" class="ctrl-btn">自动排时间</button>
+        <button type="button" id="btnTourEditorUseView" class="ctrl-btn">存当前画面</button>
+      </div>
+    </div>
+    <div class="te-actions te-primary-actions">
+      <button type="button" id="btnTourEditorProduct" class="ctrl-btn primary">Product Tour</button>
+      <button type="button" id="btnTourEditorPlay" class="ctrl-btn">Play</button>
+      <button type="button" id="btnTourPreview" class="ctrl-btn">Preview</button>
+      <button type="button" id="btnTourEditorBind" class="ctrl-btn">保存为主 Tour</button>
+    </div>
+    <div class="te-rail-card te-main-card">
+      <div class="te-rail-title">
+        <span>主 Tour 状态</span>
+        <b id="tourMainBadge">Default</b>
+      </div>
+      <div class="te-main-status" id="tourMainStatus">右上角 Tour 当前会播放默认产品镜头。</div>
+      <div class="te-actions">
+        <button type="button" id="btnTourMainPlay" class="ctrl-btn primary">播放主 Tour</button>
+        <button type="button" id="btnTourMainBindCurrent" class="ctrl-btn">把当前编辑设为主 Tour</button>
+        <button type="button" id="btnTourMainSmooth" class="ctrl-btn">顺滑整理</button>
+        <button type="button" id="btnTourMainCheck" class="ctrl-btn">播放前自检</button>
+      </div>
+    </div>
+    <div class="te-rail-card te-saved-card">
+      <div class="te-rail-title">
+        <span>历史 Tour</span>
+        <b id="tourSavedCount">0 个</b>
+      </div>
+      <div class="te-saved-row">
+        <select id="tourSavedSelect" aria-label="Saved tours"></select>
+      </div>
+      <div class="te-actions">
+        <button type="button" id="btnTourSavedRecoverBest" class="ctrl-btn primary">一键找回旧 Tour</button>
+        <button type="button" id="btnTourSavedRestore" class="ctrl-btn">恢复到编辑器</button>
+        <button type="button" id="btnTourSavedBind" class="ctrl-btn">恢复并绑定主 Tour</button>
+        <button type="button" id="btnTourSavedRefresh" class="ctrl-btn">刷新</button>
+      </div>
+      <div class="te-saved-hint">右上角 Tour 播错时，在这里选以前保存的镜头，点“恢复并绑定主 Tour”。</div>
+    </div>
+    <div class="te-rail-card">
+      <div class="te-rail-title">
+        <span>Shot Controls</span>
+        <b id="tourSelectedNode">No node</b>
+      </div>
+      <div class="te-actions">
+        <button type="button" id="btnTourRailCamera" class="ctrl-btn active"><span class="te-swatch">Move Camera</span></button>
+        <button type="button" id="btnTourRailTarget" class="ctrl-btn"><span class="te-swatch target">Aim At Product</span></button>
+        <button type="button" id="btnTourEditorZoomIn" class="ctrl-btn">Zoom In</button>
+        <button type="button" id="btnTourEditorZoomOut" class="ctrl-btn">Zoom Out</button>
+      </div>
+      <div class="te-timeline">
+        <span id="tourTimeCurrent">0.0s</span>
+        <input type="range" id="tourTimeline" min="0" max="60" step="0.05" value="0" />
+        <span id="tourTimeTotal">60.0s</span>
+      </div>
+    </div>
+    <div class="te-actions">
+      <button type="button" id="btnTourEditorPreset" class="ctrl-btn">Interior Preset</button>
+      <button type="button" id="btnTourEditorCapture" class="ctrl-btn">加一幕</button>
+      <button type="button" id="btnTourEditorDiagnose" class="ctrl-btn">Check</button>
+      <button type="button" id="btnTourEditorClear" class="ctrl-btn">Clear</button>
+    </div>
+    <div class="te-status" id="tourStudioStatus">No tour loaded.</div>
+    <div class="te-row">
+      <label for="tourNameInput">Name</label>
+      <input type="text" id="tourNameInput" value="Custom Tour" />
+    </div>
+    <div class="te-row">
+      <label for="tourPauseInput">Pause</label>
+      <input type="number" id="tourPauseInput" min="0" max="5" step="0.05" value="1.40" />
+    </div>
+    <div class="te-row compact">
+      <label><input type="checkbox" id="tourOverlayToggle" checked /> Overlay</label>
+      <label><input type="checkbox" id="tourCinematicToggle" checked /> Smooth</label>
+    </div>
+    <div class="te-subtitle-row">
+      <div class="te-subtitle">Advanced JSON</div>
+      <button type="button" id="btnTourJsonToggle" class="ctrl-btn">Show</button>
+    </div>
+    <textarea id="tourJsonText" class="te-json" spellcheck="false" placeholder="Tour JSON" hidden></textarea>
+    <div class="te-actions">
+      <button type="button" id="btnTourEditorExport" class="ctrl-btn">Export</button>
+      <button type="button" id="btnTourEditorImport" class="ctrl-btn">Import</button>
+    </div>
+    <div class="te-list" id="tourWaypointList"></div>
+  </div>
   <pre id="log" hidden></pre>
 
   <script type="module">
@@ -139,6 +385,28 @@
       { url: "./samples/duplex-apartment/raw/Duplex_Electrical_20121207.ifc",        label: "Electrical",  system: "electrical",   priority: 2 },
       { url: "./samples/duplex-apartment/raw/Duplex_MEP_20110907.ifc",               label: "Mechanical",  system: "hvac",         priority: 2 },
       { url: "./samples/duplex-apartment/raw/Duplex_Plumbing_20121113.ifc",          label: "Plumbing",    system: "plumbing",     priority: 3 }
+    ];
+    const DEFAULT_STYLE = "luxury";
+    const RENDERER_MODULE_URL = "./scripts/bp3d-real-renderer.js?v=one-take-window-20260627d";
+    const CHUANGSHA_WINDOW_TAGS = ["181930", "182101"];
+    const TOUR_EDITOR_KEY = "bp3d-pure:tour-editor:v8:one-take-window-product";
+    const TOUR_EDITOR_KEY_PREFIX = "bp3d-pure:tour-editor:";
+    const TOUR_EDITOR_LEGACY_KEYS = [
+      "bp3d-pure:tour-editor:v7:one-take-window-product",
+      "bp3d-pure:tour-editor:v6:one-take-window-product",
+      "bp3d-pure:tour-editor:v5:one-take-window-product",
+      "bp3d-pure:tour-editor:v4:one-take-window-product",
+      "bp3d-pure:tour-editor:v3:one-take-window-product",
+      "bp3d-pure:tour-editor:v2:one-take-window-product",
+      "bp3d-pure:tour-editor:v1:one-take-window-product",
+      "bp3d-pure:tour-editor:v1"
+    ];
+    const TOUR_BUTTON_BINDING_KEY = "bp3d-pure:tour-button-binding:v1";
+    const STYLE_BUTTONS = [
+      { name: "japandi", id: "btnStyleJapandi" },
+      { name: "luxury", id: "btnStyleLuxury" },
+      { name: "volcanic", id: "btnStyleVolcanic" },
+      { name: "smart", id: "btnStyleSmart" }
     ];
     const $status = document.querySelector("#status");
     const $log = document.querySelector("#log");
@@ -163,7 +431,7 @@
     (async () => {
       try {
         setStatus("Loading renderer module…");
-        const mod = await import("./scripts/bp3d-real-renderer.js");
+        const mod = await import(RENDERER_MODULE_URL);
         log("renderer module loaded");
 
         const canvas = document.querySelector("#canvas");
@@ -175,15 +443,21 @@
         window.__bp3dApi = api;
         log("renderer created");
         let styleTextureUpgradeTimer = null;
+        function syncStyleButtonState(styleName) {
+          STYLE_BUTTONS.forEach(({ name, id }) => {
+            document.getElementById(id)?.classList.toggle("active", name === styleName);
+          });
+        }
         function applyStyle(styleName, options = {}) {
           clearTimeout(styleTextureUpgradeTimer);
           api.setStyle(styleName, options);
+          syncStyleButtonState(styleName);
         }
         function scheduleActiveStyleTextureUpgrade(delayMs = 300) {
           clearTimeout(styleTextureUpgradeTimer);
           const runUpgrade = () => {
             styleTextureUpgradeTimer = null;
-            const activeStyle = api.getActiveStyle?.() || "luxury";
+            const activeStyle = api.getActiveStyle?.() || DEFAULT_STYLE;
             try {
               api.setStyle(activeStyle, { loadTextures: true });
               log(`style textures hydrated: ${activeStyle}`);
@@ -193,7 +467,20 @@
           };
           styleTextureUpgradeTimer = window.setTimeout(runUpgrade, delayMs);
         }
-        applyStyle("luxury", { loadTextures: false }); // keep startup fast; hydrate textures once the scene settles
+        applyStyle(DEFAULT_STYLE, { loadTextures: false }); // keep startup fast; hydrate textures once the scene settles
+        api.setLightPreset?.('indoor');
+        api.setLocalClarity?.({
+          strength: 0.64,
+          fine: 0.56,
+          mid: 0.24,
+          threshold: 0.014,
+          chroma: 0.04,
+          limit: 0.038,
+          radius: 0.9,
+          white: 0.12,
+          whiteThreshold: 0.80,
+          rolloff: 0.46
+        });
 
         // Slider wiring
         const wire = (id, valId, fn) => {
@@ -218,12 +505,13 @@
           sunTimer = setTimeout(() => api.setSunPosition(elev, 155), 150);
         });
 
-        // PostFX toggle — checkbox starts unchecked, so disable composer on init
+        // PostFX toggle
         const pfxCheck = document.querySelector("#pfx");
         const pfxLabel = document.querySelector("#pfxV");
-        api.setPostProcessing(pfxCheck.checked); // sync renderer to initial state (OFF)
+        let sceneReadyForPostFx = false;
+        api.setPostProcessing(false);
         pfxCheck.addEventListener("change", () => {
-          api.setPostProcessing(pfxCheck.checked);
+          api.setPostProcessing(pfxCheck.checked && sceneReadyForPostFx);
           pfxLabel.textContent = pfxCheck.checked ? "ON" : "OFF";
         });
 
@@ -239,12 +527,9 @@
         });
 
         // Style buttons
-        const styleButtons = ['Japandi', 'Luxury', 'Volcanic', 'Smart'];
-        styleButtons.forEach(s => {
-          document.getElementById('btnStyle' + s)?.addEventListener('click', () => {
-            applyStyle(s.toLowerCase(), { loadTextures: true });
-            styleButtons.forEach(b => document.getElementById('btnStyle' + b)?.classList.remove('active'));
-            document.getElementById('btnStyle' + s)?.classList.add('active');
+        STYLE_BUTTONS.forEach(({ name, id }) => {
+          document.getElementById(id)?.addEventListener('click', () => {
+            applyStyle(name, { loadTextures: true });
           });
         });
 
@@ -270,9 +555,1511 @@
           document.getElementById('btnLightIndoor')?.classList.add('active');
         });
 
-        // Tour buttons
-        document.getElementById('btnTour1')?.addEventListener('click', () => api.startTour('overview'));
-        document.getElementById('btnTourStop')?.addEventListener('click', () => api.stopTour?.());
+        // Tour buttons + editor
+        const $tourEditor = document.querySelector("#tourEditor");
+        const $tourNameInput = document.querySelector("#tourNameInput");
+        const $tourPauseInput = document.querySelector("#tourPauseInput");
+        const $tourWaypointList = document.querySelector("#tourWaypointList");
+        const $tourOverlayToggle = document.querySelector("#tourOverlayToggle");
+        const $tourCinematicToggle = document.querySelector("#tourCinematicToggle");
+        const $tourStudioStatus = document.querySelector("#tourStudioStatus");
+        const $tourJsonText = document.querySelector("#tourJsonText");
+        const $tourSelectedNode = document.querySelector("#tourSelectedNode");
+        const $tourTimeline = document.querySelector("#tourTimeline");
+        const $tourTimeCurrent = document.querySelector("#tourTimeCurrent");
+        const $tourTimeTotal = document.querySelector("#tourTimeTotal");
+        const $btnTourRailCamera = document.querySelector("#btnTourRailCamera");
+        const $btnTourRailTarget = document.querySelector("#btnTourRailTarget");
+        const $btnTourJsonToggle = document.querySelector("#btnTourJsonToggle");
+        const $tourGuideStep = document.querySelector("#tourGuideStep");
+        const $tourGuideTitle = document.querySelector("#tourGuideTitle");
+        const $btnTourEditorPrev = document.querySelector("#btnTourEditorPrev");
+        const $btnTourEditorNext = document.querySelector("#btnTourEditorNext");
+        const $btnTourEditorCopy = document.querySelector("#btnTourEditorCopy");
+        const $btnTourEditorAutoTime = document.querySelector("#btnTourEditorAutoTime");
+        const $btnTourEditorUseView = document.querySelector("#btnTourEditorUseView");
+        const $tourSavedSelect = document.querySelector("#tourSavedSelect");
+        const $tourSavedCount = document.querySelector("#tourSavedCount");
+        const $tourMainBadge = document.querySelector("#tourMainBadge");
+        const $tourMainStatus = document.querySelector("#tourMainStatus");
+        const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+        const round2 = (v) => Math.round((Number(v) || 0) * 100) / 100;
+        const escapeTourHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (ch) => ({
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          "\"": "&quot;",
+          "'": "&#39;"
+        }[ch]));
+        const escapeAttr = (value) => String(value ?? "").replace(/[&<>"']/g, (ch) => ({
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          '"': "&quot;",
+          "'": "&#39;"
+        }[ch]));
+        const defaultTourState = { name: "one_take_window_product_60s", pauseAt: 0, waypoints: [] };
+        const cloneTourState = (state) => JSON.parse(JSON.stringify(state || defaultTourState));
+        const TOUR_PURPOSES = [
+          { value: "intro", label: "开场" },
+          { value: "whole", label: "看全貌" },
+          { value: "detail", label: "看细节" },
+          { value: "motion", label: "看动作" },
+          { value: "hero", label: "主展示" },
+          { value: "custom", label: "自定义" }
+        ];
+        const TOUR_FOCUS = [
+          { value: "window", label: "窗户整体" },
+          { value: "frame", label: "窗框" },
+          { value: "mesh", label: "纱网" },
+          { value: "handle", label: "把手/锁扣" },
+          { value: "display", label: "显示屏" },
+          { value: "button", label: "按钮" },
+          { value: "track", label: "轨道" },
+          { value: "room", label: "室内关系" },
+          { value: "outside", label: "窗外" },
+          { value: "custom", label: "自定义" }
+        ];
+        const TOUR_MOVES = [
+          { value: "hold", label: "不动一下" },
+          { value: "push", label: "慢慢靠近" },
+          { value: "pull", label: "慢慢后退" },
+          { value: "orbit", label: "绕一圈" },
+          { value: "track", label: "平移跟随" },
+          { value: "crane", label: "上升/下降" },
+          { value: "pass", label: "穿过打开处" },
+          { value: "custom", label: "自定义" }
+        ];
+        const TOUR_FRAMING = [
+          { value: "wide", label: "远景", fov: 42 },
+          { value: "full", label: "全景", fov: 34 },
+          { value: "medium", label: "中景", fov: 28 },
+          { value: "close", label: "近景", fov: 22 },
+          { value: "macro", label: "特写", fov: 18 }
+        ];
+        const optionMarkup = (items, value) => items.map((item) => (
+          `<option value="${escapeAttr(item.value)}"${item.value === value ? " selected" : ""}>${escapeAttr(item.label)}</option>`
+        )).join("");
+        const inferShotField = (wp, index, field) => {
+          const text = `${wp?.label || ""} ${wp?.intent || ""} ${wp?.motion?.cue || ""} ${wp?.beat || ""}`.toLowerCase();
+          if (field === "purpose") {
+            if (text.includes("open") || text.includes("start") || index === 0) return "intro";
+            if (text.includes("detail") || text.includes("close") || text.includes("mesh") || text.includes("handle")) return "detail";
+            if (text.includes("motion") || text.includes("open/close") || text.includes("open")) return "motion";
+            return "whole";
+          }
+          if (field === "focus") {
+            if (text.includes("mesh") || text.includes("screen")) return "mesh";
+            if (text.includes("display") || text.includes("panel")) return "display";
+            if (text.includes("button") || text.includes("control")) return "button";
+            if (text.includes("handle") || text.includes("lock")) return "handle";
+            if (text.includes("frame")) return "frame";
+            if (text.includes("outside")) return "outside";
+            return "window";
+          }
+          if (field === "movement") {
+            if (text.includes("orbit")) return "orbit";
+            if (text.includes("track")) return "track";
+            if (text.includes("crane")) return "crane";
+            if (text.includes("pass")) return "pass";
+            if (text.includes("pull")) return "pull";
+            if (text.includes("push")) return "push";
+            return index === 0 ? "hold" : "push";
+          }
+          if (field === "framing") {
+            if (text.includes("macro")) return "macro";
+            if (text.includes("close")) return "close";
+            if (text.includes("medium")) return "medium";
+            if (text.includes("full")) return "full";
+            return "wide";
+          }
+          return "custom";
+        };
+        const framingToFov = (framing, fallback) => {
+          const hit = TOUR_FRAMING.find((item) => item.value === framing);
+          return hit?.fov ?? fallback ?? 34;
+        };
+        const scoreTone = (score) => score >= 85 ? "good" : score >= 70 ? "mid" : "bad";
+        const formatShotScoreBadge = (shotScore) => {
+          if (!shotScore || !Number.isFinite(shotScore.score)) return "";
+          const tone = scoreTone(shotScore.score);
+          return `<span class="te-pill score-${tone}">Score ${Math.round(shotScore.score)}</span>`;
+        };
+        const formatShotScorePanel = (shotScore) => {
+          if (!shotScore || !Number.isFinite(shotScore.score)) return "";
+          const tone = scoreTone(shotScore.score);
+          const title = tone === "good"
+            ? "这幕在认真拍产品"
+            : tone === "mid"
+            ? "这幕还能再聚焦一点"
+            : "这幕明显偏题了";
+          const headline = shotScore.headline || "继续检查主体锁定";
+          const focusLabel = shotScore.focusLabel || shotScore.focus || "window";
+          return `
+            <div class="te-score-inline ${tone}">
+              <div class="te-score-title">
+                <span>${title}</span>
+                <span>${Math.round(shotScore.score)} / 100</span>
+              </div>
+              <div class="te-score-body">
+                看的是 ${escapeAttr(focusLabel)}。${escapeAttr(headline)}
+              </div>
+            </div>
+          `;
+        };
+        const getWaypointTime = (index) => {
+          const wp = customTour.waypoints[index];
+          if (!wp) return 0;
+          if (Number.isFinite(wp.time)) return wp.time;
+          let t = 0;
+          for (let i = 0; i < index; i += 1) {
+            const prev = customTour.waypoints[i];
+            t += Math.max(0.2, Number(prev?.duration) || 0) + Math.max(0, Number(prev?.hold) || 0);
+          }
+          return round2(t);
+        };
+        let selectedWaypointIndex = 0;
+        let selectedRailKind = "camera";
+        let currentTourTime = 0;
+        let suppressTourRender = false;
+        const expandedAdvancedShots = new Set();
+        const normalizeEditorWaypoint = (wp, index) => ({
+          id: typeof wp?.id === "string" && wp.id ? wp.id : `shot_${String(index + 1).padStart(2, "0")}`,
+          label: typeof wp?.label === "string" && wp.label.trim() ? wp.label.trim() : `Shot ${index + 1}`,
+          time: Number.isFinite(wp?.time) ? round2(wp.time) : null,
+          duration: Number.isFinite(wp?.duration) ? clamp(wp.duration, 0.2, 60) : 3.4,
+          hold: Number.isFinite(wp?.hold) ? clamp(wp.hold, 0, 20) : 0,
+          fov: Number.isFinite(wp?.fov) ? clamp(wp.fov, 15, 80) : null,
+          position: Array.isArray(wp?.position) ? wp.position.slice(0, 3).map((n) => round2(n)) : [0, 1.6, 4],
+          target: Array.isArray(wp?.target) ? wp.target.slice(0, 3).map((n) => round2(n)) : [0, 1.5, 0],
+          subject: wp?.subject && typeof wp.subject === "object" ? { ...wp.subject } : null,
+          motion: wp?.motion && typeof wp.motion === "object" ? { ...wp.motion } : null,
+          intent: typeof wp?.intent === "string" ? wp.intent : "",
+          purpose: typeof wp?.purpose === "string" ? wp.purpose : inferShotField(wp, index, "purpose"),
+          focus: typeof wp?.focus === "string" ? wp.focus : inferShotField(wp, index, "focus"),
+          movement: typeof wp?.movement === "string" ? wp.movement : inferShotField(wp, index, "movement"),
+          framing: typeof wp?.framing === "string" ? wp.framing : inferShotField(wp, index, "framing"),
+          notes: typeof wp?.notes === "string" ? wp.notes : ""
+        });
+        const editorWaypointsForPlayback = (options = {}) => {
+          const oneTake = options.oneTake !== false;
+          const source = customTour.waypoints.map((wp) => ({
+            ...wp,
+            position: wp.position.slice(),
+            target: wp.target.slice(),
+            duration: wp.duration,
+            hold: wp.hold,
+            ...(Number.isFinite(wp.time) ? { time: wp.time } : {}),
+            ...(Number.isFinite(wp.fov) ? { fov: wp.fov } : {})
+          }));
+          if (!oneTake || source.length < 2) return source;
+          let runningTime = 0;
+          return source.map((wp, index) => {
+            const clone = {
+              ...wp,
+              hold: 0,
+              time: round2(runningTime)
+            };
+            if (index < source.length - 1) {
+              runningTime += Math.max(0.2, Number(wp.duration) || 0);
+            }
+            return clone;
+          });
+        };
+        const getTourDuration = (waypoints = customTour.waypoints) => {
+          if (!waypoints.length) return 0;
+          const timed = waypoints
+            .map((wp) => Number.isFinite(wp.time) ? wp.time : null)
+            .filter((value) => value != null);
+          if (timed.length) return Math.max(0, ...timed);
+          return waypoints.reduce((sum, wp, index) => (
+            sum + (index === 0 ? 0 : Math.max(0, wp.duration || 0)) + Math.max(0, wp.hold || 0)
+          ), 0);
+        };
+        const getOneTakePlaybackDuration = (waypoints = editorWaypointsForPlayback({ oneTake: true })) => {
+          if (!waypoints.length) return 0;
+          if (waypoints.length === 1) return Math.max(0.2, Number(waypoints[0].duration) || 0);
+          return round2(waypoints.slice(1).reduce((sum, wp) => sum + Math.max(0.2, Number(wp.duration) || 0), 0));
+        };
+        const clampSelectedWaypoint = () => {
+          if (!customTour.waypoints.length) {
+            selectedWaypointIndex = 0;
+            return null;
+          }
+          selectedWaypointIndex = clamp(selectedWaypointIndex, 0, customTour.waypoints.length - 1);
+          return customTour.waypoints[selectedWaypointIndex];
+        };
+        const updateRailButtons = () => {
+          $btnTourRailCamera?.classList.toggle("active", selectedRailKind === "camera");
+          $btnTourRailTarget?.classList.toggle("active", selectedRailKind === "target");
+        };
+        const updateSelectedNodeLabel = () => {
+          const wp = clampSelectedWaypoint();
+          updateRailButtons();
+          if (!$tourSelectedNode) return;
+          if (!wp) {
+            $tourSelectedNode.textContent = "No node";
+            return;
+          }
+          const label = selectedRailKind === "target" ? "Aim" : "Camera";
+          $tourSelectedNode.textContent = `Shot ${selectedWaypointIndex + 1} · ${label}`;
+        };
+        const syncTimelineUi = () => {
+          const duration = Math.max(0, getTourDuration());
+          currentTourTime = clamp(currentTourTime, 0, Math.max(0, duration));
+          if ($tourTimeline) {
+            $tourTimeline.max = Math.max(1, duration).toFixed(2);
+            $tourTimeline.value = currentTourTime.toFixed(2);
+          }
+          if ($tourTimeCurrent) $tourTimeCurrent.textContent = `${currentTourTime.toFixed(1)}s`;
+          if ($tourTimeTotal) $tourTimeTotal.textContent = `${duration.toFixed(1)}s`;
+          return duration;
+        };
+        const updateTourJsonText = () => {
+          if (!$tourJsonText) return;
+          $tourJsonText.value = JSON.stringify(customTour, null, 2);
+        };
+        function handleTourStudioNodeSelect(event) {
+          if (!event || !customTour.waypoints[event.index]) return;
+          selectedWaypointIndex = event.index;
+          selectedRailKind = event.kind === "target" ? "target" : "camera";
+          renderTourEditor();
+        }
+        function handleTourStudioNodeChange(event) {
+          if (!event || !customTour.waypoints[event.index] || !Array.isArray(event.value)) return;
+          const wp = customTour.waypoints[event.index];
+          const value = event.value.slice(0, 3).map((n) => round2(n));
+          if (event.kind === "target") wp.target = value;
+          else wp.position = value;
+          selectedWaypointIndex = event.index;
+          selectedRailKind = event.kind === "target" ? "target" : "camera";
+          saveTourState();
+          updateTourJsonText();
+          updateSelectedNodeLabel();
+          if (event.phase === "commit" && !suppressTourRender) {
+            renderTourEditor();
+          }
+        }
+        const updateTourStudioOverlay = () => {
+          if (!$tourOverlayToggle?.checked) {
+            api.clearTourStudioOverlay?.();
+            return null;
+          }
+          return api.showTourStudioOverlay?.(editorWaypointsForPlayback(), {
+            visible: true,
+            selectedIndex: selectedWaypointIndex,
+            selectedKind: selectedRailKind,
+            onNodeSelect: handleTourStudioNodeSelect,
+            onNodeChange: handleTourStudioNodeChange
+          }) || null;
+        };
+        const updateTourStudioStatus = (diagnostics = null) => {
+          const diag = diagnostics || api.diagnoseTourStudioWaypoints?.(editorWaypointsForPlayback());
+          if (!$tourStudioStatus || !diag) return;
+          const total = customTour.waypoints.length;
+          const duration = Number(diag.duration || 0).toFixed(1);
+          const avgScore = Number.isFinite(diag.summary?.avgScore) ? `镜头分 ${diag.summary.avgScore}` : null;
+          const locked = Number.isFinite(diag.summary?.subjectLocked) ? `锁定 ${diag.summary.subjectLocked}/${total}` : null;
+          const issues = diag.issues || [];
+          const issueText = issues.slice(0, 3).map((item) => {
+            const shot = item.index != null ? `Shot ${item.index + 1}` : "Path";
+            return `${shot}: ${item.message}`;
+          });
+          if (issues.length > 3) issueText.push(`${issues.length - 3} more smoothing notes`);
+          $tourStudioStatus.textContent = [
+            [`${total} shots`, `${duration}s`, avgScore, locked].filter(Boolean).join(" · "),
+            ...(issueText.length ? issueText : ["Ready to preview."])
+          ].join("\n");
+        };
+        const refreshTourStudio = () => {
+          clampSelectedWaypoint();
+          syncTimelineUi();
+          updateSelectedNodeLabel();
+          const diagnostics = updateTourStudioOverlay();
+          updateTourStudioStatus(diagnostics);
+          updateTourJsonText();
+        };
+        const parseStoredTourState = (raw, key = TOUR_EDITOR_KEY) => {
+          if (!raw) return null;
+          try {
+            const parsed = JSON.parse(raw);
+            if (!parsed || typeof parsed !== "object") return null;
+            const waypoints = Array.isArray(parsed.waypoints) ? parsed.waypoints : [];
+            if (!waypoints.length) return null;
+            return {
+              key,
+              name: typeof parsed.name === "string" && parsed.name.trim() ? parsed.name.trim() : defaultTourState.name,
+              pauseAt: Number.isFinite(parsed.pauseAt) ? clamp(parsed.pauseAt, 0, 5) : defaultTourState.pauseAt,
+              updatedAt: Number.isFinite(parsed.updatedAt) ? parsed.updatedAt : 0,
+              waypoints: waypoints.map(normalizeEditorWaypoint)
+            };
+          } catch {
+            return null;
+          }
+        };
+        const listTourStorageKeys = () => {
+          const keys = new Set([TOUR_EDITOR_KEY, ...TOUR_EDITOR_LEGACY_KEYS]);
+          try {
+            for (let i = 0; i < localStorage.length; i += 1) {
+              const key = localStorage.key(i);
+              if (key?.startsWith?.(TOUR_EDITOR_KEY_PREFIX)) keys.add(key);
+            }
+          } catch {}
+          return Array.from(keys);
+        };
+        const findBestStoredTourState = () => {
+          const candidates = listTourStorageKeys()
+            .map((key) => parseStoredTourState(localStorage.getItem(key), key))
+            .filter(Boolean)
+            .sort((a, b) => (
+              (b.key === TOUR_EDITOR_KEY ? 1 : 0) - (a.key === TOUR_EDITOR_KEY ? 1 : 0) ||
+              (b.updatedAt || 0) - (a.updatedAt || 0) ||
+              b.waypoints.length - a.waypoints.length
+            ));
+          return candidates[0] || null;
+        };
+        const loadTourState = () => {
+          const stored = findBestStoredTourState();
+          if (!stored) return cloneTourState(defaultTourState);
+          const state = {
+            name: stored.name,
+            pauseAt: stored.pauseAt,
+            updatedAt: stored.updatedAt || Date.now(),
+            migratedFrom: stored.key !== TOUR_EDITOR_KEY ? stored.key : null,
+            waypoints: stored.waypoints
+          };
+          if (stored.key !== TOUR_EDITOR_KEY) {
+            try {
+              localStorage.setItem(TOUR_EDITOR_KEY, JSON.stringify({
+                ...state,
+                migratedFrom: stored.key,
+                migratedAt: Date.now()
+              }));
+              console.info("[bp3d-pure] migrated saved tour", stored.key, "->", TOUR_EDITOR_KEY);
+            } catch {}
+          }
+          return state;
+        };
+        const defaultTourButtonBinding = {
+          mode: "product-default",
+          name: "one_take_window_product_60s"
+        };
+        const loadTourButtonBinding = () => {
+          try {
+            const raw = localStorage.getItem(TOUR_BUTTON_BINDING_KEY);
+            if (!raw) return { ...defaultTourButtonBinding };
+            const parsed = JSON.parse(raw);
+            if (!parsed || typeof parsed !== "object") return { ...defaultTourButtonBinding };
+            return {
+              mode: parsed.mode === "custom-editor" ? "custom-editor" : "product-default",
+              name: typeof parsed.name === "string" && parsed.name.trim() ? parsed.name.trim() : defaultTourButtonBinding.name
+            };
+          } catch {
+            return { ...defaultTourButtonBinding };
+          }
+        };
+        let customTour = loadTourState();
+        let tourButtonBinding = loadTourButtonBinding();
+        let furnitureReplacementTask = null;
+        let autoFurnitureBootTask = null;
+        let chuangshaWindowReplacementTask = null;
+        let autoChuangshaWindowBootTask = null;
+
+        const deferUiTask = (work, { delay = 160, timeout = 2400 } = {}) => new Promise((resolve) => {
+          const start = () => {
+            window.setTimeout(() => {
+              Promise.resolve()
+                .then(work)
+                .then(resolve)
+                .catch((err) => {
+                  console.warn("[bp3d-pure] deferred task failed", err);
+                  resolve(null);
+                });
+            }, delay);
+          };
+          if ("requestIdleCallback" in window) window.requestIdleCallback(start, { timeout });
+          else start();
+        });
+
+        function startFurnitureReplacement(options = {}) {
+          if (furnitureReplacementTask) return furnitureReplacementTask;
+          furnitureReplacementTask = runFurnitureReplacement(options).finally(() => {
+            furnitureReplacementTask = null;
+          });
+          return furnitureReplacementTask;
+        }
+
+        function ensureAutoFurnitureReplacement() {
+          if (furnitureReplacementTask) return furnitureReplacementTask;
+          if (!autoFurnitureBootTask) {
+            autoFurnitureBootTask = deferUiTask(
+              () => startFurnitureReplacement({ auto: true }),
+              { delay: 180, timeout: 2600 }
+            ).finally(() => {
+              autoFurnitureBootTask = null;
+            });
+          }
+          return autoFurnitureBootTask;
+        }
+
+        function startChuangshaWindowReplacement(options = {}) {
+          if (chuangshaWindowReplacementTask) return chuangshaWindowReplacementTask;
+          chuangshaWindowReplacementTask = replaceChuangshaWindowsFromUi(options).finally(() => {
+            chuangshaWindowReplacementTask = null;
+            if (!$tourEditor.hidden && !customTour.waypoints.length) {
+              loadProductTourPreset({ showMessage: true });
+            }
+          });
+          return chuangshaWindowReplacementTask;
+        }
+
+        const hasChuangshaWindowsInstalled = () => {
+          const current = document.body.dataset.chuangshaWindowReplacement || "";
+          if (/^\d+\//.test(current)) return !current.startsWith("0/");
+          try {
+            const parsed = JSON.parse(current);
+            return Number(parsed?.replaced || 0) > 0;
+          } catch {
+            return false;
+          }
+        };
+
+        function ensureChuangshaWindowsReady() {
+          if (hasChuangshaWindowsInstalled()) return Promise.resolve(document.body.dataset.chuangshaWindowReplacement || "");
+          if (chuangshaWindowReplacementTask) return chuangshaWindowReplacementTask;
+          if (!autoChuangshaWindowBootTask) {
+            autoChuangshaWindowBootTask = deferUiTask(
+              () => startChuangshaWindowReplacement({ auto: true }),
+              { delay: 220, timeout: 2800 }
+            ).finally(() => {
+              autoChuangshaWindowBootTask = null;
+            });
+          }
+          return autoChuangshaWindowBootTask;
+        }
+        $tourNameInput.value = customTour.name;
+        $tourPauseInput.value = customTour.pauseAt.toFixed(2);
+        updateTourJsonText();
+        const saveTourButtonBinding = () => {
+          try {
+            localStorage.setItem(TOUR_BUTTON_BINDING_KEY, JSON.stringify(tourButtonBinding));
+          } catch {}
+        };
+        const updateTourBindButtonState = () => {
+          const btn = document.getElementById("btnTourEditorBind");
+          if (!btn) return;
+          const isBound = tourButtonBinding.mode === "custom-editor";
+          btn.classList.toggle("primary", isBound);
+          btn.textContent = isBound ? "已绑定主 Tour" : "保存为主 Tour";
+          updateMainTourStatusCard();
+        };
+        const updateMainTourStatusCard = () => {
+          if (!$tourMainBadge || !$tourMainStatus) return;
+          const isBound = tourButtonBinding.mode === "custom-editor" && customTour.waypoints.length > 0;
+          const recoverable = !isBound ? pickBestRecoverableSavedTour?.() : null;
+          if (isBound) {
+            $tourMainBadge.textContent = "已绑定";
+            $tourMainStatus.innerHTML = `<b>${escapeTourHtml(tourButtonBinding.name || customTour.name || "Custom Tour")}</b> · ${customTour.waypoints.length} 幕 · 右上角 Tour 会播放当前编辑的一镜到底。`;
+          } else if (recoverable) {
+            $tourMainBadge.textContent = "可找回";
+            $tourMainStatus.innerHTML = `<b>${escapeTourHtml(recoverable.name || "Saved Tour")}</b> · ${recoverable.waypoints} 幕 · 点“一键找回旧 Tour”即可恢复并绑定。`;
+          } else {
+            $tourMainBadge.textContent = "默认";
+            $tourMainStatus.textContent = "右上角 Tour 当前会播放默认产品镜头；如果想播放当前编辑，先点“保存为主 Tour”。";
+          }
+        };
+        const applyInitialTourBindingFromLoadedState = () => {
+          if (!customTour.migratedFrom || !customTour.waypoints.length || tourButtonBinding.mode === "custom-editor") return;
+          tourButtonBinding = {
+            mode: "custom-editor",
+            name: customTour.name || "Custom Tour"
+          };
+          saveTourButtonBinding();
+        };
+        applyInitialTourBindingFromLoadedState();
+        const saveTourState = () => {
+          try {
+            customTour.updatedAt = Date.now();
+            localStorage.setItem(TOUR_EDITOR_KEY, JSON.stringify(customTour));
+          } catch {}
+        };
+        const syncTourInputs = () => {
+          customTour.name = $tourNameInput.value.trim() || defaultTourState.name;
+          customTour.pauseAt = clamp(parseFloat($tourPauseInput.value) || defaultTourState.pauseAt, 0, 5);
+          saveTourState();
+        };
+        const setTourEditorVisible = (visible) => {
+          $tourEditor.hidden = !visible;
+          if (visible) {
+            if (!customTour.waypoints.length) {
+              if ($tourStudioStatus) $tourStudioStatus.textContent = "正在准备产品 Tour…";
+              ensureChuangshaWindowsReady().finally(() => {
+                if (!$tourEditor.hidden && !customTour.waypoints.length) loadProductTourPreset({ showMessage: true });
+              });
+            }
+            else renderTourEditor();
+          }
+          else api.clearTourStudioOverlay?.();
+        };
+        const addWaypointFromCamera = () => {
+          const pose = api.getCameraPose?.();
+          if (!pose?.position || !pose?.target) return;
+          customTour.waypoints.push(normalizeEditorWaypoint({
+            label: `Shot ${customTour.waypoints.length + 1}`,
+            time: customTour.waypoints.length
+              ? round2((customTour.waypoints.at(-1)?.time ?? customTour.waypoints.length * 3.4) + 3.4)
+              : 0,
+            duration: 3.4,
+            hold: 0.4,
+            fov: pose.fov,
+            position: pose.position.slice(0, 3).map((n) => round2(n)),
+            target: pose.target.slice(0, 3).map((n) => round2(n))
+          }, customTour.waypoints.length));
+          selectedWaypointIndex = customTour.waypoints.length - 1;
+          selectedRailKind = "camera";
+          currentTourTime = customTour.waypoints.at(-1)?.time ?? getTourDuration();
+          saveTourState();
+          renderTourEditor();
+        };
+        const useCurrentViewForWaypoint = (index = selectedWaypointIndex) => {
+          const pose = api.getCameraPose?.();
+          const current = customTour.waypoints[index];
+          if (!pose?.position || !pose?.target || !current) return;
+          updateWaypoint(index, {
+            position: pose.position.slice(0, 3).map((n) => round2(n)),
+            target: pose.target.slice(0, 3).map((n) => round2(n)),
+            fov: Number.isFinite(pose.fov) ? pose.fov : current.fov
+          });
+        };
+        const duplicateWaypoint = (index = selectedWaypointIndex) => {
+          const source = customTour.waypoints[index];
+          if (!source) return;
+          const nextTime = round2(getWaypointTime(index) + Math.max(0.2, source.duration || 3.4) + Math.max(0, source.hold || 0.4));
+          const clone = normalizeEditorWaypoint({
+            ...cloneTourState(source),
+            id: "",
+            label: `${source.label || `Shot ${index + 1}`} Copy`,
+            time: nextTime
+          }, index + 1);
+          customTour.waypoints.splice(index + 1, 0, clone);
+          customTour.waypoints = customTour.waypoints.map((wp, i) => normalizeEditorWaypoint(wp, i));
+          selectedWaypointIndex = index + 1;
+          saveTourState();
+          renderTourEditor();
+        };
+        const autoTimeWaypoints = () => {
+          let t = 0;
+          customTour.waypoints = customTour.waypoints.map((wp, index) => {
+            const next = normalizeEditorWaypoint({
+              ...wp,
+              time: round2(t)
+            }, index);
+            t += Math.max(0.2, next.duration || 0) + Math.max(0, next.hold || 0);
+            return next;
+          });
+          currentTourTime = getWaypointTime(selectedWaypointIndex);
+          saveTourState();
+          renderTourEditor();
+        };
+        const smoothTimeWaypoints = () => {
+          if (!customTour.waypoints.length) {
+            if ($tourStudioStatus) $tourStudioStatus.textContent = "还没有镜头卡，先加一幕或加载产品 Tour。";
+            return false;
+          }
+          const distanceBetween = (a, b) => {
+            const dx = (b.position?.[0] ?? 0) - (a.position?.[0] ?? 0);
+            const dy = (b.position?.[1] ?? 0) - (a.position?.[1] ?? 0);
+            const dz = (b.position?.[2] ?? 0) - (a.position?.[2] ?? 0);
+            return Math.sqrt(dx * dx + dy * dy + dz * dz);
+          };
+          const source = customTour.waypoints.map((wp, index) => normalizeEditorWaypoint(wp, index));
+          const distances = source.map((wp, index) => index > 0 ? distanceBetween(source[index - 1], wp) : 0);
+          const travelDistance = distances.reduce((sum, value) => sum + Math.max(0, value), 0);
+          const targetMoveTime = clamp(source.length * 3.1 + travelDistance * 0.55, 8, 42);
+          const baseSpeed = clamp(travelDistance / Math.max(1, targetMoveTime), 0.48, 1.25);
+          let t = 0;
+          let changed = 0;
+          let previousSpeed = null;
+          customTour.waypoints = source.map((wp, index) => {
+            let duration = Number(wp.duration) || 3.2;
+            if (index > 0) {
+              const dist = distances[index] || 0;
+              duration = dist < 0.04 ? 0.75 : clamp(dist / baseSpeed, 0.9, 7.2);
+              if (previousSpeed && dist > 0.04) {
+                let speed = dist / Math.max(0.05, duration);
+                if (speed > previousSpeed * 1.85) {
+                  duration = dist / (previousSpeed * 1.85);
+                  speed = dist / Math.max(0.05, duration);
+                }
+                if (speed < previousSpeed * 0.54) {
+                  duration = dist / (previousSpeed * 0.54);
+                  speed = dist / Math.max(0.05, duration);
+                }
+                previousSpeed = previousSpeed * 0.42 + speed * 0.58;
+              } else if (dist > 0.04) {
+                previousSpeed = dist / Math.max(0.05, duration);
+              }
+              duration = round2(clamp(duration, 0.75, 7.2));
+            } else {
+              duration = round2(clamp(duration || 3.2, 2.8, 4.8));
+            }
+            const hold = index === 0
+              ? 0.25
+              : /display|button|handle|mesh/.test(String(wp.focus || "").toLowerCase())
+              ? 0.35
+              : 0.18;
+            const next = normalizeEditorWaypoint({
+              ...wp,
+              time: round2(t),
+              duration,
+              hold: round2(hold)
+            }, index);
+            t += duration + hold;
+            changed += 1;
+            return next;
+          });
+          currentTourTime = getWaypointTime(selectedWaypointIndex);
+          saveTourState();
+          renderTourEditor();
+          if ($tourStudioStatus) {
+            $tourStudioStatus.textContent = `已顺滑整理 ${changed} 幕：按移动距离重排时间，减少速度突变。`;
+          }
+          return true;
+        };
+        const selectWaypointStep = (delta) => {
+          if (!customTour.waypoints.length) return;
+          selectedWaypointIndex = clamp(selectedWaypointIndex + delta, 0, customTour.waypoints.length - 1);
+          const wp = customTour.waypoints[selectedWaypointIndex];
+          currentTourTime = Number.isFinite(wp?.time) ? wp.time : getWaypointTime(selectedWaypointIndex);
+          api.setTourStudioSelection?.(selectedWaypointIndex, selectedRailKind);
+          jumpToWaypoint(selectedWaypointIndex);
+        };
+        const zoomCurrentCamera = (deltaFov) => {
+          const pose = api.getCameraPose?.();
+          if (!pose) return;
+          const nextFov = clamp((Number(pose.fov) || 35) + deltaFov, 15, 80);
+          api.setCameraPose?.({ ...pose, fov: nextFov });
+          if (customTour.waypoints.length) {
+            const index = clamp(selectedWaypointIndex, 0, customTour.waypoints.length - 1);
+            customTour.waypoints[index] = normalizeEditorWaypoint({
+              ...customTour.waypoints[index],
+              fov: nextFov
+            }, index);
+            saveTourState();
+            renderTourEditor();
+          } else {
+            refreshTourStudio();
+          }
+        };
+        const loadInteriorTourPreset = () => {
+          const preset = api.getSceneTour?.("upperWindowInterior12") || [];
+          if (!preset.length) return;
+          customTour.name = "L2 Window Interior 12s";
+          customTour.pauseAt = 0;
+          customTour.waypoints = preset.map((wp, index) => normalizeEditorWaypoint({
+            label: wp.label || `Shot ${index + 1}`,
+            duration: Number.isFinite(wp.duration) ? wp.duration : 3.4,
+            hold: Number.isFinite(wp.hold) ? wp.hold : 1.4,
+            position: wp.position.slice(0, 3).map((n) => round2(n)),
+            target: wp.target.slice(0, 3).map((n) => round2(n)),
+            fov: wp.fov,
+            purpose: index === 0 ? "intro" : "whole",
+            focus: index === 0 ? "room" : "window",
+            movement: index === 0 ? "hold" : "push",
+            framing: index === 0 ? "wide" : "full"
+          }, index));
+          selectedWaypointIndex = 0;
+          selectedRailKind = "camera";
+          currentTourTime = 0;
+          $tourNameInput.value = customTour.name;
+          $tourPauseInput.value = customTour.pauseAt.toFixed(2);
+          saveTourState();
+          renderTourEditor();
+        };
+        const loadProductTourPreset = (options = {}) => {
+          const preset = api.buildChuangshaProductTour?.({ tags: CHUANGSHA_WINDOW_TAGS, tag: "181930" }) || [];
+          if (!preset.length) {
+            if (!options.silent && $tourStudioStatus) {
+              $tourStudioStatus.textContent = "产品 Tour 还没准备好：正在安装纱窗模型，稍等一下会自动出现。";
+            }
+            return false;
+          }
+          customTour.name = "one_take_window_product_60s";
+          customTour.pauseAt = 0;
+          customTour.waypoints = preset.map((wp, index) => normalizeEditorWaypoint({
+            ...wp,
+            subject: { type: "window", tag: wp.productTag || "181930" },
+            motion: wp.motionCue || null,
+            intent: wp.beat || "",
+            purpose: wp.purpose || inferShotField(wp, index, "purpose"),
+            focus: wp.focus || inferShotField(wp, index, "focus"),
+            movement: wp.movement || inferShotField(wp, index, "movement"),
+            framing: wp.framing || inferShotField(wp, index, "framing"),
+            notes: [
+              wp.range ? `Time: ${wp.range}` : "",
+              wp.shotSize ? `Size: ${wp.shotSize}` : "",
+              wp.cameraAngle ? `Angle: ${wp.cameraAngle}` : "",
+              wp.cameraMove ? `Move: ${wp.cameraMove}` : "",
+              wp.beat || "",
+              wp.notes || wp.script || ""
+            ].filter(Boolean).join("\n")
+          }, index));
+          selectedWaypointIndex = 0;
+          selectedRailKind = "camera";
+          currentTourTime = 0;
+          $tourNameInput.value = customTour.name;
+          $tourPauseInput.value = customTour.pauseAt.toFixed(2);
+          saveTourState();
+          renderTourEditor();
+          if (options.showMessage && $tourStudioStatus) {
+            $tourStudioStatus.textContent = "产品 Tour 已恢复。可以点 Play，或者拖蓝点/黄点继续改镜头。";
+          }
+          return true;
+        };
+        const updateWaypoint = (index, patch) => {
+          const current = customTour.waypoints[index];
+          if (!current) return;
+          customTour.waypoints[index] = normalizeEditorWaypoint({
+            ...current,
+            ...patch,
+            duration: Number.isFinite(patch.duration) ? clamp(patch.duration, 0.2, 60) : current.duration,
+            hold: Number.isFinite(patch.hold) ? clamp(patch.hold, 0, 20) : current.hold,
+            time: Number.isFinite(patch.time) ? patch.time : current.time,
+            fov: Number.isFinite(patch.fov) ? patch.fov : current.fov,
+            position: patch.position ? patch.position.slice(0, 3).map((n) => round2(n)) : current.position,
+            target: patch.target ? patch.target.slice(0, 3).map((n) => round2(n)) : current.target
+          }, index);
+          selectedWaypointIndex = index;
+          saveTourState();
+          renderTourEditor();
+        };
+        const moveWaypoint = (index, delta) => {
+          const next = index + delta;
+          if (next < 0 || next >= customTour.waypoints.length) return;
+          const copy = customTour.waypoints.slice();
+          const [item] = copy.splice(index, 1);
+          copy.splice(next, 0, item);
+          customTour.waypoints = copy;
+          selectedWaypointIndex = next;
+          saveTourState();
+          renderTourEditor();
+        };
+        const deleteWaypoint = (index) => {
+          customTour.waypoints.splice(index, 1);
+          selectedWaypointIndex = clamp(Math.min(index, customTour.waypoints.length - 1), 0, Math.max(0, customTour.waypoints.length - 1));
+          saveTourState();
+          renderTourEditor();
+        };
+        const jumpToWaypoint = (index) => {
+          const wp = customTour.waypoints[index];
+          if (!wp) return;
+          selectedWaypointIndex = index;
+          currentTourTime = Number.isFinite(wp.time) ? wp.time : currentTourTime;
+          api.setTourStudioSelection?.(selectedWaypointIndex, selectedRailKind);
+          api.stopTour?.();
+          api.setCameraPose?.(wp);
+          renderTourEditor();
+        };
+        const previewTourAtCurrentTime = () => {
+          const duration = syncTimelineUi();
+          if (!customTour.waypoints.length) return;
+          api.stopTour?.();
+          const playbackWaypoints = editorWaypointsForPlayback({ oneTake: true });
+          const playbackDuration = getOneTakePlaybackDuration(playbackWaypoints) || duration;
+          api.previewTourStudioAt?.(playbackDuration > 0 ? currentTourTime / playbackDuration : 0, {
+            duration: playbackDuration,
+            applyCamera: true
+          });
+        };
+        const playCustomTour = () => {
+          syncTourInputs();
+          if (!customTour.waypoints.length) return;
+          diagnoseCurrentTourForPlayback({ silent: false });
+          api.stopTour?.();
+          const playbackWaypoints = editorWaypointsForPlayback({ oneTake: true });
+          api.startTour(
+            playbackWaypoints,
+            {
+              pauseAt: customTour.pauseAt,
+              continuous: true,
+              cinematic: !!$tourCinematicToggle?.checked,
+              duration: getOneTakePlaybackDuration(playbackWaypoints) || undefined
+            }
+          );
+        };
+        const diagnoseCurrentTourForPlayback = (options = {}) => {
+          const playbackWaypoints = editorWaypointsForPlayback({ oneTake: true });
+          const diag = api.diagnoseTourStudioWaypoints?.(playbackWaypoints);
+          if (!diag) {
+            if ($tourStudioStatus && !options.silent) $tourStudioStatus.textContent = "暂时没有诊断数据。";
+            return { ok: playbackWaypoints.length > 0, diag: null, playbackWaypoints };
+          }
+          const errors = diag.summary?.errors || 0;
+          const warnings = diag.summary?.warnings || 0;
+          const avgScore = Number.isFinite(diag.summary?.avgScore) ? diag.summary.avgScore : null;
+          const locked = Number.isFinite(diag.summary?.subjectLocked) ? diag.summary.subjectLocked : 0;
+          const total = Math.max(1, diag.count || playbackWaypoints.length);
+          const ok = playbackWaypoints.length > 0 && errors === 0 && locked >= Math.max(1, Math.ceil(total * 0.65)) && (avgScore == null || avgScore >= 66);
+          if ($tourStudioStatus && !options.silent) {
+            const issueText = (diag.issues || []).slice(0, 3).map((item) => {
+              const shot = item.index != null ? `Shot ${item.index + 1}` : "Path";
+              return `${shot}: ${item.message}`;
+            });
+            $tourStudioStatus.textContent = [
+              ok ? "播放前自检通过，可以播放。" : "播放前自检未通过，建议先修一下镜头。",
+              `${playbackWaypoints.length} 幕 · ${Number(diag.duration || 0).toFixed(1)}s · 分数 ${avgScore ?? "n/a"} · 锁定 ${locked}/${total} · ${warnings} warnings`,
+              ...(issueText.length ? issueText : ["没有明显问题。"])
+            ].join("\n");
+          }
+          return { ok, diag, playbackWaypoints };
+        };
+        const bindEditorTourToMainButton = () => {
+          syncTourInputs();
+          if (!customTour.waypoints.length) {
+            updateTourStudioStatus();
+            if ($tourStudioStatus) {
+              $tourStudioStatus.textContent = "先至少加一幕，再保存为主 Tour。";
+            }
+            return;
+          }
+          tourButtonBinding = {
+            mode: "custom-editor",
+            name: customTour.name || "Custom Tour"
+          };
+          saveTourState();
+          saveTourButtonBinding();
+          updateTourBindButtonState();
+          if ($tourStudioStatus) {
+            $tourStudioStatus.textContent = `已保存为主 Tour：${tourButtonBinding.name}。右侧 Tour 按钮现在会播放这一镜到底版本。`;
+          }
+        };
+        const buildBoundMainTour = () => {
+          syncTourInputs();
+          if (tourButtonBinding.mode === "custom-editor" && customTour.waypoints.length) {
+            const playbackWaypoints = editorWaypointsForPlayback({ oneTake: true });
+            return {
+              type: "custom-editor",
+              name: tourButtonBinding.name || customTour.name || "Custom Tour",
+              waypoints: playbackWaypoints,
+              duration: getOneTakePlaybackDuration(playbackWaypoints) || undefined
+            };
+          }
+          return null;
+        };
+        const recoverBoundMainTourIfPossible = () => {
+          if (tourButtonBinding.mode === "custom-editor" && customTour.waypoints.length) return false;
+          const best = pickBestRecoverableSavedTour();
+          if (!best) return false;
+          const ok = restoreSavedTour(best.key);
+          if (!ok) return false;
+          tourButtonBinding = {
+            mode: "custom-editor",
+            name: customTour.name || best.name || "Custom Tour"
+          };
+          saveTourButtonBinding();
+          updateTourBindButtonState();
+          if ($tourStudioStatus) {
+            $tourStudioStatus.textContent = `Tour 已自动找回旧镜头：${customTour.name || best.name}。`;
+          }
+          return true;
+        };
+        const exportTourJson = () => {
+          syncTourInputs();
+          updateTourJsonText();
+          $tourJsonText?.select();
+          navigator.clipboard?.writeText($tourJsonText.value).catch(() => {});
+          updateTourStudioStatus();
+        };
+        const importTourJson = () => {
+          try {
+            const parsed = JSON.parse($tourJsonText.value);
+            const source = Array.isArray(parsed) ? { name: "Imported Tour", pauseAt: customTour.pauseAt, waypoints: parsed } : parsed;
+            customTour = {
+              name: typeof source.name === "string" && source.name.trim() ? source.name.trim() : "Imported Tour",
+              pauseAt: Number.isFinite(source.pauseAt) ? clamp(source.pauseAt, 0, 5) : 0,
+              waypoints: (Array.isArray(source.waypoints) ? source.waypoints : []).map(normalizeEditorWaypoint)
+            };
+            $tourNameInput.value = customTour.name;
+            $tourPauseInput.value = customTour.pauseAt.toFixed(2);
+            saveTourState();
+            renderTourEditor();
+          } catch (err) {
+            $tourStudioStatus.textContent = `Import failed: ${err.message || err}`;
+          }
+        };
+        const listSavedTours = () => listTourStorageKeys()
+          .map((key) => parseStoredTourState(localStorage.getItem(key), key))
+          .filter(Boolean)
+          .map((state) => ({
+            key: state.key,
+            name: state.name,
+            waypoints: state.waypoints.length,
+            updatedAt: state.updatedAt || null,
+            current: state.key === TOUR_EDITOR_KEY
+          }))
+          .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0) || b.waypoints - a.waypoints);
+        const formatSavedTourDate = (updatedAt) => {
+          if (!updatedAt) return "no date";
+          try {
+            return new Date(updatedAt).toLocaleString([], {
+              month: "2-digit",
+              day: "2-digit",
+              hour: "2-digit",
+              minute: "2-digit"
+            });
+          } catch {
+            return "saved";
+          }
+        };
+        const formatSavedTourLabel = (item) => {
+          const origin = item.current ? "当前" : "旧版";
+          return `${item.name || "Saved Tour"} | ${item.waypoints} 幕 | ${origin} | ${formatSavedTourDate(item.updatedAt)}`;
+        };
+        const refreshSavedTourSelect = () => {
+          if (!$tourSavedSelect) return [];
+          const saved = listSavedTours();
+          const previous = $tourSavedSelect.value;
+          $tourSavedSelect.innerHTML = "";
+          if (!saved.length) {
+            const option = document.createElement("option");
+            option.value = "";
+            option.textContent = "没有找到保存过的 Tour";
+            $tourSavedSelect.appendChild(option);
+            $tourSavedSelect.disabled = true;
+          } else {
+            saved.forEach((item) => {
+              const option = document.createElement("option");
+              option.value = item.key;
+              option.textContent = formatSavedTourLabel(item);
+              $tourSavedSelect.appendChild(option);
+            });
+            $tourSavedSelect.disabled = false;
+            if (previous && saved.some((item) => item.key === previous)) {
+              $tourSavedSelect.value = previous;
+            }
+          }
+          if ($tourSavedCount) {
+            $tourSavedCount.textContent = `${saved.length} 个`;
+          }
+          updateMainTourStatusCard();
+          return saved;
+        };
+        const pickBestRecoverableSavedTour = () => {
+          const saved = listSavedTours();
+          if (!saved.length) return null;
+          return saved.slice().sort((a, b) => (
+            (a.current ? 1 : 0) - (b.current ? 1 : 0) ||
+            b.waypoints - a.waypoints ||
+            (b.updatedAt || 0) - (a.updatedAt || 0)
+          ))[0];
+        };
+        const restoreSavedTour = (key = null) => {
+          const source = key
+            ? parseStoredTourState(localStorage.getItem(key), key)
+            : findBestStoredTourState();
+          if (!source) return false;
+          customTour = {
+            name: source.name,
+            pauseAt: source.pauseAt,
+            updatedAt: Date.now(),
+            waypoints: source.waypoints
+          };
+          selectedWaypointIndex = 0;
+          selectedRailKind = "camera";
+          currentTourTime = 0;
+          $tourNameInput.value = customTour.name;
+          $tourPauseInput.value = customTour.pauseAt.toFixed(2);
+          saveTourState();
+          if (source.key !== TOUR_EDITOR_KEY) {
+            tourButtonBinding = {
+              mode: "custom-editor",
+              name: customTour.name || "Custom Tour"
+            };
+            saveTourButtonBinding();
+            updateTourBindButtonState();
+          }
+          renderTourEditor();
+          if ($tourStudioStatus) {
+            $tourStudioStatus.textContent = `Restored saved tour: ${customTour.name} (${customTour.waypoints.length} shots).`;
+          }
+          return true;
+        };
+        const restoreSelectedSavedTour = (bindToMain = false) => {
+          const key = $tourSavedSelect?.value || "";
+          if (!key) {
+            if ($tourStudioStatus) $tourStudioStatus.textContent = "先在“历史 Tour”里选一个保存过的镜头。";
+            return false;
+          }
+          const ok = restoreSavedTour(key);
+          refreshSavedTourSelect();
+          if (ok && bindToMain) bindEditorTourToMainButton();
+          return ok;
+        };
+        const recoverBestSavedTourAsMain = () => {
+          const best = pickBestRecoverableSavedTour();
+          if (!best) {
+            if ($tourStudioStatus) $tourStudioStatus.textContent = "没有找到可以找回的历史 Tour。";
+            return false;
+          }
+          if ($tourSavedSelect) $tourSavedSelect.value = best.key;
+          const ok = restoreSelectedSavedTour(true);
+          if (ok && $tourStudioStatus) {
+            $tourStudioStatus.textContent = `已找回并绑定主 Tour：${best.name || "Saved Tour"}（${best.waypoints} 幕）。右上角 Tour 会播放它。`;
+          }
+          return ok;
+        };
+        function renderTourEditorLegacy() {
+          syncTourInputs();
+          clampSelectedWaypoint();
+          updateRailButtons();
+          $tourWaypointList.innerHTML = "";
+          customTour.waypoints.forEach((wp, index) => {
+            const item = document.createElement("div");
+            item.className = "te-item";
+            item.classList.toggle("active", index === selectedWaypointIndex);
+            const advancedOpen = expandedAdvancedShots.has(index);
+            const timeValue = Number.isFinite(wp.time) ? Number(wp.time).toFixed(2) : "";
+            const fovValue = Number.isFinite(wp.fov) ? Number(wp.fov).toFixed(1) : "";
+            item.innerHTML = `
+              <div class="te-shot-main">
+                <span class="idx">${index + 1}</span>
+                <div class="te-shot-title">
+                  <input type="text" class="wp-label" value="${escapeAttr(wp.label)}" />
+                  <div class="te-shot-meta">
+                    <span class="te-pill">${timeValue || "--"}s</span>
+                    <span class="te-pill">${fovValue || "--"}°</span>
+                    <span class="te-pill">${Number(wp.duration).toFixed(1)}s move</span>
+                  </div>
+                </div>
+                <button type="button" class="ctrl-btn" data-act="go">View</button>
+              </div>
+              <div class="te-compact-fields">
+                <label>Time<input type="number" class="wp-time" min="0" max="300" step="0.05" value="${timeValue}" /></label>
+                <label>Move<input type="number" class="wp-duration" min="0.2" max="60" step="0.05" value="${Number(wp.duration).toFixed(2)}" /></label>
+                <label>FOV<input type="number" class="wp-fov" min="15" max="80" step="0.5" value="${fovValue}" /></label>
+              </div>
+              <div class="te-item-actions">
+                <button type="button" class="ctrl-btn" data-act="cam">Move Cam</button>
+                <button type="button" class="ctrl-btn" data-act="target">Aim</button>
+                <button type="button" class="ctrl-btn" data-act="up">Up</button>
+                <button type="button" class="ctrl-btn" data-act="down">Down</button>
+                <button type="button" class="ctrl-btn" data-act="advanced">${advancedOpen ? "Hide" : "Advanced"}</button>
+                <button type="button" class="ctrl-btn" data-act="del">Del</button>
+              </div>
+              <div class="te-advanced" ${advancedOpen ? "" : "hidden"}>
+                <div class="te-compact-fields">
+                  <label>Hold<input type="number" class="wp-hold" min="0" max="20" step="0.05" value="${Number(wp.hold ?? customTour.pauseAt).toFixed(2)}" /></label>
+                </div>
+                <div class="te-grid">
+                  <div class="group">
+                    <span>Camera Position</span>
+                    <div class="row3">
+                      <input type="number" class="wp-px" step="0.01" value="${Number(wp.position[0]).toFixed(2)}" />
+                      <input type="number" class="wp-py" step="0.01" value="${Number(wp.position[1]).toFixed(2)}" />
+                      <input type="number" class="wp-pz" step="0.01" value="${Number(wp.position[2]).toFixed(2)}" />
+                    </div>
+                  </div>
+                  <div class="group">
+                    <span>Look At Target</span>
+                    <div class="row3">
+                      <input type="number" class="wp-tx" step="0.01" value="${Number(wp.target[0]).toFixed(2)}" />
+                      <input type="number" class="wp-ty" step="0.01" value="${Number(wp.target[1]).toFixed(2)}" />
+                      <input type="number" class="wp-tz" step="0.01" value="${Number(wp.target[2]).toFixed(2)}" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            `;
+            const onField = (sel, handler) => {
+              item.querySelector(sel)?.addEventListener("change", handler);
+            };
+            onField(".wp-label", (e) => updateWaypoint(index, { label: e.target.value || `Shot ${index + 1}` }));
+            onField(".wp-time", (e) => updateWaypoint(index, { time: parseFloat(e.target.value) }));
+            onField(".wp-fov", (e) => updateWaypoint(index, { fov: parseFloat(e.target.value) }));
+            onField(".wp-duration", (e) => updateWaypoint(index, { duration: parseFloat(e.target.value) }));
+            onField(".wp-hold", (e) => updateWaypoint(index, { hold: parseFloat(e.target.value) }));
+            onField(".wp-px", (e) => updateWaypoint(index, { position: [parseFloat(e.target.value), wp.position[1], wp.position[2]] }));
+            onField(".wp-py", (e) => updateWaypoint(index, { position: [wp.position[0], parseFloat(e.target.value), wp.position[2]] }));
+            onField(".wp-pz", (e) => updateWaypoint(index, { position: [wp.position[0], wp.position[1], parseFloat(e.target.value)] }));
+            onField(".wp-tx", (e) => updateWaypoint(index, { target: [parseFloat(e.target.value), wp.target[1], wp.target[2]] }));
+            onField(".wp-ty", (e) => updateWaypoint(index, { target: [wp.target[0], parseFloat(e.target.value), wp.target[2]] }));
+            onField(".wp-tz", (e) => updateWaypoint(index, { target: [wp.target[0], wp.target[1], parseFloat(e.target.value)] }));
+            item.addEventListener("click", (event) => {
+              if (event.target.closest("button,input")) return;
+              selectedWaypointIndex = index;
+              api.setTourStudioSelection?.(selectedWaypointIndex, selectedRailKind);
+              renderTourEditor();
+            });
+            item.querySelector('[data-act="cam"]')?.addEventListener("click", () => {
+              selectedWaypointIndex = index;
+              selectedRailKind = "camera";
+              api.setTourStudioSelection?.(selectedWaypointIndex, selectedRailKind);
+              renderTourEditor();
+            });
+            item.querySelector('[data-act="target"]')?.addEventListener("click", () => {
+              selectedWaypointIndex = index;
+              selectedRailKind = "target";
+              api.setTourStudioSelection?.(selectedWaypointIndex, selectedRailKind);
+              renderTourEditor();
+            });
+            item.querySelector('[data-act="go"]')?.addEventListener("click", () => jumpToWaypoint(index));
+            item.querySelector('[data-act="up"]')?.addEventListener("click", () => moveWaypoint(index, -1));
+            item.querySelector('[data-act="down"]')?.addEventListener("click", () => moveWaypoint(index, 1));
+            item.querySelector('[data-act="advanced"]')?.addEventListener("click", () => {
+              if (expandedAdvancedShots.has(index)) expandedAdvancedShots.delete(index);
+              else expandedAdvancedShots.add(index);
+              renderTourEditor();
+            });
+            item.querySelector('[data-act="del"]')?.addEventListener("click", () => deleteWaypoint(index));
+            $tourWaypointList.appendChild(item);
+          });
+          refreshTourStudio();
+        }
+        function renderTourEditor() {
+          syncTourInputs();
+          clampSelectedWaypoint();
+          updateRailButtons();
+          const diagnostics = api.diagnoseTourStudioWaypoints?.(editorWaypointsForPlayback()) || null;
+          const shotScoreMap = new Map((diagnostics?.shotScores || []).map((item) => [item.index, item]));
+          const selected = customTour.waypoints[selectedWaypointIndex];
+          if ($tourGuideStep) {
+            $tourGuideStep.textContent = selected
+              ? `Shot ${selectedWaypointIndex + 1} / ${customTour.waypoints.length}`
+              : "Shot 0 / 0";
+          }
+          if ($tourGuideTitle) {
+            $tourGuideTitle.textContent = selected?.label || "No shot selected";
+          }
+          $tourWaypointList.innerHTML = "";
+          customTour.waypoints.forEach((wp, index) => {
+            const item = document.createElement("div");
+            item.className = "te-item";
+            item.classList.toggle("active", index === selectedWaypointIndex);
+            const advancedOpen = expandedAdvancedShots.has(index);
+            const timeValue = Number.isFinite(wp.time) ? Number(wp.time).toFixed(2) : "";
+            const fovValue = Number.isFinite(wp.fov) ? Number(wp.fov).toFixed(1) : "";
+            const shotTime = timeValue || Number(getWaypointTime(index)).toFixed(2);
+            const purpose = wp.purpose || inferShotField(wp, index, "purpose");
+            const focus = wp.focus || inferShotField(wp, index, "focus");
+            const movement = wp.movement || inferShotField(wp, index, "movement");
+            const framing = wp.framing || inferShotField(wp, index, "framing");
+            const isActiveShot = index === selectedWaypointIndex;
+            const shotScore = shotScoreMap.get(index) || null;
+            item.innerHTML = `
+              <div class="te-shot-main">
+                <span class="idx">${index + 1}</span>
+                <div class="te-shot-title">
+                  <input type="text" class="wp-label" value="${escapeAttr(wp.label)}" />
+                  <div class="te-shot-meta">
+                    <span class="te-pill">${shotTime}s</span>
+                    <span class="te-pill">${fovValue || framingToFov(framing, 34)} deg</span>
+                    <span class="te-pill">${Number(wp.duration).toFixed(1)}s move</span>
+                    ${formatShotScoreBadge(shotScore)}
+                  </div>
+                </div>
+                <button type="button" class="ctrl-btn" data-act="go">${isActiveShot ? "看这幕" : "打开"}</button>
+              </div>
+              ${formatShotScorePanel(shotScore)}
+              <div class="te-guide-grid">
+                <label class="te-guide-field"><span>1 拍什么</span><select class="wp-purpose">${optionMarkup(TOUR_PURPOSES, purpose)}</select></label>
+                <label class="te-guide-field"><span>2 看哪里</span><select class="wp-focus">${optionMarkup(TOUR_FOCUS, focus)}</select></label>
+                <label class="te-guide-field"><span>3 远近</span><select class="wp-framing">${optionMarkup(TOUR_FRAMING, framing)}</select></label>
+                <label class="te-guide-field"><span>4 怎么走</span><select class="wp-movement">${optionMarkup(TOUR_MOVES, movement)}</select></label>
+              </div>
+              <div class="te-compact-fields four">
+                <label>开始<input type="number" class="wp-time" min="0" max="300" step="0.05" value="${timeValue}" /></label>
+                <label>移动<input type="number" class="wp-duration" min="0.2" max="60" step="0.05" value="${Number(wp.duration).toFixed(2)}" /></label>
+                <label>停留<input type="number" class="wp-hold" min="0" max="20" step="0.05" value="${Number(wp.hold ?? customTour.pauseAt).toFixed(2)}" /></label>
+                <label>FOV<input type="number" class="wp-fov" min="15" max="80" step="0.5" value="${fovValue}" /></label>
+              </div>
+              <div class="te-item-actions">
+                <button type="button" class="ctrl-btn" data-act="cam">放相机</button>
+                <button type="button" class="ctrl-btn" data-act="target">看这里</button>
+                <button type="button" class="ctrl-btn" data-act="use-view">存当前</button>
+                <button type="button" class="ctrl-btn" data-act="copy">复制</button>
+                <button type="button" class="ctrl-btn" data-act="up">上移</button>
+                <button type="button" class="ctrl-btn" data-act="down">下移</button>
+                <button type="button" class="ctrl-btn" data-act="advanced">${advancedOpen ? "收起" : "高级"}</button>
+                <button type="button" class="ctrl-btn" data-act="del">删</button>
+              </div>
+              <div class="te-advanced" ${advancedOpen ? "" : "hidden"}>
+                <label class="te-guide-field"><span>导演备注</span><textarea class="te-note wp-notes" spellcheck="false">${escapeAttr(wp.notes || "")}</textarea></label>
+                <div class="te-grid">
+                  <div class="group">
+                    <span>Camera Position</span>
+                    <div class="row3">
+                      <input type="number" class="wp-px" step="0.01" value="${Number(wp.position[0]).toFixed(2)}" />
+                      <input type="number" class="wp-py" step="0.01" value="${Number(wp.position[1]).toFixed(2)}" />
+                      <input type="number" class="wp-pz" step="0.01" value="${Number(wp.position[2]).toFixed(2)}" />
+                    </div>
+                  </div>
+                  <div class="group">
+                    <span>Look At Target</span>
+                    <div class="row3">
+                      <input type="number" class="wp-tx" step="0.01" value="${Number(wp.target[0]).toFixed(2)}" />
+                      <input type="number" class="wp-ty" step="0.01" value="${Number(wp.target[1]).toFixed(2)}" />
+                      <input type="number" class="wp-tz" step="0.01" value="${Number(wp.target[2]).toFixed(2)}" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            `;
+            const onField = (sel, handler, eventName = "change") => {
+              item.querySelector(sel)?.addEventListener(eventName, handler);
+            };
+            onField(".wp-label", (e) => updateWaypoint(index, { label: e.target.value || `Shot ${index + 1}` }));
+            onField(".wp-purpose", (e) => updateWaypoint(index, { purpose: e.target.value }));
+            onField(".wp-focus", (e) => updateWaypoint(index, { focus: e.target.value }));
+            onField(".wp-movement", (e) => updateWaypoint(index, { movement: e.target.value }));
+            onField(".wp-framing", (e) => updateWaypoint(index, { framing: e.target.value, fov: framingToFov(e.target.value, wp.fov) }));
+            onField(".wp-time", (e) => updateWaypoint(index, { time: parseFloat(e.target.value) }));
+            onField(".wp-fov", (e) => updateWaypoint(index, { fov: parseFloat(e.target.value) }));
+            onField(".wp-duration", (e) => updateWaypoint(index, { duration: parseFloat(e.target.value) }));
+            onField(".wp-hold", (e) => updateWaypoint(index, { hold: parseFloat(e.target.value) }));
+            onField(".wp-notes", (e) => updateWaypoint(index, { notes: e.target.value }), "input");
+            onField(".wp-px", (e) => updateWaypoint(index, { position: [parseFloat(e.target.value), wp.position[1], wp.position[2]] }));
+            onField(".wp-py", (e) => updateWaypoint(index, { position: [wp.position[0], parseFloat(e.target.value), wp.position[2]] }));
+            onField(".wp-pz", (e) => updateWaypoint(index, { position: [wp.position[0], wp.position[1], parseFloat(e.target.value)] }));
+            onField(".wp-tx", (e) => updateWaypoint(index, { target: [parseFloat(e.target.value), wp.target[1], wp.target[2]] }));
+            onField(".wp-ty", (e) => updateWaypoint(index, { target: [wp.target[0], parseFloat(e.target.value), wp.target[2]] }));
+            onField(".wp-tz", (e) => updateWaypoint(index, { target: [wp.target[0], wp.target[1], parseFloat(e.target.value)] }));
+            item.addEventListener("click", (event) => {
+              if (event.target.closest("button,input,select,textarea")) return;
+              selectedWaypointIndex = index;
+              api.setTourStudioSelection?.(selectedWaypointIndex, selectedRailKind);
+              renderTourEditor();
+            });
+            item.querySelector('[data-act="cam"]')?.addEventListener("click", () => {
+              selectedWaypointIndex = index;
+              selectedRailKind = "camera";
+              api.setTourStudioSelection?.(selectedWaypointIndex, selectedRailKind);
+              renderTourEditor();
+            });
+            item.querySelector('[data-act="target"]')?.addEventListener("click", () => {
+              selectedWaypointIndex = index;
+              selectedRailKind = "target";
+              api.setTourStudioSelection?.(selectedWaypointIndex, selectedRailKind);
+              renderTourEditor();
+            });
+            item.querySelector('[data-act="go"]')?.addEventListener("click", () => jumpToWaypoint(index));
+            item.querySelector('[data-act="use-view"]')?.addEventListener("click", () => useCurrentViewForWaypoint(index));
+            item.querySelector('[data-act="copy"]')?.addEventListener("click", () => duplicateWaypoint(index));
+            item.querySelector('[data-act="up"]')?.addEventListener("click", () => moveWaypoint(index, -1));
+            item.querySelector('[data-act="down"]')?.addEventListener("click", () => moveWaypoint(index, 1));
+            item.querySelector('[data-act="advanced"]')?.addEventListener("click", () => {
+              if (expandedAdvancedShots.has(index)) expandedAdvancedShots.delete(index);
+              else expandedAdvancedShots.add(index);
+              renderTourEditor();
+            });
+            item.querySelector('[data-act="del"]')?.addEventListener("click", () => deleteWaypoint(index));
+            $tourWaypointList.appendChild(item);
+          });
+          syncTimelineUi();
+          updateSelectedNodeLabel();
+          const diagnosticsAfterOverlay = updateTourStudioOverlay() || diagnostics;
+          updateTourStudioStatus(diagnosticsAfterOverlay);
+          updateTourJsonText();
+          refreshSavedTourSelect();
+        }
+
+        const playMainTour = async () => {
+          recoverBoundMainTourIfPossible();
+          const boundTour = buildBoundMainTour();
+          if (boundTour?.waypoints?.length) {
+            const playbackCheck = diagnoseCurrentTourForPlayback({ silent: false });
+            if (!playbackCheck.ok && playbackCheck.diag?.summary?.errors) return;
+            api.stopTour?.();
+            api.startTour(boundTour.waypoints, {
+              pauseAt: customTour.pauseAt,
+              continuous: true,
+              cinematic: !!$tourCinematicToggle?.checked,
+              duration: boundTour.duration
+            });
+            document.body.dataset.objectTour = JSON.stringify({
+              source: "tour-editor-bound",
+              name: boundTour.name,
+              waypoints: boundTour.waypoints.length
+            }).slice(0, 1200);
+            return;
+          }
+          await ensureChuangshaWindowsReady();
+          api.setLevelFilter?.({ min: 3.1, max: 6.0 });
+          const tourOptions = { tags: CHUANGSHA_WINDOW_TAGS, tag: "181930" };
+          const tourWaypoints = api.buildChuangshaProductTour?.(tourOptions) || [];
+          const tourDebug = api.debugChuangshaProductTour?.(tourOptions);
+          if (tourDebug) {
+            document.body.dataset.objectTour = JSON.stringify({
+              source: tourDebug.source,
+              reason: tourDebug.reason || null,
+              productCount: tourDebug.productCount,
+              selectedTag: tourDebug.selectedTag,
+              waypoints: (tourDebug.waypoints || []).length
+            }).slice(0, 1200);
+            console.info("[bp3d-pure] chuangsha product tour", tourDebug);
+          }
+          if (!tourWaypoints?.length) {
+            if ($tourStudioStatus) {
+              $tourStudioStatus.textContent = "Window tour is still preparing. Wait for the window model to finish loading, then click Tour again.";
+            }
+            return;
+          }
+          api.startTour(tourWaypoints, {
+            tag: tourOptions.tag,
+            continuous: true,
+            cinematic: true,
+            duration: 60,
+            ease: "sine.inOut",
+            lingerRadius: 0.01,
+            lingerStrength: 0.012
+          });
+        };
+        document.getElementById("btnTour1")?.addEventListener("click", playMainTour);
+        document.getElementById("btnTourStop")?.addEventListener("click", () => api.stopTour?.());
+
+        function selectAllWindowsFromUi(options = {}) {
+          const result = api.selectAllWindows?.();
+          document.getElementById("btnSelectWindows")?.classList.toggle("active", !!result?.count);
+          document.body.dataset.windowInventory = JSON.stringify(result || {}).slice(0, 4000);
+          const tags = (result?.windows || []).map((w) => w.tag || w.expressID || w.id).join(", ");
+          log(`windows ${options.auto ? "auto-selected" : "selected"}: ${result?.count ?? 0} (${result?.meshCount ?? 0} meshes)${tags ? ` | tags ${tags}` : ""}`);
+          console.info("[bp3d-pure] windows selected", result);
+          return result;
+        }
+
+        async function replaceChuangshaWindowsFromUi(options = {}) {
+          const btn = document.getElementById("btnReplaceChuangshaWindows");
+          if (btn) btn.disabled = true;
+          try {
+            const result = await api.replaceWindowsByTagsFromGlb?.("./chuangsha.glb", CHUANGSHA_WINDOW_TAGS, {
+              padding: 0.992,
+              heightPadding: 0.992,
+              depthPadding: 0.94,
+              minDepth: 0.052
+            });
+            document.body.dataset.chuangshaWindowReplacement = JSON.stringify(result || {}).slice(0, 4000);
+            btn?.classList.toggle("active", !!result?.replaced);
+            log(`chuangsha windows ${options.auto ? "auto-replaced" : "replaced"}: ${result?.replaced ?? 0}/${CHUANGSHA_WINDOW_TAGS.length} | tags ${CHUANGSHA_WINDOW_TAGS.join(", ")}`);
+            console.info("[bp3d-pure] chuangsha window replacement", result);
+            return result;
+          } catch (err) {
+            btn?.classList.remove("active");
+            log(`chuangsha window replacement failed: ${err.message || err}`);
+            console.warn("[bp3d-pure] chuangsha window replacement failed", err);
+            return null;
+          } finally {
+            if (btn) btn.disabled = false;
+          }
+        }
+
+        document.getElementById("btnSelectWindows")?.addEventListener("click", () => selectAllWindowsFromUi());
+        document.getElementById("btnClearWindows")?.addEventListener("click", () => {
+          api.clearWindowSelection?.();
+          document.getElementById("btnSelectWindows")?.classList.remove("active");
+          document.body.dataset.windowInventory = "";
+          log("window selection cleared");
+        });
+        document.getElementById("btnReplaceChuangshaWindows")?.addEventListener("click", () => {
+          startChuangshaWindowReplacement();
+        });
+        document.getElementById("btnRestoreChuangshaWindows")?.addEventListener("click", () => {
+          api.clearWindowReplacements?.();
+          document.getElementById("btnReplaceChuangshaWindows")?.classList.remove("active");
+          document.body.dataset.chuangshaWindowReplacement = "";
+          log("chuangsha window replacements cleared");
+        });
+        document.getElementById("btnTourEdit")?.addEventListener("click", () => setTourEditorVisible($tourEditor.hidden));
+        document.getElementById("btnTourEditorClose")?.addEventListener("click", () => setTourEditorVisible(false));
+        document.getElementById("btnTourEditorPreset")?.addEventListener("click", loadInteriorTourPreset);
+        document.getElementById("btnTourEditorProduct")?.addEventListener("click", () => {
+          if (customTour.waypoints.length) {
+            renderTourEditor();
+            return;
+          }
+          if (!loadProductTourPreset({ showMessage: true })) {
+            ensureChuangshaWindowsReady();
+          }
+        });
+        document.getElementById("btnTourEditorCapture")?.addEventListener("click", addWaypointFromCamera);
+        document.getElementById("btnTourEditorZoomIn")?.addEventListener("click", () => zoomCurrentCamera(-4));
+        document.getElementById("btnTourEditorZoomOut")?.addEventListener("click", () => zoomCurrentCamera(4));
+        document.getElementById("btnTourEditorPlay")?.addEventListener("click", playCustomTour);
+        document.getElementById("btnTourEditorBind")?.addEventListener("click", bindEditorTourToMainButton);
+        document.getElementById("btnTourMainPlay")?.addEventListener("click", playMainTour);
+        document.getElementById("btnTourMainBindCurrent")?.addEventListener("click", bindEditorTourToMainButton);
+        document.getElementById("btnTourMainSmooth")?.addEventListener("click", smoothTimeWaypoints);
+        document.getElementById("btnTourMainCheck")?.addEventListener("click", () => diagnoseCurrentTourForPlayback({ silent: false }));
+        document.getElementById("btnTourSavedRecoverBest")?.addEventListener("click", recoverBestSavedTourAsMain);
+        document.getElementById("btnTourSavedRestore")?.addEventListener("click", () => restoreSelectedSavedTour(false));
+        document.getElementById("btnTourSavedBind")?.addEventListener("click", () => restoreSelectedSavedTour(true));
+        document.getElementById("btnTourSavedRefresh")?.addEventListener("click", () => {
+          refreshSavedTourSelect();
+          if ($tourStudioStatus) $tourStudioStatus.textContent = "历史 Tour 列表已刷新。";
+        });
+        document.getElementById("btnTourEditorDiagnose")?.addEventListener("click", () => updateTourStudioStatus(updateTourStudioOverlay()));
+        document.getElementById("btnTourPreview")?.addEventListener("click", previewTourAtCurrentTime);
+        $btnTourEditorPrev?.addEventListener("click", () => selectWaypointStep(-1));
+        $btnTourEditorNext?.addEventListener("click", () => selectWaypointStep(1));
+        $btnTourEditorCopy?.addEventListener("click", () => duplicateWaypoint(selectedWaypointIndex));
+        $btnTourEditorAutoTime?.addEventListener("click", autoTimeWaypoints);
+        $btnTourEditorUseView?.addEventListener("click", () => useCurrentViewForWaypoint(selectedWaypointIndex));
+        $btnTourRailCamera?.addEventListener("click", () => {
+          selectedRailKind = "camera";
+          api.setTourStudioSelection?.(selectedWaypointIndex, selectedRailKind);
+          renderTourEditor();
+        });
+        $btnTourRailTarget?.addEventListener("click", () => {
+          selectedRailKind = "target";
+          api.setTourStudioSelection?.(selectedWaypointIndex, selectedRailKind);
+          renderTourEditor();
+        });
+        $tourTimeline?.addEventListener("input", () => {
+          currentTourTime = parseFloat($tourTimeline.value) || 0;
+          syncTimelineUi();
+          previewTourAtCurrentTime();
+        });
+        $btnTourJsonToggle?.addEventListener("click", () => {
+          const show = !!$tourJsonText?.hidden;
+          if ($tourJsonText) $tourJsonText.hidden = !show;
+          $btnTourJsonToggle.textContent = show ? "Hide" : "Show";
+        });
+        document.getElementById("btnTourEditorExport")?.addEventListener("click", exportTourJson);
+        document.getElementById("btnTourEditorImport")?.addEventListener("click", importTourJson);
+        document.getElementById("btnTourEditorClear")?.addEventListener("click", () => {
+          customTour.waypoints = [];
+          saveTourState();
+          renderTourEditor();
+        });
+        $tourNameInput.addEventListener("input", syncTourInputs);
+        $tourPauseInput.addEventListener("input", syncTourInputs);
+        $tourOverlayToggle?.addEventListener("change", () => {
+          api.setTourStudioOverlayVisible?.(!!$tourOverlayToggle.checked);
+          refreshTourStudio();
+        });
+        refreshSavedTourSelect();
+        updateTourBindButtonState();
+        updateMainTourStatusCard();
+        window.__bp3dPureTourEditor = {
+          open: () => setTourEditorVisible(true),
+          close: () => setTourEditorVisible(false),
+          loadInterior: loadInteriorTourPreset,
+          loadProduct: loadProductTourPreset,
+          bindToMainTour: bindEditorTourToMainButton,
+          capture: addWaypointFromCamera,
+          playMainTour,
+          play: playCustomTour,
+          smooth: smoothTimeWaypoints,
+          check: diagnoseCurrentTourForPlayback,
+          exportJson: exportTourJson,
+          importJson: importTourJson,
+          savedTours: listSavedTours,
+          refreshSavedTours: refreshSavedTourSelect,
+          refreshMainTourStatus: updateMainTourStatusCard,
+          restoreSavedTour,
+          recoverBestSavedTourAsMain,
+          refresh: refreshTourStudio,
+          state: () => cloneTourState(customTour),
+          binding: () => ({ ...tourButtonBinding })
+        };
 
         // ---- GLB model toggle buttons ----
         // Each button loads/unloads a specific .glb from assets/models/furniture/.
@@ -327,6 +2114,62 @@
           });
           glbLoaded.clear();
           log('All GLB models removed');
+        });
+
+        async function runFurnitureReplacement({ auto = false } = {}) {
+          const btn = document.getElementById('btnReplaceFurniture');
+          btn.disabled = true;
+          btn.classList.add('active');
+          const replacementOptions = {
+            padding: 0.98,
+            bedScaleBoost: 1.14,
+            bedHeadGap: 0.055,
+            bedHeadSnapMax: 0.82,
+            bedHeadSnapDistance: 1.65,
+            bedRotationFitTolerance: 0.5,
+            bedWallMargin: 0.06
+          };
+          try {
+            if (auto) setStatus("Replacing furniture…");
+            const before = api.debugFurnitureReplacementCandidates?.();
+            log(`replacement candidates: ${before ? JSON.stringify(before.byCategory) : 'n/a'}`);
+            const result = await api.replaceSemanticFurnitureFromGlb('./jiaju1.glb', replacementOptions);
+            log(`jiaju1 replacement: ${result.replaced}/${result.totalTargets} · ${JSON.stringify(result.byCategory)}`);
+            console.info("[bp3d-pure] jiaju1 replacement", result);
+            document.body.dataset.furnitureReplacement = `${result.replaced}/${result.totalTargets}`;
+            document.body.dataset.furnitureReplacementBeds = String(result.byCategory?.bed ?? 0);
+            document.body.dataset.furnitureReplacementCleanBeds = String(result.cleanBedReplacements ?? 0);
+            document.body.dataset.furnitureReplacementHiddenBedAccessories = String(result.hiddenBedAccessories ?? 0);
+            document.body.dataset.furnitureReplacementHiddenBedAccessorySamples = JSON.stringify(
+              result.hiddenBedAccessorySamples || []
+            ).slice(0, 1800);
+            document.body.dataset.furnitureReplacementBedSamples = JSON.stringify(
+              (result.samples || []).filter((item) => item.category === 'bed')
+            ).slice(0, 1800);
+            document.body.dataset.furnitureReplacementMaterials = JSON.stringify(
+              api.debugFurnitureReplacementMaterialLooks?.() || {}
+            ).slice(0, 2400);
+            if (!result.replaced) btn.classList.remove('active');
+            return result;
+          } catch (err) {
+            btn.classList.remove('active');
+            log(`jiaju1 replacement failed: ${err.message || err}`);
+            console.warn("[bp3d-pure] jiaju1 replacement failed", err);
+            return null;
+          } finally {
+            btn.disabled = false;
+            if (auto) setStatus("");
+          }
+        }
+
+        document.getElementById('btnReplaceFurniture')?.addEventListener('click', async () => {
+          await startFurnitureReplacement();
+        });
+
+        document.getElementById('btnRestoreFurniture')?.addEventListener('click', () => {
+          api.clearSemanticFurnitureReplacements?.();
+          document.getElementById('btnReplaceFurniture')?.classList.remove('active');
+          log('jiaju1 replacements cleared');
         });
 
         // Day/Night slider
@@ -392,6 +2235,9 @@
             info.furnitureName ? `<div class="ic-row"><b>Name</b> ${escapeHtml(info.furnitureName)}</div>` : "",
             info.furnitureObjectType ? `<div class="ic-row"><b>Spec</b> ${escapeHtml(info.furnitureObjectType)}</div>` : "",
             info.furnitureTag ? `<div class="ic-row"><b>Tag</b> ${escapeHtml(info.furnitureTag)}</div>` : "",
+            info.windowTag ? `<div class="ic-row"><b>Window Tag</b> ${escapeHtml(info.windowTag)}</div>` : "",
+            info.windowObjectType ? `<div class="ic-row"><b>Window Spec</b> ${escapeHtml(info.windowObjectType)}</div>` : "",
+            info.windowName ? `<div class="ic-row"><b>Window Name</b> ${escapeHtml(info.windowName)}</div>` : "",
             pos ? `<div class="ic-row"><b>Position</b> (${pos.x.toFixed(2)}, ${pos.y.toFixed(2)}, ${pos.z.toFixed(2)})</div>` : ""
           ].join("");
           $card.style.display = "block";
@@ -523,6 +2369,9 @@
           }
         }
         api.fit();
+        ensureAutoFurnitureReplacement();
+        sceneReadyForPostFx = true;
+        api.setPostProcessing(pfxCheck.checked);
         scheduleActiveStyleTextureUpgrade(450);
         setStatus(background.length ? "Loading scene…" : "");
 
@@ -544,6 +2393,9 @@
         };
         if ("requestIdleCallback" in window) window.requestIdleCallback(refreshContactShadow, { timeout: 4000 });
         else setTimeout(refreshContactShadow, 800);
+        setStatus("");
+        setStatus("Replacing windows…");
+        ensureChuangshaWindowsReady();
         setStatus("");
       } catch (err) {
         console.error(err);
