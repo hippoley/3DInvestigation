@@ -103,6 +103,7 @@
     #tourEditor .te-project-card { background: rgba(255,209,102,0.052); border-color: rgba(255,209,102,0.18); }
     #tourEditor .te-project-card .ctrl-btn { flex: 1 1 120px; min-height: 29px; white-space: normal; }
     #tourEditor .te-project-hint { margin-top: -4px; color: rgba(235,242,247,0.55); font-size: 10px; line-height: 1.35; }
+    #tourEditor .te-project-next { margin-top: 6px; color: rgba(255,236,184,0.92); font-size: 11px; line-height: 1.4; }
     #tourEditor .te-swatch { display: inline-flex; align-items: center; gap: 6px; }
     #tourEditor .te-swatch::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: #48c7ff; box-shadow: 0 0 10px rgba(72,199,255,0.6); }
     #tourEditor .te-swatch.target::before { background: #ffd166; box-shadow: 0 0 10px rgba(255,209,102,0.55); }
@@ -198,9 +199,9 @@
   <span id="title">BP3D · Pure</span>
   <div id="status">Initializing…</div>
   <div class="row" id="tourControlsRow" style="gap:4px">
-    <button type="button" id="btnTour1" class="ctrl-btn">▶ Tour</button>
-    <button type="button" id="btnTourEdit" class="ctrl-btn">Edit</button>
-    <button type="button" id="btnTourStop" class="ctrl-btn">■ Stop</button>
+    <button type="button" id="btnTour1" class="ctrl-btn" disabled>▶ Tour</button>
+    <button type="button" id="btnTourEdit" class="ctrl-btn" disabled>Edit</button>
+    <button type="button" id="btnTourStop" class="ctrl-btn" disabled>■ Stop</button>
   </div>
   <div id="controls">
     <div class="row"><label for="exp">Exposure</label><input type="range" id="exp" min="0.4" max="2.4" step="0.02" value="0.90"><span class="val" id="expV">0.90</span></div>
@@ -237,6 +238,10 @@
     <div class="row" style="gap:4px">
       <button type="button" id="btnReplaceChuangshaWindows" class="ctrl-btn">换纱窗</button>
       <button type="button" id="btnRestoreChuangshaWindows" class="ctrl-btn">还原纱窗</button>
+    </div>
+    <div class="row" style="gap:4px">
+      <button type="button" id="btnFindL1SingleWindows" class="ctrl-btn">找一楼单窗</button>
+      <button type="button" id="btnReplaceL1SingleWindows" class="ctrl-btn">换一楼单窗</button>
     </div>
     <div class="row"><label style="opacity:0.6;font-size:10px;text-transform:uppercase;letter-spacing:.05em">GLB Models</label></div>
     <div class="row" style="gap:4px;flex-wrap:wrap">
@@ -326,8 +331,12 @@
       </div>
       <div class="te-actions">
         <button type="button" id="btnTourSavedRecoverBest" class="ctrl-btn primary">一键找回旧 Tour</button>
+        <button type="button" id="btnTourSavedSnapshot" class="ctrl-btn">保存当前快照</button>
         <button type="button" id="btnTourSavedRestore" class="ctrl-btn">恢复到编辑器</button>
         <button type="button" id="btnTourSavedBind" class="ctrl-btn">恢复并绑定主 Tour</button>
+        <button type="button" id="btnTourSavedDownload" class="ctrl-btn">下载选中 JSON</button>
+        <button type="button" id="btnTourSavedDelete" class="ctrl-btn">删除选中快照</button>
+        <button type="button" id="btnTourSavedPrune" class="ctrl-btn">清理旧快照</button>
         <button type="button" id="btnTourSavedRefresh" class="ctrl-btn">刷新</button>
       </div>
       <div class="te-saved-hint">右上角 Tour 播错时，在这里选以前保存的镜头，点“恢复并绑定主 Tour”。</div>
@@ -337,7 +346,10 @@
         <span>项目 Tour 文件</span>
         <b id="tourProjectBadge">JSON</b>
       </div>
+      <div class="te-project-hint" id="tourProjectStatus">当前 Tour 还没有项目文件来源。</div>
+      <div class="te-project-next" id="tourProjectNextStep">先加载项目默认 Tour，或者导入本地 Tour JSON。</div>
       <div class="te-actions">
+        <button type="button" id="btnTourProjectBind" class="ctrl-btn primary">保存修改到 Tour 按钮</button>
         <button type="button" id="btnTourLoadProjectFile" class="ctrl-btn primary">加载项目默认 Tour</button>
         <button type="button" id="btnTourImportLocalFile" class="ctrl-btn">导入本地 Tour JSON</button>
         <button type="button" id="btnTourDownloadFile" class="ctrl-btn">下载当前 Tour JSON</button>
@@ -403,10 +415,31 @@
       { url: "./samples/duplex-apartment/raw/Duplex_Plumbing_20121113.ifc",          label: "Plumbing",    system: "plumbing",     priority: 3 }
     ];
     const DEFAULT_STYLE = "luxury";
-    const RENDERER_MODULE_URL = "./scripts/bp3d-real-renderer.js?v=one-take-window-20260627d";
+    const RENDERER_MODULE_URL = "./scripts/bp3d-real-renderer.js?v=one-take-window-20260629-hybrid-screen-up-glass-v5";
     const CHUANGSHA_WINDOW_TAGS = ["181930", "182101"];
+    const L1_SINGLE_WINDOW_REPLACE_OPTIONS = {
+      padding: 1,
+      heightPadding: 1,
+      depthPadding: 1,
+      minDepth: 0.052,
+      useExportedHybridAssembly: true,
+      hybridAssemblyUrl: "./hybrid-window-assembly.glb",
+      append: true
+    };
+    const L1_SINGLE_WINDOW_FILTER = {
+      levelHint: "L1",
+      minWorldWidth: 0.32,
+      maxWorldWidth: 1.35,
+      minWorldHeight: 1.0,
+      maxWorldHeight: 2.85,
+      maxOverallWidth: 1.2,
+      minOverallHeight: 0.9,
+      maxOverallHeight: 3.0
+    };
     const TOUR_EDITOR_KEY = "bp3d-pure:tour-editor:v8:one-take-window-product";
     const TOUR_EDITOR_KEY_PREFIX = "bp3d-pure:tour-editor:";
+    const TOUR_SNAPSHOT_KEY_PREFIX = `${TOUR_EDITOR_KEY_PREFIX}snapshot:`;
+    const TOUR_SNAPSHOT_KEEP_COUNT = 12;
     const TOUR_PROJECT_FILE_URL = "./assets/tours/one_take_window_product_60s.json";
     const TOUR_EDITOR_LEGACY_KEYS = [
       "bp3d-pure:tour-editor:v7:one-take-window-product",
@@ -599,6 +632,9 @@
         const $tourSavedCount = document.querySelector("#tourSavedCount");
         const $tourMainBadge = document.querySelector("#tourMainBadge");
         const $tourMainStatus = document.querySelector("#tourMainStatus");
+        const $tourProjectBadge = document.querySelector("#tourProjectBadge");
+        const $tourProjectStatus = document.querySelector("#tourProjectStatus");
+        const $tourProjectNextStep = document.querySelector("#tourProjectNextStep");
         const $tourLocalFileInput = document.querySelector("#tourLocalFileInput");
         const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
         const round2 = (v) => Math.round((Number(v) || 0) * 100) / 100;
@@ -616,7 +652,29 @@
           '"': "&quot;",
           "'": "&#39;"
         }[ch]));
-        const defaultTourState = { name: "one_take_window_product_60s", pauseAt: 0, waypoints: [] };
+        const TOUR_META_SCHEMA = "bp3d-tour/v1";
+        const makeTourMeta = (patch = {}) => ({
+          schema: patch.schema || TOUR_META_SCHEMA,
+          sourceKind: patch.sourceKind || "editor",
+          sourceLabel: patch.sourceLabel || "",
+          sourcePath: patch.sourcePath || "",
+          storageKey: patch.storageKey || "",
+          loadedAt: Number.isFinite(patch.loadedAt) ? patch.loadedAt : Date.now(),
+          updatedAt: Number.isFinite(patch.updatedAt) ? patch.updatedAt : 0,
+          exportedAt: Number.isFinite(patch.exportedAt) ? patch.exportedAt : 0,
+          dirty: !!patch.dirty,
+          boundAt: Number.isFinite(patch.boundAt) ? patch.boundAt : 0
+        });
+        const defaultTourState = {
+          name: "one_take_window_product_60s",
+          pauseAt: 0,
+          waypoints: [],
+          _meta: makeTourMeta({
+            sourceKind: "empty",
+            sourceLabel: "Empty Tour Studio editor",
+            loadedAt: 0
+          })
+        };
         const cloneTourState = (state) => JSON.parse(JSON.stringify(state || defaultTourState));
         const TOUR_PURPOSES = [
           { value: "intro", label: "开场" },
@@ -851,6 +909,7 @@
           else wp.position = value;
           selectedWaypointIndex = event.index;
           selectedRailKind = event.kind === "target" ? "target" : "camera";
+          markTourEdited();
           saveTourState();
           updateTourJsonText();
           updateSelectedNodeLabel();
@@ -909,7 +968,16 @@
               name: typeof parsed.name === "string" && parsed.name.trim() ? parsed.name.trim() : defaultTourState.name,
               pauseAt: Number.isFinite(parsed.pauseAt) ? clamp(parsed.pauseAt, 0, 5) : defaultTourState.pauseAt,
               updatedAt: Number.isFinite(parsed.updatedAt) ? parsed.updatedAt : 0,
-              waypoints: waypoints.map(normalizeEditorWaypoint)
+              waypoints: waypoints.map(normalizeEditorWaypoint),
+              _meta: makeTourMeta({
+                ...(parsed._meta && typeof parsed._meta === "object" ? parsed._meta : {}),
+                sourceKind: parsed._meta?.sourceKind || "localStorage",
+                sourceLabel: parsed._meta?.sourceLabel || parsed.name || key,
+                sourcePath: parsed._meta?.sourcePath || key,
+                storageKey: key,
+                loadedAt: Date.now(),
+                updatedAt: Number.isFinite(parsed.updatedAt) ? parsed.updatedAt : 0
+              })
             };
           } catch {
             return null;
@@ -925,6 +993,7 @@
           } catch {}
           return Array.from(keys);
         };
+        const makeTourSnapshotKey = () => `${TOUR_SNAPSHOT_KEY_PREFIX}${new Date().toISOString().replace(/[:.]/g, "-")}`;
         const findBestStoredTourState = () => {
           const candidates = listTourStorageKeys()
             .map((key) => parseStoredTourState(localStorage.getItem(key), key))
@@ -944,7 +1013,16 @@
             pauseAt: stored.pauseAt,
             updatedAt: stored.updatedAt || Date.now(),
             migratedFrom: stored.key !== TOUR_EDITOR_KEY ? stored.key : null,
-            waypoints: stored.waypoints
+            waypoints: stored.waypoints,
+            _meta: makeTourMeta({
+              ...(stored._meta || {}),
+              sourceKind: stored.key === TOUR_EDITOR_KEY ? (stored._meta?.sourceKind || "localStorage") : "legacy-localStorage",
+              sourceLabel: stored._meta?.sourceLabel || stored.name || stored.key,
+              sourcePath: stored._meta?.sourcePath || stored.key,
+              storageKey: stored.key,
+              loadedAt: Date.now(),
+              updatedAt: stored.updatedAt || Date.now()
+            })
           };
           if (stored.key !== TOUR_EDITOR_KEY) {
             try {
@@ -982,6 +1060,8 @@
         let autoFurnitureBootTask = null;
         let chuangshaWindowReplacementTask = null;
         let autoChuangshaWindowBootTask = null;
+        let l1SingleWindowReplacementTask = null;
+        let autoL1SingleWindowBootTask = null;
 
         const deferUiTask = (work, { delay = 160, timeout = 2400 } = {}) => new Promise((resolve) => {
           const start = () => {
@@ -1024,6 +1104,9 @@
           if (chuangshaWindowReplacementTask) return chuangshaWindowReplacementTask;
           chuangshaWindowReplacementTask = replaceChuangshaWindowsFromUi(options).finally(() => {
             chuangshaWindowReplacementTask = null;
+            if (options.withL1 !== false) {
+              startL1SingleWindowReplacement({ auto: !!options.auto });
+            }
             if (!$tourEditor.hidden && !customTour.waypoints.length) {
               loadProductTourPreset({ showMessage: true });
             }
@@ -1055,6 +1138,38 @@
           }
           return autoChuangshaWindowBootTask;
         }
+
+        function startL1SingleWindowReplacement(options = {}) {
+          if (l1SingleWindowReplacementTask) return l1SingleWindowReplacementTask;
+          l1SingleWindowReplacementTask = replaceL1SingleWindowsFromUi(options).finally(() => {
+            l1SingleWindowReplacementTask = null;
+          });
+          return l1SingleWindowReplacementTask;
+        }
+
+        const hasL1SingleWindowsInstalled = () => {
+          const current = document.body.dataset.l1SingleWindowReplacement || "";
+          try {
+            const parsed = JSON.parse(current);
+            return Number(parsed?.replaced || 0) > 0;
+          } catch {
+            return false;
+          }
+        };
+
+        function ensureL1SingleWindowsReady() {
+          if (hasL1SingleWindowsInstalled()) return Promise.resolve(document.body.dataset.l1SingleWindowReplacement || "");
+          if (l1SingleWindowReplacementTask) return l1SingleWindowReplacementTask;
+          if (!autoL1SingleWindowBootTask) {
+            autoL1SingleWindowBootTask = deferUiTask(
+              () => startL1SingleWindowReplacement({ auto: true }),
+              { delay: 260, timeout: 3200 }
+            ).finally(() => {
+              autoL1SingleWindowBootTask = null;
+            });
+          }
+          return autoL1SingleWindowBootTask;
+        }
         $tourNameInput.value = customTour.name;
         $tourPauseInput.value = customTour.pauseAt.toFixed(2);
         updateTourJsonText();
@@ -1071,7 +1186,79 @@
           btn.textContent = isBound ? "已绑定主 Tour" : "保存为主 Tour";
           updateMainTourStatusCard();
         };
+        const formatTourMetaDate = (updatedAt) => {
+          if (!updatedAt) return "";
+          try {
+            return new Date(updatedAt).toLocaleString([], {
+              month: "2-digit",
+              day: "2-digit",
+              hour: "2-digit",
+              minute: "2-digit"
+            });
+          } catch {
+            return "";
+          }
+        };
+        const formatTourSourceKind = (kind) => ({
+          "project-file": "PROJECT FILE",
+          "local-file": "LOCAL FILE",
+          "json-text": "JSON TEXT",
+          "localStorage": "BROWSER SAVE",
+          "legacy-localStorage": "OLD SAVE",
+          "snapshot": "SNAPSHOT",
+          "preset": "PRESET",
+          "generated": "GENERATED",
+          "empty": "EMPTY",
+          "editor": "EDITOR"
+        }[kind] || "TOUR");
+        const markTourEdited = () => {
+          customTour._meta = makeTourMeta({
+            ...(customTour._meta || {}),
+            sourceKind: customTour._meta?.sourceKind || "editor",
+            sourceLabel: customTour._meta?.sourceLabel || customTour.name || "Tour Studio editor",
+            updatedAt: Date.now(),
+            dirty: true
+          });
+        };
+        const updateProjectTourStatusCard = () => {
+          if (!$tourProjectBadge || !$tourProjectStatus) return;
+          const rawMeta = customTour._meta || {};
+          const kind = rawMeta.sourceKind || (customTour.waypoints?.length ? "editor" : "empty");
+          const label = rawMeta.sourceLabel || customTour.name || defaultTourState.name;
+          const path = rawMeta.sourcePath || rawMeta.storageKey || "";
+          const loaded = formatTourMetaDate(rawMeta.loadedAt);
+          const updated = formatTourMetaDate(customTour.updatedAt || rawMeta.updatedAt);
+          const exported = formatTourMetaDate(rawMeta.exportedAt);
+          const bound = formatTourMetaDate(rawMeta.boundAt);
+          const pathText = path && path !== label ? escapeTourHtml(path) : "";
+          const isBound = tourButtonBinding.mode === "custom-editor" && customTour.waypoints.length > 0;
+          const bits = [
+            `${escapeTourHtml(label)} · ${customTour.waypoints.length} shots`,
+            pathText,
+            loaded ? `loaded ${loaded}` : "",
+            updated ? `saved ${updated}` : "",
+            exported ? `exported ${exported}` : "",
+            rawMeta.dirty ? "EDITED" : "",
+            isBound ? `BOUND TO TOUR BUTTON${bound ? ` ${bound}` : ""}` : "NOT BOUND"
+          ].filter(Boolean);
+          $tourProjectBadge.textContent = formatTourSourceKind(kind);
+          $tourProjectStatus.innerHTML = bits.join(" · ");
+          if ($tourProjectNextStep) {
+            if (!customTour.waypoints.length) {
+              $tourProjectNextStep.textContent = "下一步：点“加载项目默认 Tour”，或者导入本地 Tour JSON。";
+            } else if (!isBound) {
+              $tourProjectNextStep.textContent = "下一步：点“保存修改到 Tour 按钮”，右上角 Tour 才会播放当前镜头。";
+            } else if (rawMeta.dirty) {
+              $tourProjectNextStep.textContent = "下一步：已绑定可播放。若这版满意，再点“下载当前 Tour JSON”留档进项目。";
+            } else if (kind === "project-file") {
+              $tourProjectNextStep.textContent = "当前项目 Tour 已绑定，可直接点右上角 Tour 播放。";
+            } else {
+              $tourProjectNextStep.textContent = "当前 Tour 已绑定，可播放；需要长期保留时下载 JSON。";
+            }
+          }
+        };
         const updateMainTourStatusCard = () => {
+          updateProjectTourStatusCard();
           if (!$tourMainBadge || !$tourMainStatus) return;
           const isBound = tourButtonBinding.mode === "custom-editor" && customTour.waypoints.length > 0;
           const recoverable = !isBound ? pickBestRecoverableSavedTour?.() : null;
@@ -1097,14 +1284,73 @@
         applyInitialTourBindingFromLoadedState();
         const saveTourState = () => {
           try {
-            customTour.updatedAt = Date.now();
+            const now = Date.now();
+            customTour.updatedAt = now;
+            customTour._meta = makeTourMeta({
+              ...(customTour._meta || {}),
+              sourceKind: customTour._meta?.sourceKind || "editor",
+              sourceLabel: customTour._meta?.sourceLabel || customTour.name || "Tour Studio editor",
+              updatedAt: now
+            });
             localStorage.setItem(TOUR_EDITOR_KEY, JSON.stringify(customTour));
           } catch {}
+          updateProjectTourStatusCard();
         };
-        const syncTourInputs = () => {
+        const syncTourInputs = (options = {}) => {
+          const previousName = customTour.name;
+          const previousPause = customTour.pauseAt;
           customTour.name = $tourNameInput.value.trim() || defaultTourState.name;
           customTour.pauseAt = clamp(parseFloat($tourPauseInput.value) || defaultTourState.pauseAt, 0, 5);
+          if (options.markDirty && (previousName !== customTour.name || previousPause !== customTour.pauseAt)) {
+            markTourEdited();
+          }
           saveTourState();
+        };
+        const saveTourSnapshotFromState = (state, options = {}) => {
+          const waypoints = Array.isArray(state?.waypoints) ? state.waypoints : [];
+          if (!waypoints.length) return null;
+          const now = Date.now();
+          const key = makeTourSnapshotKey();
+          const baseName = state.name || "Tour";
+          const snapshotName = options.name || `${baseName} snapshot`;
+          const payload = cloneTourState({
+            ...state,
+            name: snapshotName,
+            updatedAt: now,
+            _meta: makeTourMeta({
+              ...(state._meta || {}),
+              sourceKind: "snapshot",
+              sourceLabel: snapshotName,
+              sourcePath: key,
+              storageKey: key,
+              loadedAt: state._meta?.loadedAt || now,
+              updatedAt: now,
+              dirty: false
+            })
+          });
+          localStorage.setItem(key, JSON.stringify(payload));
+          return { key, name: snapshotName, waypoints: payload.waypoints.length };
+        };
+        const maybeAutoSnapshotBeforeReplace = (reason = "replacing current tour") => {
+          if (!customTour.waypoints.length || !customTour._meta?.dirty) return null;
+          syncTourInputs();
+          try {
+            const safeReason = reason ? ` before ${reason}` : "";
+            const snap = saveTourSnapshotFromState(customTour, {
+              name: `${customTour.name || "Tour"} autosave${safeReason}`
+            });
+            if (snap) {
+              refreshSavedTourSelect?.();
+              document.body.dataset.lastTourAutoSnapshot = JSON.stringify(snap).slice(0, 1000);
+            }
+            return snap;
+          } catch (err) {
+            console.warn("[bp3d-pure] auto tour snapshot failed", err);
+            if ($tourStudioStatus) {
+              $tourStudioStatus.textContent = `自动安全快照失败：${err.message || err}`;
+            }
+            return null;
+          }
         };
         const setTourEditorVisible = (visible) => {
           $tourEditor.hidden = !visible;
@@ -1136,6 +1382,7 @@
           selectedWaypointIndex = customTour.waypoints.length - 1;
           selectedRailKind = "camera";
           currentTourTime = customTour.waypoints.at(-1)?.time ?? getTourDuration();
+          markTourEdited();
           saveTourState();
           renderTourEditor();
         };
@@ -1162,6 +1409,7 @@
           customTour.waypoints.splice(index + 1, 0, clone);
           customTour.waypoints = customTour.waypoints.map((wp, i) => normalizeEditorWaypoint(wp, i));
           selectedWaypointIndex = index + 1;
+          markTourEdited();
           saveTourState();
           renderTourEditor();
         };
@@ -1176,6 +1424,7 @@
             return next;
           });
           currentTourTime = getWaypointTime(selectedWaypointIndex);
+          markTourEdited();
           saveTourState();
           renderTourEditor();
         };
@@ -1237,6 +1486,7 @@
             return next;
           });
           currentTourTime = getWaypointTime(selectedWaypointIndex);
+          markTourEdited();
           saveTourState();
           renderTourEditor();
           if ($tourStudioStatus) {
@@ -1263,6 +1513,7 @@
               ...customTour.waypoints[index],
               fov: nextFov
             }, index);
+            markTourEdited();
             saveTourState();
             renderTourEditor();
           } else {
@@ -1272,8 +1523,15 @@
         const loadInteriorTourPreset = () => {
           const preset = api.getSceneTour?.("upperWindowInterior12") || [];
           if (!preset.length) return;
+          maybeAutoSnapshotBeforeReplace("loading interior preset");
           customTour.name = "L2 Window Interior 12s";
           customTour.pauseAt = 0;
+          customTour._meta = makeTourMeta({
+            sourceKind: "preset",
+            sourceLabel: "L2 Window Interior preset",
+            sourcePath: "api.getSceneTour(upperWindowInterior12)",
+            dirty: false
+          });
           customTour.waypoints = preset.map((wp, index) => normalizeEditorWaypoint({
             label: wp.label || `Shot ${index + 1}`,
             duration: Number.isFinite(wp.duration) ? wp.duration : 3.4,
@@ -1302,8 +1560,15 @@
             }
             return false;
           }
+          maybeAutoSnapshotBeforeReplace("loading product tour");
           customTour.name = "one_take_window_product_60s";
           customTour.pauseAt = 0;
+          customTour._meta = makeTourMeta({
+            sourceKind: "generated",
+            sourceLabel: "Generated window product tour",
+            sourcePath: "api.buildChuangshaProductTour(tags=181930,182101)",
+            dirty: false
+          });
           customTour.waypoints = preset.map((wp, index) => normalizeEditorWaypoint({
             ...wp,
             subject: { type: "window", tag: wp.productTag || "181930" },
@@ -1348,6 +1613,7 @@
             target: patch.target ? patch.target.slice(0, 3).map((n) => round2(n)) : current.target
           }, index);
           selectedWaypointIndex = index;
+          markTourEdited();
           saveTourState();
           renderTourEditor();
         };
@@ -1359,12 +1625,14 @@
           copy.splice(next, 0, item);
           customTour.waypoints = copy;
           selectedWaypointIndex = next;
+          markTourEdited();
           saveTourState();
           renderTourEditor();
         };
         const deleteWaypoint = (index) => {
           customTour.waypoints.splice(index, 1);
           selectedWaypointIndex = clamp(Math.min(index, customTour.waypoints.length - 1), 0, Math.max(0, customTour.waypoints.length - 1));
+          markTourEdited();
           saveTourState();
           renderTourEditor();
         };
@@ -1444,6 +1712,10 @@
             mode: "custom-editor",
             name: customTour.name || "Custom Tour"
           };
+          customTour._meta = makeTourMeta({
+            ...(customTour._meta || {}),
+            boundAt: Date.now()
+          });
           saveTourState();
           saveTourButtonBinding();
           updateTourBindButtonState();
@@ -1481,12 +1753,28 @@
           }
           return true;
         };
-        const applyTourState = (source = {}, fallbackName = "Imported Tour") => {
+        const applyTourState = (source = {}, fallbackName = "Imported Tour", metaPatch = {}) => {
+          if (!metaPatch.skipAutoSnapshot) {
+            maybeAutoSnapshotBeforeReplace(metaPatch.reason || `loading ${fallbackName}`);
+          }
+          const sourceMeta = source._meta && typeof source._meta === "object" ? source._meta : {};
+          const loadedAt = Date.now();
           customTour = {
             name: typeof source.name === "string" && source.name.trim() ? source.name.trim() : fallbackName,
             pauseAt: Number.isFinite(source.pauseAt) ? clamp(source.pauseAt, 0, 5) : 0,
-            updatedAt: Date.now(),
-            waypoints: (Array.isArray(source.waypoints) ? source.waypoints : []).map(normalizeEditorWaypoint)
+            updatedAt: loadedAt,
+            waypoints: (Array.isArray(source.waypoints) ? source.waypoints : []).map(normalizeEditorWaypoint),
+            _meta: makeTourMeta({
+              ...sourceMeta,
+              ...metaPatch,
+              schema: metaPatch.schema || source.schema || sourceMeta.schema || TOUR_META_SCHEMA,
+              sourceKind: metaPatch.sourceKind || sourceMeta.sourceKind || source.sourceKind || "imported",
+              sourceLabel: metaPatch.sourceLabel || sourceMeta.sourceLabel || source.source || source.name || fallbackName,
+              sourcePath: metaPatch.sourcePath || sourceMeta.sourcePath || source.url || "",
+              loadedAt,
+              updatedAt: loadedAt,
+              dirty: false
+            })
           };
           selectedWaypointIndex = 0;
           selectedRailKind = "camera";
@@ -1508,7 +1796,11 @@
           try {
             const parsed = JSON.parse($tourJsonText.value);
             const source = Array.isArray(parsed) ? { name: "Imported Tour", pauseAt: customTour.pauseAt, waypoints: parsed } : parsed;
-            applyTourState(source, "Imported Tour");
+            applyTourState(source, "Imported Tour", {
+              sourceKind: "json-text",
+              sourceLabel: "Advanced JSON text import",
+              reason: "importing JSON text"
+            });
           } catch (err) {
             $tourStudioStatus.textContent = `Import failed: ${err.message || err}`;
           }
@@ -1522,8 +1814,22 @@
             updatedAt: Date.now(),
             source: source.source || "Tour Studio",
             subject: source.subject || { type: "window", tags: CHUANGSHA_WINDOW_TAGS },
+            _meta: source._meta && typeof source._meta === "object" ? source._meta : null,
             waypoints: (Array.isArray(source.waypoints) ? source.waypoints : []).map(normalizeEditorWaypoint)
           };
+        };
+        const downloadTourPayload = (payload, fallbackName = "bp3d-tour") => {
+          const safeName = (payload.name || fallbackName).toLowerCase().replace(/[^a-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "") || fallbackName;
+          const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = `${safeName}.json`;
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          URL.revokeObjectURL(url);
+          return link.download;
         };
         const loadProjectTourFile = async (options = {}) => {
           try {
@@ -1531,7 +1837,13 @@
             if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
             const payload = normalizeTourFilePayload(await response.json());
             if (!payload.waypoints.length) throw new Error("tour file has no waypoints");
-            applyTourState(payload, payload.name || "Project Tour");
+            applyTourState(payload, payload.name || "Project Tour", {
+              sourceKind: "project-file",
+              sourceLabel: payload.name || "Project Tour",
+              sourcePath: TOUR_PROJECT_FILE_URL,
+              schema: payload.schema,
+              reason: "loading project tour file"
+            });
             if (options.bind !== false) bindEditorTourToMainButton();
             if ($tourStudioStatus) {
               $tourStudioStatus.textContent = `已加载项目 Tour 文件：${payload.name}（${payload.waypoints.length} 幕）。`;
@@ -1546,23 +1858,20 @@
         };
         const downloadCurrentTourFile = () => {
           syncTourInputs();
+          customTour._meta = makeTourMeta({
+            ...(customTour._meta || {}),
+            exportedAt: Date.now()
+          });
+          saveTourState();
           const payload = normalizeTourFilePayload({
             ...customTour,
             source: "bp3d-pure Tour Studio export",
-            subject: { type: "window", tags: CHUANGSHA_WINDOW_TAGS }
+            subject: { type: "window", tags: CHUANGSHA_WINDOW_TAGS },
+            _meta: customTour._meta
           });
-          const safeName = (payload.name || "bp3d-tour").toLowerCase().replace(/[^a-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "") || "bp3d-tour";
-          const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement("a");
-          link.href = url;
-          link.download = `${safeName}.json`;
-          document.body.appendChild(link);
-          link.click();
-          link.remove();
-          URL.revokeObjectURL(url);
+          const fileName = downloadTourPayload(payload);
           if ($tourStudioStatus) {
-            $tourStudioStatus.textContent = `已下载 ${link.download}。把它放进 assets/tours/ 可作为项目 Tour 文件提交。`;
+            $tourStudioStatus.textContent = `已下载 ${fileName}。把它放进 assets/tours/ 可作为项目 Tour 文件提交。`;
           }
           return payload;
         };
@@ -1572,7 +1881,13 @@
             const text = await file.text();
             const payload = normalizeTourFilePayload(JSON.parse(text));
             if (!payload.waypoints.length) throw new Error("tour file has no waypoints");
-            applyTourState(payload, payload.name || file.name.replace(/\.json$/i, "") || "Local Tour");
+            applyTourState(payload, payload.name || file.name.replace(/\.json$/i, "") || "Local Tour", {
+              sourceKind: "local-file",
+              sourceLabel: file.name,
+              sourcePath: file.name,
+              schema: payload.schema,
+              reason: `importing ${file.name}`
+            });
             bindEditorTourToMainButton();
             if ($tourStudioStatus) {
               $tourStudioStatus.textContent = `已导入本地 Tour：${file.name}（${payload.waypoints.length} 幕）。`;
@@ -1595,7 +1910,9 @@
             name: state.name,
             waypoints: state.waypoints.length,
             updatedAt: state.updatedAt || null,
-            current: state.key === TOUR_EDITOR_KEY
+            current: state.key === TOUR_EDITOR_KEY,
+            snapshot: state.key.startsWith(TOUR_SNAPSHOT_KEY_PREFIX),
+            legacy: state.key !== TOUR_EDITOR_KEY && !state.key.startsWith(TOUR_SNAPSHOT_KEY_PREFIX)
           }))
           .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0) || b.waypoints - a.waypoints);
         const formatSavedTourDate = (updatedAt) => {
@@ -1612,8 +1929,100 @@
           }
         };
         const formatSavedTourLabel = (item) => {
-          const origin = item.current ? "当前" : "旧版";
+          const origin = item.current ? "当前" : item.snapshot ? "快照" : "旧版";
           return `${item.name || "Saved Tour"} | ${item.waypoints} 幕 | ${origin} | ${formatSavedTourDate(item.updatedAt)}`;
+        };
+        const saveCurrentTourSnapshot = () => {
+          syncTourInputs();
+          if (!customTour.waypoints.length) {
+            if ($tourStudioStatus) $tourStudioStatus.textContent = "当前没有镜头，先加载或添加镜头后再保存快照。";
+            return null;
+          }
+          const snapshotName = `${customTour.name || "Tour"} snapshot`;
+          let snap = null;
+          try {
+            snap = saveTourSnapshotFromState(customTour, { name: snapshotName });
+          } catch (err) {
+            if ($tourStudioStatus) $tourStudioStatus.textContent = `保存快照失败：${err.message || err}`;
+            return null;
+          }
+          refreshSavedTourSelect();
+          if ($tourSavedSelect && snap?.key) $tourSavedSelect.value = snap.key;
+          if ($tourStudioStatus) {
+            $tourStudioStatus.textContent = `已保存快照：${snapshotName}（${snap.waypoints} 幕）。以后可在历史 Tour 里恢复。`;
+          }
+          return snap;
+        };
+        const downloadSelectedSavedTour = () => {
+          const key = $tourSavedSelect?.value || "";
+          if (!key) {
+            if ($tourStudioStatus) $tourStudioStatus.textContent = "先在历史 Tour 里选一个要下载的版本。";
+            return null;
+          }
+          const source = parseStoredTourState(localStorage.getItem(key), key);
+          if (!source) {
+            if ($tourStudioStatus) $tourStudioStatus.textContent = "这个历史 Tour 已经不存在或格式无效。";
+            return null;
+          }
+          const payload = normalizeTourFilePayload({
+            ...source,
+            source: "bp3d-pure saved Tour export",
+            subject: { type: "window", tags: CHUANGSHA_WINDOW_TAGS },
+            _meta: makeTourMeta({
+              ...(source._meta || {}),
+              exportedAt: Date.now(),
+              sourcePath: source._meta?.sourcePath || source.key,
+              storageKey: source.key
+            })
+          });
+          const fileName = downloadTourPayload(payload, "bp3d-saved-tour");
+          if ($tourStudioStatus) {
+            $tourStudioStatus.textContent = `已下载历史 Tour：${fileName}。可放进 assets/tours/ 或发给同事。`;
+          }
+          return payload;
+        };
+        const deleteSelectedTourSnapshot = () => {
+          const key = $tourSavedSelect?.value || "";
+          if (!key) {
+            if ($tourStudioStatus) $tourStudioStatus.textContent = "先在历史 Tour 里选一个快照。";
+            return false;
+          }
+          if (!key.startsWith(TOUR_SNAPSHOT_KEY_PREFIX)) {
+            if ($tourStudioStatus) $tourStudioStatus.textContent = "只能删除快照；当前自动保存和旧版 key 会保留。";
+            return false;
+          }
+          const item = listSavedTours().find((tour) => tour.key === key);
+          try {
+            localStorage.removeItem(key);
+          } catch (err) {
+            if ($tourStudioStatus) $tourStudioStatus.textContent = `删除快照失败：${err.message || err}`;
+            return false;
+          }
+          refreshSavedTourSelect();
+          if ($tourStudioStatus) {
+            $tourStudioStatus.textContent = `已删除快照：${item?.name || key}。`;
+          }
+          return true;
+        };
+        const pruneOldTourSnapshots = (keepCount = TOUR_SNAPSHOT_KEEP_COUNT) => {
+          const snapshots = listSavedTours()
+            .filter((item) => item.snapshot)
+            .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+          const removable = snapshots.slice(Math.max(0, keepCount));
+          let removed = 0;
+          removable.forEach((item) => {
+            try {
+              localStorage.removeItem(item.key);
+              removed += 1;
+            } catch {}
+          });
+          refreshSavedTourSelect();
+          if ($tourStudioStatus) {
+            $tourStudioStatus.textContent = removed
+              ? `已清理 ${removed} 个旧快照，保留最近 ${keepCount} 个。`
+              : `快照数量未超过 ${keepCount} 个，不需要清理。`;
+          }
+          return removed;
         };
         const refreshSavedTourSelect = () => {
           if (!$tourSavedSelect) return [];
@@ -1658,7 +2067,18 @@
             ? parseStoredTourState(localStorage.getItem(key), key)
             : findBestStoredTourState();
           if (!source) return false;
-          applyTourState(source, source.name || "Saved Tour");
+          applyTourState(source, source.name || "Saved Tour", {
+            ...(source._meta || {}),
+            sourceKind: source.key?.startsWith?.(TOUR_SNAPSHOT_KEY_PREFIX)
+              ? "snapshot"
+              : source.key === TOUR_EDITOR_KEY
+              ? (source._meta?.sourceKind || "localStorage")
+              : "legacy-localStorage",
+            sourceLabel: source._meta?.sourceLabel || source.name || "Saved Tour",
+            sourcePath: source._meta?.sourcePath || source.key,
+            storageKey: source.key,
+            reason: "restoring saved tour"
+          });
           if (source.key !== TOUR_EDITOR_KEY) {
             tourButtonBinding = {
               mode: "custom-editor",
@@ -2015,15 +2435,99 @@
           return result;
         }
 
+        function windowWorldWidth(windowInfo) {
+          const size = Array.isArray(windowInfo?.size) ? windowInfo.size.map((n) => Math.abs(Number(n) || 0)) : [0, 0, 0];
+          return Math.max(size[0] || 0, size[2] || 0);
+        }
+
+        function windowWorldHeight(windowInfo) {
+          const size = Array.isArray(windowInfo?.size) ? windowInfo.size.map((n) => Math.abs(Number(n) || 0)) : [0, 0, 0];
+          return size[1] || 0;
+        }
+
+        function normalizeWindowMeasureMeters(value) {
+          const n = Number(value);
+          if (!Number.isFinite(n) || n <= 0) return null;
+          return n > 20 ? n / 1000 : n;
+        }
+
+        function isL1SingleWindowCandidate(windowInfo, filter = L1_SINGLE_WINDOW_FILTER) {
+          if (!windowInfo || windowInfo.levelHint !== filter.levelHint || !windowInfo.tag) return false;
+          const worldWidth = windowWorldWidth(windowInfo);
+          const worldHeight = windowWorldHeight(windowInfo);
+          const overallWidth = normalizeWindowMeasureMeters(windowInfo.overallWidth);
+          const overallHeight = normalizeWindowMeasureMeters(windowInfo.overallHeight);
+          const widthLooksSingle = overallWidth != null
+            ? overallWidth <= filter.maxOverallWidth
+            : worldWidth >= filter.minWorldWidth && worldWidth <= filter.maxWorldWidth;
+          const heightLooksWindow = overallHeight != null
+            ? overallHeight >= filter.minOverallHeight && overallHeight <= filter.maxOverallHeight
+            : worldHeight >= filter.minWorldHeight && worldHeight <= filter.maxWorldHeight;
+          return widthLooksSingle && heightLooksWindow && worldWidth >= filter.minWorldWidth && worldHeight >= filter.minWorldHeight;
+        }
+
+        function compactWindowCandidate(windowInfo) {
+          return {
+            id: windowInfo.id,
+            tag: String(windowInfo.tag || ""),
+            expressID: windowInfo.expressID ?? null,
+            levelHint: windowInfo.levelHint,
+            name: windowInfo.name || null,
+            objectType: windowInfo.objectType || null,
+            overallWidth: windowInfo.overallWidth ?? null,
+            overallHeight: windowInfo.overallHeight ?? null,
+            meshCount: windowInfo.meshCount ?? null,
+            center: windowInfo.center || null,
+            size: windowInfo.size || null,
+            worldWidth: +windowWorldWidth(windowInfo).toFixed(3),
+            worldHeight: +windowWorldHeight(windowInfo).toFixed(3)
+          };
+        }
+
+        function findL1SingleWindowCandidates(options = {}) {
+          const windows = api.getWindowInventory?.({ includeHidden: true }) || [];
+          const filter = { ...L1_SINGLE_WINDOW_FILTER, ...(options.filter || {}) };
+          const seenTags = new Set();
+          const candidates = windows
+            .filter((windowInfo) => isL1SingleWindowCandidate(windowInfo, filter))
+            .filter((windowInfo) => {
+              const tag = String(windowInfo.tag || "");
+              if (!tag || seenTags.has(tag)) return false;
+              seenTags.add(tag);
+              return true;
+            })
+            .sort((a, b) => {
+              const az = Number(a.center?.[2] ?? 0);
+              const bz = Number(b.center?.[2] ?? 0);
+              const ax = Number(a.center?.[0] ?? 0);
+              const bx = Number(b.center?.[0] ?? 0);
+              return az - bz || ax - bx || String(a.id).localeCompare(String(b.id));
+            })
+            .map(compactWindowCandidate);
+          const result = {
+            totalWindows: windows.length,
+            count: candidates.length,
+            tags: candidates.map((item) => item.tag),
+            candidates
+          };
+          document.body.dataset.l1SingleWindowCandidates = JSON.stringify(result).slice(0, 4000);
+          const tagText = result.tags.length ? result.tags.join(", ") : "none";
+          log(`L1 single window candidates: ${result.count}/${result.totalWindows} | tags ${tagText}`);
+          console.info("[bp3d-pure] L1 single window candidates", result);
+          return result;
+        }
+
         async function replaceChuangshaWindowsFromUi(options = {}) {
           const btn = document.getElementById("btnReplaceChuangshaWindows");
           if (btn) btn.disabled = true;
           try {
             const result = await api.replaceWindowsByTagsFromGlb?.("./chuangsha.glb", CHUANGSHA_WINDOW_TAGS, {
-              padding: 0.992,
-              heightPadding: 0.992,
-              depthPadding: 0.94,
-              minDepth: 0.052
+              padding: 1,
+              heightPadding: 1,
+              depthPadding: 1,
+              minDepth: 0.052,
+              useExportedHybridAssembly: true,
+              hybridAssemblyUrl: "./hybrid-window-assembly.glb"
             });
             document.body.dataset.chuangshaWindowReplacement = JSON.stringify(result || {}).slice(0, 4000);
             btn?.classList.toggle("active", !!result?.replaced);
@@ -2040,6 +2544,63 @@
           }
         }
 
+        async function replaceL1SingleWindowsFromUi(options = {}) {
+          const btn = document.getElementById("btnReplaceL1SingleWindows");
+          if (btn) btn.disabled = true;
+          try {
+            const candidateResult = findL1SingleWindowCandidates(options);
+            if (!candidateResult.tags.length) {
+              btn?.classList.remove("active");
+              log("L1 single window replacement skipped: no suitable tagged windows found");
+              return { replaced: 0, requestedTags: [], candidates: [] };
+            }
+            const result = await api.replaceWindowsByTagsFromGlb?.("./chuangsha.glb", candidateResult.tags, {
+              ...L1_SINGLE_WINDOW_REPLACE_OPTIONS,
+              ...(options.fit || {})
+            });
+            const payload = {
+              ...(result || {}),
+              candidates: candidateResult.candidates
+            };
+            document.body.dataset.l1SingleWindowReplacement = JSON.stringify(payload).slice(0, 4000);
+            document.body.dataset.l1SingleWindowDebugState = JSON.stringify(
+              api.debugWindowReplacementState?.(candidateResult.tags) || []
+            ).slice(0, 4000);
+            btn?.classList.toggle("active", !!result?.replaced);
+            log(`L1 single windows replaced: ${result?.replaced ?? 0}/${candidateResult.tags.length} | tags ${candidateResult.tags.join(", ")}`);
+            console.info("[bp3d-pure] L1 single window replacement", payload);
+            return payload;
+          } catch (err) {
+            btn?.classList.remove("active");
+            log(`L1 single window replacement failed: ${err.message || err}`);
+            console.warn("[bp3d-pure] L1 single window replacement failed", err);
+            return null;
+          } finally {
+            if (btn) btn.disabled = false;
+          }
+        }
+
+        function exposeWindowTools() {
+          window.__bp3dPureWindowTools = {
+            inventory: (options = {}) => api.getWindowInventory?.({ includeHidden: true, ...options }) || [],
+            findL1SingleWindows: findL1SingleWindowCandidates,
+            replaceL1SingleWindows: replaceL1SingleWindowsFromUi,
+            replaceProductWindows: replaceChuangshaWindowsFromUi,
+            debugState: (tags = []) => api.debugWindowReplacementState?.(tags) || [],
+            selectAll: selectAllWindowsFromUi,
+            clear: () => {
+              api.clearWindowReplacements?.();
+              api.clearWindowSelection?.();
+              document.getElementById("btnReplaceChuangshaWindows")?.classList.remove("active");
+              document.getElementById("btnReplaceL1SingleWindows")?.classList.remove("active");
+              document.getElementById("btnSelectWindows")?.classList.remove("active");
+              return true;
+            }
+          };
+          return window.__bp3dPureWindowTools;
+        }
+        exposeWindowTools();
+
         document.getElementById("btnSelectWindows")?.addEventListener("click", () => selectAllWindowsFromUi());
         document.getElementById("btnClearWindows")?.addEventListener("click", () => {
           api.clearWindowSelection?.();
@@ -2050,10 +2611,19 @@
         document.getElementById("btnReplaceChuangshaWindows")?.addEventListener("click", () => {
           startChuangshaWindowReplacement();
         });
+        document.getElementById("btnFindL1SingleWindows")?.addEventListener("click", () => {
+          const result = findL1SingleWindowCandidates();
+          document.getElementById("btnFindL1SingleWindows")?.classList.toggle("active", !!result.count);
+        });
+        document.getElementById("btnReplaceL1SingleWindows")?.addEventListener("click", () => {
+          startL1SingleWindowReplacement();
+        });
         document.getElementById("btnRestoreChuangshaWindows")?.addEventListener("click", () => {
           api.clearWindowReplacements?.();
           document.getElementById("btnReplaceChuangshaWindows")?.classList.remove("active");
+          document.getElementById("btnReplaceL1SingleWindows")?.classList.remove("active");
           document.body.dataset.chuangshaWindowReplacement = "";
+          document.body.dataset.l1SingleWindowReplacement = "";
           log("chuangsha window replacements cleared");
         });
         document.getElementById("btnTourEdit")?.addEventListener("click", () => setTourEditorVisible($tourEditor.hidden));
@@ -2077,9 +2647,14 @@
         document.getElementById("btnTourMainBindCurrent")?.addEventListener("click", bindEditorTourToMainButton);
         document.getElementById("btnTourMainSmooth")?.addEventListener("click", smoothTimeWaypoints);
         document.getElementById("btnTourMainCheck")?.addEventListener("click", () => diagnoseCurrentTourForPlayback({ silent: false }));
+        document.getElementById("btnTourProjectBind")?.addEventListener("click", bindEditorTourToMainButton);
         document.getElementById("btnTourSavedRecoverBest")?.addEventListener("click", recoverBestSavedTourAsMain);
+        document.getElementById("btnTourSavedSnapshot")?.addEventListener("click", saveCurrentTourSnapshot);
         document.getElementById("btnTourSavedRestore")?.addEventListener("click", () => restoreSelectedSavedTour(false));
         document.getElementById("btnTourSavedBind")?.addEventListener("click", () => restoreSelectedSavedTour(true));
+        document.getElementById("btnTourSavedDownload")?.addEventListener("click", downloadSelectedSavedTour);
+        document.getElementById("btnTourSavedDelete")?.addEventListener("click", deleteSelectedTourSnapshot);
+        document.getElementById("btnTourSavedPrune")?.addEventListener("click", () => pruneOldTourSnapshots());
         document.getElementById("btnTourSavedRefresh")?.addEventListener("click", () => {
           refreshSavedTourSelect();
           if ($tourStudioStatus) $tourStudioStatus.textContent = "历史 Tour 列表已刷新。";
@@ -2118,19 +2693,30 @@
         document.getElementById("btnTourEditorExport")?.addEventListener("click", exportTourJson);
         document.getElementById("btnTourEditorImport")?.addEventListener("click", importTourJson);
         document.getElementById("btnTourEditorClear")?.addEventListener("click", () => {
+          maybeAutoSnapshotBeforeReplace("clearing tour");
           customTour.waypoints = [];
+          customTour._meta = makeTourMeta({
+            sourceKind: "empty",
+            sourceLabel: "Empty Tour Studio editor",
+            dirty: true
+          });
           saveTourState();
           renderTourEditor();
         });
-        $tourNameInput.addEventListener("input", syncTourInputs);
-        $tourPauseInput.addEventListener("input", syncTourInputs);
+        $tourNameInput.addEventListener("input", () => syncTourInputs({ markDirty: true }));
+        $tourPauseInput.addEventListener("input", () => syncTourInputs({ markDirty: true }));
         $tourOverlayToggle?.addEventListener("change", () => {
           api.setTourStudioOverlayVisible?.(!!$tourOverlayToggle.checked);
           refreshTourStudio();
         });
+        ["btnTour1", "btnTourEdit", "btnTourStop"].forEach((id) => {
+          const btn = document.getElementById(id);
+          if (btn) btn.disabled = false;
+        });
         refreshSavedTourSelect();
         updateTourBindButtonState();
         updateMainTourStatusCard();
+        exposeWindowTools();
         window.__bp3dPureTourEditor = {
           open: () => setTourEditorVisible(true),
           close: () => setTourEditorVisible(false),
@@ -2148,11 +2734,16 @@
           downloadCurrentTourFile,
           importLocalTourFile,
           savedTours: listSavedTours,
+          saveSnapshot: saveCurrentTourSnapshot,
+          downloadSelectedSavedTour,
+          deleteSelectedSnapshot: deleteSelectedTourSnapshot,
+          pruneSnapshots: pruneOldTourSnapshots,
           refreshSavedTours: refreshSavedTourSelect,
           refreshMainTourStatus: updateMainTourStatusCard,
           restoreSavedTour,
           recoverBestSavedTourAsMain,
           refresh: refreshTourStudio,
+          source: () => ({ ...(customTour._meta || {}) }),
           state: () => cloneTourState(customTour),
           binding: () => ({ ...tourButtonBinding })
         };

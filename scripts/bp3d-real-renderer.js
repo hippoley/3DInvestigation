@@ -607,6 +607,9 @@ export async function createRealRenderer(canvas) {
     } else {
       controls.update();
     }
+    if (updateChuangshaAutoCycle()) {
+      _dirty = true;
+    }
 
     // Render only when dirty or within settle window
     if (_dirty || _idleFrames < IDLE_SETTLE_FRAMES) {
@@ -906,6 +909,9 @@ export async function createRealRenderer(canvas) {
   const replacedOriginals = new Set();
   const windowReplacementGroups = new Set();
   const windowReplacedOriginals = new Set();
+  const CHUANGSHA_AUTO_CYCLE_SECONDS = 20;
+  let chuangshaAutoCycleEnabled = true;
+  let chuangshaAutoCycleStartMs = (typeof performance !== "undefined" ? performance.now() : Date.now());
   let chuangshaProductCache = null;
   let chuangshaMaterialSet = null;
   const WALL_REPLACEMENT_IFC_TYPES = new Set([
@@ -2652,6 +2658,38 @@ ${shader.fragmentShader}`;
         clearcoat: 0.55,
         clearcoatRoughness: 0.12
       }),
+      glass: new THREE.MeshPhysicalMaterial({
+        color: 0xc7e6ee,
+        roughness: 0.018,
+        metalness: 0.0,
+        transparent: true,
+        opacity: 0.48,
+        transmission: 0.58,
+        ior: 1.52,
+        thickness: 0.055,
+        envMapIntensity: 2.65,
+        clearcoat: 1.0,
+        clearcoatRoughness: 0.035,
+        side: THREE.DoubleSide,
+        depthWrite: false
+      }),
+      darkTitanium: new THREE.MeshStandardMaterial({
+        color: 0x1e2624,
+        roughness: 0.32,
+        metalness: 0.82,
+        envMapIntensity: 1.4
+      }),
+      brightTitanium: new THREE.MeshStandardMaterial({
+        color: 0xd7dbd4,
+        roughness: 0.16,
+        metalness: 0.92,
+        envMapIntensity: 2.0
+      }),
+      rubber: new THREE.MeshStandardMaterial({
+        color: 0x070807,
+        roughness: 0.58,
+        metalness: 0.12
+      }),
       screen: new THREE.MeshStandardMaterial({
         color: 0xb8bcb5,
         roughness: 0.82,
@@ -2676,6 +2714,10 @@ ${shader.fragmentShader}`;
     chuangshaMaterialSet.label.name = "chuangsha_black_lower_label";
     chuangshaMaterialSet.display.name = "chuangsha_black_glass_display";
     chuangshaMaterialSet.button.name = "chuangsha_satin_control_button";
+    chuangshaMaterialSet.glass.name = "hybrid_push_window_recessed_glass";
+    chuangshaMaterialSet.darkTitanium.name = "hybrid_push_window_dark_titanium_gasket";
+    chuangshaMaterialSet.brightTitanium.name = "hybrid_push_window_bright_hardware";
+    chuangshaMaterialSet.rubber.name = "hybrid_push_window_black_rubber_shadow";
     chuangshaMaterialSet.screen.name = "chuangsha_fine_insect_screen";
     chuangshaMaterialSet.lines.name = "chuangsha_visible_screen_threads";
     return chuangshaMaterialSet;
@@ -2685,7 +2727,7 @@ ${shader.fragmentShader}`;
     if (!set) return;
     try { set.texture?.dispose?.(); } catch {}
     try { set.titaniumTexture?.dispose?.(); } catch {}
-    ["frame", "label", "display", "button", "screen", "lines"].forEach((key) => {
+    ["frame", "label", "display", "button", "glass", "darkTitanium", "brightTitanium", "rubber", "screen", "lines"].forEach((key) => {
       try { set[key]?.dispose?.(); } catch {}
     });
     if (set === chuangshaMaterialSet) chuangshaMaterialSet = null;
@@ -3178,6 +3220,489 @@ ${shader.fragmentShader}`;
     return group.userData.chuangshaMotionRig;
   }
 
+  function getHybridMotionNodeName(node) {
+    return String(node?.name || node?.userData?.name || "").toLowerCase();
+  }
+
+  function getHybridMotionMaterialName(node) {
+    if (!node?.isMesh) return "";
+    const materials = Array.isArray(node.material) ? node.material : [node.material];
+    return materials
+      .map((mat) => String(mat?.name || ""))
+      .join(" ")
+      .toLowerCase();
+  }
+
+  function isHybridGlassNode(node) {
+    if (!node?.isMesh) return false;
+    const name = getHybridMotionNodeName(node);
+    const materialName = getHybridMotionMaterialName(node);
+    return (
+      name.includes("glass") ||
+      materialName.includes("glass") ||
+      materialName.includes("transparent") ||
+      materialName.includes("glazing")
+    );
+  }
+
+  function tuneHybridGlassMaterial(material) {
+    if (!material) return material;
+    if ("color" in material && material.color?.setHex) material.color.setHex(0xc7e6ee);
+    if ("roughness" in material) material.roughness = 0.018;
+    if ("metalness" in material) material.metalness = 0.0;
+    if ("envMapIntensity" in material) material.envMapIntensity = 2.65;
+    if ("clearcoat" in material) material.clearcoat = 1.0;
+    if ("clearcoatRoughness" in material) material.clearcoatRoughness = 0.035;
+    if ("transmission" in material) material.transmission = Math.max(material.transmission || 0, 0.58);
+    if ("ior" in material) material.ior = 1.52;
+    if ("thickness" in material) material.thickness = Math.max(material.thickness || 0, 0.055);
+    if ("opacity" in material) material.opacity = Math.max(material.opacity ?? 0.42, 0.48);
+    material.transparent = true;
+    material.depthWrite = false;
+    material.side = THREE.DoubleSide;
+    if (scene.environment && "envMap" in material) material.envMap = scene.environment;
+    material.needsUpdate = true;
+    return material;
+  }
+
+  function getHybridScreenReleaseAxis(node) {
+    if (!node?.isMesh) return "y";
+    if (!node.geometry?.boundingBox) node.geometry?.computeBoundingBox?.();
+    const size = node.geometry?.boundingBox?.getSize(new THREE.Vector3()) || new THREE.Vector3(1, 1, 1);
+    const weighted = {
+      x: Math.abs(size.x * node.scale.x),
+      y: Math.abs(size.y * node.scale.y),
+      z: Math.abs(size.z * node.scale.z)
+    };
+    return Object.entries(weighted).sort((a, b) => b[1] - a[1])[0]?.[0] || "y";
+  }
+
+  function getHybridScreenAxisInfo(node, axis) {
+    if (!node?.isMesh) return { releaseExtent: 0.45, releaseSign: 1 };
+    if (!node.geometry?.boundingBox) node.geometry?.computeBoundingBox?.();
+    const box = node.geometry?.boundingBox;
+    if (!box) return { releaseExtent: 0.45, releaseSign: 1 };
+    node.updateMatrixWorld(true);
+    const minLocal = new THREE.Vector3(0, 0, 0);
+    const maxLocal = new THREE.Vector3(0, 0, 0);
+    minLocal[axis] = box.min[axis];
+    maxLocal[axis] = box.max[axis];
+    const minWorld = node.localToWorld(minLocal.clone());
+    const maxWorld = node.localToWorld(maxLocal.clone());
+    const releaseSign = maxWorld.y >= minWorld.y ? 1 : -1;
+    const releaseExtent = Math.max(0.001, Math.abs((box.max[axis] - box.min[axis]) * node.scale[axis]));
+    return { releaseExtent, releaseSign };
+  }
+
+  function captureHybridMotionTransform(node) {
+    const worldPosition = new THREE.Vector3();
+    node?.getWorldPosition?.(worldPosition);
+    return {
+      node,
+      basePosition: node.position.clone(),
+      baseRotation: node.rotation.clone(),
+      baseScale: node.scale.clone(),
+      baseWorldPosition: worldPosition
+    };
+  }
+
+  function refreshHybridMotionTransform(part) {
+    const node = part?.node;
+    if (!node) return part;
+    node.updateMatrixWorld(true);
+    node.getWorldPosition(part.baseWorldPosition || new THREE.Vector3());
+    part.basePosition = node.position.clone();
+    part.baseRotation = node.rotation.clone();
+    part.baseScale = node.scale.clone();
+    return part;
+  }
+
+  function refreshExportedHybridAssemblyMotionRigBase(group) {
+    const rig = group?.userData?.hybridAssemblyMotionRig;
+    if (!rig) return null;
+    group.updateMatrixWorld(true);
+    if (rig.pushPivot) {
+      rig.pushPivot.matrixAutoUpdate = true;
+      rig.pushPivot.updateMatrixWorld(true);
+      rig.pushBaseRotation = rig.pushPivot.rotation.clone();
+      rig.pushBaseLocalMatrix = rig.pushPivot.matrix.clone();
+      rig.pushBaseWorldMatrix = rig.pushPivot.matrixWorld.clone();
+      rig.pushBaseWorldPosition = new THREE.Vector3().setFromMatrixPosition(rig.pushBaseWorldMatrix);
+      rig.pushWorldAxis = new THREE.Vector3(0, 1, 0).transformDirection(rig.pushBaseWorldMatrix).normalize();
+      rig.pushPivot.matrixAutoUpdate = false;
+    }
+    (rig.screenParts || []).forEach(refreshHybridMotionTransform);
+    (rig.bottomChainParts || []).forEach(refreshHybridMotionTransform);
+    const fittedBox = new THREE.Box3().setFromObject(group);
+    if (finiteBox(fittedBox)) {
+      const fittedHeight = Math.max(0, fittedBox.max.y - fittedBox.min.y);
+      rig.screenTravel = Math.max(0.38, Math.min(1.1, fittedHeight * 0.36));
+      rig.bottomChainTravel = Math.max(0.065, Math.min(0.22, fittedHeight * 0.045));
+    }
+    rig.lastOpen = null;
+    rig.lastRelease = null;
+    return rig;
+  }
+
+  function moveNodeToWorldPosition(node, worldPosition) {
+    if (!node?.parent || !worldPosition) return;
+    node.parent.updateMatrixWorld(true);
+    node.position.copy(node.parent.worldToLocal(worldPosition.clone()));
+  }
+
+  function getObjectWorldHeight(object) {
+    if (!object) return 0;
+    const box = new THREE.Box3().setFromObject(object);
+    if (!finiteBox(box)) return 0;
+    return Math.max(0, box.max.y - box.min.y);
+  }
+
+  function buildExportedHybridAssemblyMotionRig(group) {
+    if (!group) return null;
+    let pushPivot = null;
+    const screenPanelNodes = [];
+    const screenThreadFallbackNodes = [];
+    const screenNodeSet = new Set();
+    const bottomChainNodes = [];
+    const bottomChainNodeSet = new Set();
+
+    group.traverse((node) => {
+      const name = getHybridMotionNodeName(node);
+      const materialName = getHybridMotionMaterialName(node);
+      if (!pushPivot && name.includes("hidden_left_reveal_side_swing_pivot")) {
+        pushPivot = node;
+      }
+      const isBottomChainNode =
+        name.includes("bottom chain opener moving seat") ||
+        name.includes("chain opener segment");
+      if (isBottomChainNode && !bottomChainNodeSet.has(node)) {
+        bottomChainNodeSet.add(node);
+        bottomChainNodes.push(node);
+      }
+      if (!node.isMesh || screenNodeSet.has(node)) return;
+      const isScreenPanel = materialName.includes("semi_transparent_fine_insect_screen_mesh");
+      const isThreadFallback =
+        name.includes("screen_mesh_threads") ||
+        name.includes("screen_cross_threads") ||
+        materialName.includes("screen_cross_threads");
+      if (isScreenPanel || isThreadFallback) {
+        screenNodeSet.add(node);
+        if (isScreenPanel) screenPanelNodes.push(node);
+        else screenThreadFallbackNodes.push(node);
+      }
+    });
+
+    const screenNodes = screenPanelNodes.length ? screenPanelNodes : screenThreadFallbackNodes;
+    if (!pushPivot && !screenNodes.length && !bottomChainNodes.length) return null;
+    const screenHeight = Math.max(...screenNodes.map((node) => getObjectWorldHeight(node)), 0);
+    const screenTravel = Math.max(0.22, Math.min(0.7, screenHeight * 0.42 || 0.36));
+    const rig = {
+      kind: "exported-hybrid-window-auto-cycle",
+      cycleSeconds: CHUANGSHA_AUTO_CYCLE_SECONDS,
+      pushPivot,
+      pushBaseRotation: pushPivot ? pushPivot.rotation.clone() : null,
+      pushOpenAngle: THREE.MathUtils.degToRad(38),
+      pushOpenSign: 1,
+      screenTravel,
+      screenParts: screenNodes.map((node) => {
+        const releaseAxis = getHybridScreenReleaseAxis(node);
+        const axisInfo = getHybridScreenAxisInfo(node, releaseAxis);
+        return {
+          ...captureHybridMotionTransform(node),
+          releaseAxis,
+          releaseExtent: axisInfo.releaseExtent,
+          releaseSign: axisInfo.releaseSign
+        };
+      }),
+      bottomChainParts: bottomChainNodes.map((node) => captureHybridMotionTransform(node)),
+      bottomChainTravel: Math.max(0.045, Math.min(0.16, screenTravel * 0.18)),
+      lastOpen: null,
+      lastRelease: null
+    };
+    (rig.bottomChainParts || []).forEach((part) => {
+      part.node?.traverse?.((child) => {
+        if (!child?.isMesh) return;
+        child.visible = true;
+        child.frustumCulled = false;
+        child.castShadow = true;
+        child.receiveShadow = true;
+        child.renderOrder = Math.max(child.renderOrder || 0, 12);
+        child.userData.hybridBottomChainMechanism = true;
+        const materials = Array.isArray(child.material) ? child.material : [child.material];
+        materials.forEach((mat) => {
+          if (!mat) return;
+          if (scene.environment && "envMap" in mat) mat.envMap = scene.environment;
+          if ("envMapIntensity" in mat) mat.envMapIntensity = Math.max(mat.envMapIntensity || 0, 1.25);
+          if ("roughness" in mat) mat.roughness = Math.min(mat.roughness ?? 0.6, 0.55);
+          mat.needsUpdate = true;
+        });
+      });
+    });
+    group.userData.hybridAssemblyMotionRig = rig;
+    return rig;
+  }
+
+  function applyHybridOnlyChuangshaMode(group, classification) {
+    if (!group || !classification?.parts?.length) return { hiddenOriginalParts: 0, preservedOriginalParts: 0 };
+    let hiddenOriginalParts = 0;
+    classification.parts.forEach((part) => {
+      const mesh = part.mesh;
+      if (!mesh?.isMesh || mesh.userData.chuangshaGeneratedHybridPart) return;
+      mesh.userData._hybridVisualHidden = true;
+      mesh.visible = false;
+      mesh.castShadow = false;
+      mesh.receiveShadow = false;
+      hiddenOriginalParts++;
+    });
+    group.userData.hybridOnlyVisualMode = {
+      hiddenOriginalParts,
+      preservedOriginalParts: 0,
+      preservedRoles: []
+    };
+    return group.userData.hybridOnlyVisualMode;
+  }
+
+  function preserveHybridChuangshaProductBody(group, classification) {
+    const parts = classification?.parts || [];
+    parts.forEach((part) => {
+      const mesh = part?.mesh;
+      if (!mesh?.isMesh) return;
+      mesh.userData._hybridVisualHidden = false;
+      mesh.visible = true;
+      mesh.castShadow = part.role !== "screen";
+      mesh.receiveShadow = part.role !== "screen";
+    });
+    group.userData.hybridOnlyVisualMode = {
+      hiddenOriginalParts: 0,
+      preservedOriginalParts: parts.length,
+      preservedRoles: Array.from(new Set(parts.map((part) => part.role).filter(Boolean))),
+      sourceProductBody: "chuangsha.glb",
+      sourceComposition: "hybrid-window.html preserves the indoor screen-machine body and adds the outward push sash"
+    };
+    return group.userData.hybridOnlyVisualMode;
+  }
+
+  function makeHybridPushBox(name, parent, material, size, position, options = {}) {
+    const geometry = new THREE.BoxGeometry(
+      Math.max(0.001, size.x),
+      Math.max(0.001, size.y),
+      Math.max(0.001, size.z)
+    );
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.name = name;
+    mesh.position.copy(position);
+    mesh.castShadow = options.castShadow ?? true;
+    mesh.receiveShadow = options.receiveShadow ?? true;
+    mesh.renderOrder = options.renderOrder ?? 0;
+    mesh.userData.chuangshaGeneratedHybridPart = true;
+    mesh.userData.chuangshaRole = options.role || "push_window_part";
+    parent.add(mesh);
+    return mesh;
+  }
+
+  function makeHybridPushCylinder(name, parent, material, radius, length, position, axis = "y", options = {}) {
+    const geometry = new THREE.CylinderGeometry(Math.max(0.001, radius), Math.max(0.001, radius), Math.max(0.001, length), options.segments || 20);
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.name = name;
+    mesh.position.copy(position);
+    if (axis === "x") mesh.rotation.z = Math.PI / 2;
+    if (axis === "z") mesh.rotation.x = Math.PI / 2;
+    mesh.castShadow = options.castShadow ?? true;
+    mesh.receiveShadow = options.receiveShadow ?? true;
+    mesh.renderOrder = options.renderOrder ?? 0;
+    mesh.userData.chuangshaGeneratedHybridPart = true;
+    mesh.userData.chuangshaRole = options.role || "push_window_part";
+    parent.add(mesh);
+    return mesh;
+  }
+
+  function getChuangshaProductLocalBox(group) {
+    const classificationParts = group?.userData?.chuangshaClassification?.parts || [];
+    const box = new THREE.Box3();
+    classificationParts.forEach((part) => {
+      if (finiteBox(part?.box)) box.union(part.box);
+    });
+    if (finiteBox(box)) return box;
+
+    const inverse = new THREE.Matrix4().copy(group.matrixWorld).invert();
+    group.updateMatrixWorld(true);
+    group.traverse((node) => {
+      if (!node?.isMesh || node.userData?.chuangshaGeneratedHybridPart) return;
+      const worldBox = new THREE.Box3().setFromObject(node);
+      if (!finiteBox(worldBox)) return;
+      const points = [
+        new THREE.Vector3(worldBox.min.x, worldBox.min.y, worldBox.min.z),
+        new THREE.Vector3(worldBox.min.x, worldBox.min.y, worldBox.max.z),
+        new THREE.Vector3(worldBox.min.x, worldBox.max.y, worldBox.min.z),
+        new THREE.Vector3(worldBox.min.x, worldBox.max.y, worldBox.max.z),
+        new THREE.Vector3(worldBox.max.x, worldBox.min.y, worldBox.min.z),
+        new THREE.Vector3(worldBox.max.x, worldBox.min.y, worldBox.max.z),
+        new THREE.Vector3(worldBox.max.x, worldBox.max.y, worldBox.min.z),
+        new THREE.Vector3(worldBox.max.x, worldBox.max.y, worldBox.max.z)
+      ];
+      points.forEach((point) => box.expandByPoint(point.applyMatrix4(inverse)));
+    });
+    return finiteBox(box) ? box : null;
+  }
+
+  function addHybridPushWindowAssembly(group, targetBox, fitInfo = {}, options = {}) {
+    if (!finiteBox(targetBox)) return null;
+    const preserveProductBody = options.preserveProductBody !== false;
+    const materialSet = getChuangshaMaterialSet();
+    const boxSize = targetBox.getSize(new THREE.Vector3());
+    const widthAxis = fitInfo.widthAxis === "x" ? "x" : "z";
+    const depthAxis = fitInfo.depthAxis === "z" ? "z" : "x";
+    const productLocalBox = getChuangshaProductLocalBox(group);
+    const productLocalCenter = productLocalBox?.getCenter(new THREE.Vector3()) || new THREE.Vector3(0, 0, 0);
+    const productLocalSize = productLocalBox?.getSize(new THREE.Vector3()) || new THREE.Vector3(
+      group.scale.x > 0 ? boxSize[widthAxis] / group.scale.x : boxSize[widthAxis],
+      group.scale.y > 0 ? boxSize.y / group.scale.y : boxSize.y,
+      group.scale.z > 0 ? Math.max(0.1, boxSize[depthAxis] * 0.7) / group.scale.z : 0.18
+    );
+    const localWidth = Math.max(productLocalSize.x, 0.1);
+    const localHeight = Math.max(productLocalSize.y, 0.1);
+    const localDepth = Math.max(productLocalSize.z, localHeight * 0.032, 0.18);
+    const sceneCenter = getSceneHorizontalCenter();
+    const targetCenter = targetBox.getCenter(new THREE.Vector3());
+    const worldInteriorSign = sceneCenter[depthAxis] >= targetCenter[depthAxis] ? 1 : -1;
+    const worldExteriorSign = -worldInteriorSign;
+    const inwardWorld = sceneCenter.clone().sub(targetCenter);
+    inwardWorld.y = 0;
+    if (inwardWorld.lengthSq() < 1e-6) inwardWorld[depthAxis] = worldInteriorSign;
+    inwardWorld.normalize();
+    const localPositiveDepthWorld = new THREE.Vector3(0, 0, 1)
+      .applyQuaternion(group.getWorldQuaternion(new THREE.Quaternion()));
+    localPositiveDepthWorld.y = 0;
+    if (localPositiveDepthWorld.lengthSq() < 1e-6) localPositiveDepthWorld[depthAxis] = worldInteriorSign;
+    localPositiveDepthWorld.normalize();
+    const localInteriorSign = localPositiveDepthWorld.dot(inwardWorld) >= 0 ? 1 : -1;
+    const localExteriorSign = -localInteriorSign;
+    const revealZ = 0;
+    const screenZ = localInteriorSign * Math.max(localDepth * 0.34, 0.035);
+    const controlZ = localInteriorSign * Math.max(localDepth * 0.48, 0.045);
+    const hingeZ = localExteriorSign * Math.max(localDepth * 0.34, 0.04);
+    const chainZ = localInteriorSign * Math.max(localDepth * 0.42, 0.04);
+    const sashDepthOffset = localExteriorSign * Math.max(localDepth * 0.64, 0.06);
+    const rail = Math.max(Math.min(localWidth, localHeight) * 0.075, 0.035);
+    const sashWidth = Math.max(localWidth * 0.88, localWidth - rail * 2.2);
+    const sashHeight = Math.max(localHeight * 0.9, localHeight - rail * 1.8);
+    const sashDepth = Math.max(localDepth * 0.42, 0.045);
+    const glassWidth = Math.max(sashWidth - rail * 2.2, localWidth * 0.42);
+    const glassHeight = Math.max(sashHeight - rail * 2.2, localHeight * 0.5);
+    const makeVec = (x, y, z) => new THREE.Vector3(x, y, z);
+    const makeSize = (x, y, z) => new THREE.Vector3(
+      Math.max(0.001, x),
+      Math.max(0.001, y),
+      Math.max(0.001, z)
+    );
+
+    const assembly = new THREE.Group();
+    assembly.name = "hybrid_push_window_integrated_sash_and_screen";
+    assembly.position.copy(productLocalCenter);
+    assembly.userData.chuangshaGeneratedHybridAssembly = true;
+    assembly.userData.chuangshaRole = "push_window_assembly";
+    group.add(assembly);
+
+    const fixed = new THREE.Group();
+    fixed.name = "hybrid_fixed_titanium_reveal_frame";
+    assembly.add(fixed);
+
+    const pivot = new THREE.Group();
+    pivot.name = "hybrid_left_reveal_push_sash_pivot";
+    pivot.position.copy(makeVec(-sashWidth * 0.5, 0, sashDepthOffset));
+    assembly.add(pivot);
+
+    const sash = new THREE.Group();
+    sash.name = "hybrid_push_out_glass_sash_open_18deg";
+    sash.position.copy(makeVec(sashWidth * 0.5, 0, 0));
+    pivot.add(sash);
+
+    const frameZ = revealZ;
+    makeHybridPushBox("hybrid_outer_left_fixed_titanium_stile", fixed, materialSet.frame, makeSize(rail, localHeight * 0.94, sashDepth * 0.72), makeVec(-localWidth * 0.5 + rail * 0.5, 0, frameZ), { role: "fixed_push_frame" });
+    makeHybridPushBox("hybrid_outer_right_fixed_titanium_stile", fixed, materialSet.frame, makeSize(rail, localHeight * 0.94, sashDepth * 0.72), makeVec(localWidth * 0.5 - rail * 0.5, 0, frameZ), { role: "fixed_push_frame" });
+    makeHybridPushBox("hybrid_outer_top_fixed_titanium_rail", fixed, materialSet.frame, makeSize(localWidth, rail, sashDepth * 0.72), makeVec(0, localHeight * 0.5 - rail * 0.5, frameZ), { role: "fixed_push_frame" });
+    makeHybridPushBox("hybrid_outer_bottom_fixed_titanium_rail", fixed, materialSet.frame, makeSize(localWidth, rail, sashDepth * 0.72), makeVec(0, -localHeight * 0.5 + rail * 0.5, frameZ), { role: "fixed_push_frame" });
+
+    makeHybridPushBox("hybrid_sash_left_titanium_stile", sash, materialSet.frame, makeSize(rail, sashHeight, sashDepth), makeVec(-sashWidth * 0.5 + rail * 0.5, 0, 0), { role: "push_sash_frame" });
+    makeHybridPushBox("hybrid_sash_right_titanium_stile_with_handle", sash, materialSet.frame, makeSize(rail, sashHeight, sashDepth), makeVec(sashWidth * 0.5 - rail * 0.5, 0, 0), { role: "push_sash_frame" });
+    makeHybridPushBox("hybrid_sash_top_titanium_rail", sash, materialSet.frame, makeSize(sashWidth, rail, sashDepth), makeVec(0, sashHeight * 0.5 - rail * 0.5, 0), { role: "push_sash_frame" });
+    makeHybridPushBox("hybrid_sash_bottom_titanium_rail", sash, materialSet.frame, makeSize(sashWidth, rail, sashDepth), makeVec(0, -sashHeight * 0.5 + rail * 0.5, 0), { role: "push_sash_frame" });
+    makeHybridPushBox("hybrid_recessed_outer_glass_panel", sash, materialSet.glass, makeSize(glassWidth, glassHeight, Math.max(sashDepth * 0.13, 0.012)), makeVec(0, 0, localExteriorSign * sashDepth * 0.18), { role: "push_glass", castShadow: false, receiveShadow: false, renderOrder: 2 });
+    if (!preserveProductBody) {
+      const screenDepth = Math.max(sashDepth * 0.09, 0.009);
+      const screen = makeHybridPushBox(
+        "hybrid_integrated_inner_screen_mesh",
+        fixed,
+        materialSet.screen,
+        makeSize(glassWidth * 0.94, glassHeight * 0.94, screenDepth),
+        makeVec(0, 0, screenZ),
+        { role: "screen", castShadow: false, receiveShadow: false, renderOrder: 3 }
+      );
+      const screenPlaneInfo = getGeometryPlaneInfo(screen.geometry);
+      applyChuangshaScreenUvs(screen, screenPlaneInfo);
+      addChuangshaScreenLines(screen, materialSet.lines, screenPlaneInfo);
+      addChuangshaScreenInsetRetainers(screen, materialSet.frame, screenPlaneInfo);
+    }
+    makeHybridPushBox("hybrid_inner_black_compression_gasket_left", sash, materialSet.darkTitanium, makeSize(rail * 0.22, glassHeight, Math.max(sashDepth * 0.18, 0.012)), makeVec(-glassWidth * 0.5 - rail * 0.1, 0, localInteriorSign * sashDepth * 0.44), { role: "push_gasket", renderOrder: 4 });
+    makeHybridPushBox("hybrid_inner_black_compression_gasket_right", sash, materialSet.darkTitanium, makeSize(rail * 0.22, glassHeight, Math.max(sashDepth * 0.18, 0.012)), makeVec(glassWidth * 0.5 + rail * 0.1, 0, localInteriorSign * sashDepth * 0.44), { role: "push_gasket", renderOrder: 4 });
+
+    const hingeX = -sashWidth * 0.5 - rail * 0.2;
+    [-0.32, 0.32].forEach((factor, index) => {
+      const y = sashHeight * factor;
+      makeHybridPushCylinder(`hybrid_visible_left_hinge_barrel_${index + 1}`, fixed, materialSet.brightTitanium, rail * 0.22, rail * 1.5, makeVec(-sashWidth * 0.5 - rail * 0.58, y, hingeZ), "y", { role: "push_hinge", renderOrder: 8 });
+      makeHybridPushBox(`hybrid_fixed_hinge_leaf_${index + 1}`, fixed, materialSet.brightTitanium, makeSize(rail * 0.7, rail * 1.7, rail * 0.22), makeVec(-sashWidth * 0.5 - rail * 0.5, y, hingeZ), { role: "push_hinge", renderOrder: 7 });
+      makeHybridPushBox(`hybrid_moving_hinge_leaf_${index + 1}`, sash, materialSet.brightTitanium, makeSize(rail * 0.65, rail * 1.6, rail * 0.2), makeVec(hingeX, y, localExteriorSign * sashDepth * 0.45), { role: "push_hinge", renderOrder: 7 });
+    });
+
+    const handleHeight = Math.min(sashHeight * 0.24, Math.max(rail * 5.4, 0.16));
+    const handleX = sashWidth * 0.5 - rail * 1.15;
+    const handleZ = localInteriorSign * (sashDepth * 0.72 + rail * 0.18);
+    makeHybridPushBox("hybrid_right_free_edge_recessed_handle_shadow_pocket", sash, materialSet.rubber, makeSize(rail * 0.68, handleHeight * 1.26, rail * 0.22), makeVec(handleX, 0, handleZ - localInteriorSign * rail * 0.08), { role: "push_handle", renderOrder: 9 });
+    makeHybridPushCylinder("hybrid_right_free_edge_raised_push_handle_grip", sash, materialSet.brightTitanium, rail * 0.22, handleHeight, makeVec(handleX, 0, handleZ), "y", { role: "push_handle", renderOrder: 10 });
+    if (!preserveProductBody) {
+      makeHybridPushBox("hybrid_bottom_black_display_screen", fixed, materialSet.display, makeSize(Math.max(sashWidth * 0.30, rail * 3.2), rail * 0.52, rail * 0.34), makeVec(-sashWidth * 0.18, -sashHeight * 0.5 - rail * 0.18, controlZ), { role: "display_panel", castShadow: false, receiveShadow: false, renderOrder: 15 });
+      makeHybridPushBox("hybrid_bottom_satin_control_button", fixed, materialSet.button, makeSize(rail * 0.78, rail * 0.50, rail * 0.38), makeVec(sashWidth * 0.12, -sashHeight * 0.5 - rail * 0.17, controlZ), { role: "control_button", renderOrder: 16 });
+    }
+    makeHybridPushBox("hybrid_bottom_chain_opener_drive_housing_black", fixed, materialSet.rubber, makeSize(Math.max(sashWidth * 0.22, rail * 2.4), rail * 0.36, rail * 0.52), makeVec(0, -sashHeight * 0.5 - rail * 0.54, chainZ), { role: "chain_opener", renderOrder: 12 });
+    makeHybridPushBox("hybrid_bottom_chain_opener_satin_cover", fixed, materialSet.brightTitanium, makeSize(Math.max(sashWidth * 0.16, rail * 1.7), rail * 0.2, rail * 0.34), makeVec(0, -sashHeight * 0.5 - rail * 0.54, controlZ), { role: "chain_opener", renderOrder: 13 });
+    makeHybridPushCylinder("hybrid_bottom_push_chain_linkage_to_sash", fixed, materialSet.brightTitanium, rail * 0.105, Math.max(sashWidth * 0.22, rail * 2.2), makeVec(0, -sashHeight * 0.5 - rail * 0.28, controlZ), "x", { role: "chain_opener", renderOrder: 14, segments: 12 });
+
+    pivot.rotation.y = -localExteriorSign * THREE.MathUtils.degToRad(18);
+    group.userData.hybridPushWindow = {
+      kind: "outward-casement-plus-integrated-screen",
+      openAngleDeg: 18,
+      widthAxis,
+      depthAxis,
+      normalAxis: depthAxis,
+      interiorSign: worldInteriorSign,
+      exteriorSign: worldExteriorSign,
+      localInteriorSign,
+      localExteriorSign,
+      screenSide: "interior",
+      controlsSide: "interior",
+      pushSashSide: "exterior",
+      singleHybridWindowAssembly: true,
+      sourceReference: "hybrid-window.html",
+      sourcePolicy: "preserve chuangsha.glb product body; derive only the outward push sash and frame around it",
+      preservesSourceProductBody: preserveProductBody,
+      generatedInteriorScreen: !preserveProductBody,
+      generatedInteriorControls: !preserveProductBody,
+      sourceProductLocalBox: productLocalBox ? boxSnapshot(productLocalBox) : null,
+      width: +localWidth.toFixed(4),
+      height: +localHeight.toFixed(4),
+      sashWidth: +sashWidth.toFixed(4),
+      sashHeight: +sashHeight.toFixed(4),
+      hasPushSash: true,
+      hasScreen: true,
+      hasHandle: true,
+      hasBottomChainOpener: true,
+      hasDisplay: true,
+      hasControlButton: true,
+      hybridOnly: true
+    };
+    return assembly;
+  }
+
   function getChuangshaMotionGroups(tag = null) {
     const tagText = tag == null ? null : String(tag);
     return Array.from(windowReplacementGroups).filter((group) => (
@@ -3204,6 +3729,23 @@ ${shader.fragmentShader}`;
       return { open: 1 - close, release: 0, stage: "closing" };
     }
     return { open: 0, release: 0, stage: "closed" };
+  }
+
+  function getChuangshaAutoCycleStateAt(elapsedSeconds = 0) {
+    const duration = CHUANGSHA_AUTO_CYCLE_SECONDS;
+    const elapsed = Number.isFinite(elapsedSeconds) ? elapsedSeconds : 0;
+    const phase = ((elapsed % duration) + duration) % duration;
+    if (phase < 2) return { open: 0, release: 0, stage: "closed-hold", phase, cycleSeconds: duration };
+    if (phase < 7) {
+      const t = smoothChuangshaMotion((phase - 2) / 5);
+      return { open: t, release: Math.min(1, t * 1.25), stage: "opening", phase, cycleSeconds: duration };
+    }
+    if (phase < 10) return { open: 1, release: 0.22, stage: "open-hold", phase, cycleSeconds: duration };
+    if (phase < 16) {
+      const t = smoothChuangshaMotion((phase - 10) / 6);
+      return { open: 1 - t, release: Math.max(0, 0.2 - t * 0.2), stage: "closing", phase, cycleSeconds: duration };
+    }
+    return { open: 0, release: 0, stage: "closed-rest", phase, cycleSeconds: duration };
   }
 
   function applyChuangshaMotionToGroup(group, openAmount = 0, releaseAmount = 0) {
@@ -3239,11 +3781,135 @@ ${shader.fragmentShader}`;
     return true;
   }
 
+  function applyExportedHybridAssemblyMotionToGroup(group, openAmount = 0, releaseAmount = 0) {
+    const rig = group?.userData?.hybridAssemblyMotionRig;
+    if (!rig) return false;
+    const open = smoothChuangshaMotion(openAmount);
+    const release = smoothChuangshaMotion(releaseAmount);
+    if (
+      rig.lastOpen !== null &&
+      Math.abs((rig.lastOpen || 0) - open) < 0.0005 &&
+      Math.abs((rig.lastRelease || 0) - release) < 0.0005
+    ) {
+      return false;
+    }
+    rig.lastOpen = open;
+    rig.lastRelease = release;
+
+    if (rig.pushPivot?.parent && rig.pushBaseWorldMatrix && rig.pushBaseWorldPosition && rig.pushWorldAxis) {
+      const angle = (rig.pushOpenSign || 1) * (rig.pushOpenAngle || 0) * open;
+      const rotateWorld = new THREE.Matrix4().makeRotationAxis(rig.pushWorldAxis, angle);
+      const aroundPivot = new THREE.Matrix4()
+        .makeTranslation(rig.pushBaseWorldPosition.x, rig.pushBaseWorldPosition.y, rig.pushBaseWorldPosition.z)
+        .multiply(rotateWorld)
+        .multiply(new THREE.Matrix4().makeTranslation(
+          -rig.pushBaseWorldPosition.x,
+          -rig.pushBaseWorldPosition.y,
+          -rig.pushBaseWorldPosition.z
+        ));
+      const worldMatrix = aroundPivot.multiply(rig.pushBaseWorldMatrix);
+      rig.pushPivot.parent.updateMatrixWorld(true);
+      const parentInverse = new THREE.Matrix4().copy(rig.pushPivot.parent.matrixWorld).invert();
+      rig.pushPivot.matrixAutoUpdate = false;
+      rig.pushPivot.matrix.copy(parentInverse.multiply(worldMatrix));
+      rig.pushPivot.matrix.decompose(rig.pushPivot.position, rig.pushPivot.quaternion, rig.pushPivot.scale);
+      rig.pushPivot.updateMatrixWorld(true);
+    }
+
+    (rig.screenParts || []).forEach((part) => {
+      const node = part.node;
+      if (!node?.parent) return;
+      node.position.copy(part.basePosition);
+      node.rotation.copy(part.baseRotation);
+      node.scale.copy(part.baseScale);
+      const worldPosition = part.baseWorldPosition.clone();
+      worldPosition.y += (rig.screenTravel || 0.36) * open;
+      moveNodeToWorldPosition(node, worldPosition);
+      node.updateMatrixWorld(true);
+    });
+    const chainWorldDirection = new THREE.Vector3();
+    const pushMeta = group.userData.hybridPushWindow || null;
+    if (pushMeta?.normalAxis && Number.isFinite(pushMeta.exteriorSign)) {
+      chainWorldDirection[pushMeta.normalAxis] = pushMeta.exteriorSign;
+    } else {
+      chainWorldDirection.set(0, 0, 1).applyQuaternion(group.getWorldQuaternion(new THREE.Quaternion()));
+      chainWorldDirection.y = 0;
+    }
+    if (chainWorldDirection.lengthSq() < 1e-6) chainWorldDirection.set(0, 0, 1);
+    chainWorldDirection.normalize();
+    (rig.bottomChainParts || []).forEach((part) => {
+      const node = part.node;
+      if (!node?.parent) return;
+      node.position.copy(part.basePosition);
+      node.rotation.copy(part.baseRotation);
+      node.scale.copy(part.baseScale);
+      const worldPosition = part.baseWorldPosition.clone().addScaledVector(chainWorldDirection, (rig.bottomChainTravel || 0.08) * open);
+      moveNodeToWorldPosition(node, worldPosition);
+      node.updateMatrixWorld(true);
+    });
+    return !!(rig.pushPivot || rig.screenParts?.length || rig.bottomChainParts?.length);
+  }
+
+  function applyChuangshaProductMotionToGroup(group, openAmount = 0, releaseAmount = 0) {
+    const screenChanged = applyChuangshaMotionToGroup(group, openAmount, releaseAmount);
+    const assemblyChanged = applyExportedHybridAssemblyMotionToGroup(group, openAmount, releaseAmount);
+    return screenChanged || assemblyChanged;
+  }
+
+  function updateChuangshaAutoCycle() {
+    if (!chuangshaAutoCycleEnabled) return false;
+    const groups = getChuangshaMotionGroups();
+    if (!groups.length) return false;
+    const nowMs = typeof performance !== "undefined" ? performance.now() : Date.now();
+    const elapsed = (nowMs - chuangshaAutoCycleStartMs) / 1000;
+    const state = getChuangshaAutoCycleStateAt(elapsed);
+    let changed = false;
+    let pushRigCount = 0;
+    let screenPartCount = 0;
+    let bottomChainPartCount = 0;
+    groups.forEach((group) => {
+      changed = applyChuangshaProductMotionToGroup(group, state.open, state.release) || changed;
+      group.userData.chuangshaAutoCycleState = state;
+      group.userData.chuangshaMotionState = state;
+      const rig = group.userData.hybridAssemblyMotionRig || null;
+      if (rig?.pushPivot) pushRigCount++;
+      screenPartCount += rig?.screenParts?.length || 0;
+      bottomChainPartCount += rig?.bottomChainParts?.length || 0;
+    });
+    if (typeof document !== "undefined" && document.body) {
+      document.body.dataset.chuangshaAutoCycleState = JSON.stringify({
+        enabled: true,
+        elapsed: +elapsed.toFixed(2),
+        phase: +Number(state.phase || 0).toFixed(2),
+        stage: state.stage,
+        open: +Number(state.open || 0).toFixed(3),
+        release: +Number(state.release || 0).toFixed(3),
+        cycleSeconds: CHUANGSHA_AUTO_CYCLE_SECONDS,
+        groups: groups.length,
+        pushRigs: pushRigCount,
+        screenParts: screenPartCount,
+        bottomChainParts: bottomChainPartCount
+      });
+    }
+    return changed;
+  }
+
+  function setChuangshaAutoCycleEnabled(enabled = true) {
+    chuangshaAutoCycleEnabled = !!enabled;
+    chuangshaAutoCycleStartMs = typeof performance !== "undefined" ? performance.now() : Date.now();
+    if (!chuangshaAutoCycleEnabled) resetChuangshaProductMotion();
+    markDirty();
+    return {
+      enabled: chuangshaAutoCycleEnabled,
+      cycleSeconds: CHUANGSHA_AUTO_CYCLE_SECONDS
+    };
+  }
+
   function setChuangshaProductMotionAtTime(tag, elapsedSeconds = 0) {
     const state = getChuangshaOpenStateAt(elapsedSeconds);
     let changed = false;
     getChuangshaMotionGroups(tag).forEach((group) => {
-      changed = applyChuangshaMotionToGroup(group, state.open, state.release) || changed;
+      changed = applyChuangshaProductMotionToGroup(group, state.open, state.release) || changed;
       group.userData.chuangshaMotionState = state;
     });
     if (typeof document !== "undefined" && document.body) {
@@ -3262,7 +3928,7 @@ ${shader.fragmentShader}`;
   function resetChuangshaProductMotion(tag = null) {
     let changed = false;
     getChuangshaMotionGroups(tag).forEach((group) => {
-      changed = applyChuangshaMotionToGroup(group, 0, 0) || changed;
+      changed = applyChuangshaProductMotionToGroup(group, 0, 0) || changed;
       group.userData.chuangshaMotionState = { open: 0, release: 0, stage: "closed" };
     });
     if (typeof document !== "undefined" && document.body) {
@@ -3301,6 +3967,10 @@ ${shader.fragmentShader}`;
     return promise;
   }
 
+  async function loadHybridWindowAssemblyAsset(url = "./hybrid-window-assembly.glb") {
+    return loadChuangshaWindowAsset(url);
+  }
+
   function prepareChuangshaWindowInstance(asset) {
     const wrapper = new THREE.Group();
     wrapper.name = "replacement:window:chuangsha";
@@ -3315,7 +3985,44 @@ ${shader.fragmentShader}`;
     content.position.sub(new THREE.Vector3(sourceCenter.x, sourceBox.min.y, sourceCenter.z));
     wrapper.updateMatrixWorld(true);
     const classification = applyChuangshaMaterials(wrapper);
+    wrapper.userData.chuangshaClassification = classification;
     buildChuangshaMotionRig(wrapper, classification);
+    return wrapper;
+  }
+
+  function prepareHybridWindowAssemblyInstance(asset) {
+    const wrapper = new THREE.Group();
+    wrapper.name = "replacement:window:hybrid-assembly";
+    const content = asset.root.clone(true);
+    content.traverse((node) => {
+      if (node.isMesh) {
+        if (node.geometry?.clone) node.geometry = node.geometry.clone();
+        const mats = Array.isArray(node.material) ? node.material : [node.material];
+        node.material = Array.isArray(node.material)
+          ? mats.map((mat) => mat?.clone?.() || mat)
+          : (node.material?.clone?.() || node.material);
+        node.castShadow = true;
+        node.receiveShadow = true;
+        node.frustumCulled = false;
+        const materialList = Array.isArray(node.material) ? node.material : [node.material];
+        materialList.forEach((mat) => {
+          if (!mat) return;
+          if (scene.environment && "envMap" in mat) mat.envMap = scene.environment;
+          if ("envMapIntensity" in mat) mat.envMapIntensity = Math.max(mat.envMapIntensity || 0, 1.2);
+          if (isHybridGlassNode(node)) tuneHybridGlassMaterial(mat);
+          mat.needsUpdate = true;
+        });
+      }
+    });
+    wrapper.add(content);
+    wrapper.updateMatrixWorld(true);
+    const sourceBox = new THREE.Box3().setFromObject(wrapper);
+    const sourceCenter = sourceBox.getCenter(new THREE.Vector3());
+    content.position.sub(new THREE.Vector3(sourceCenter.x, sourceBox.min.y, sourceCenter.z));
+    wrapper.updateMatrixWorld(true);
+    wrapper.userData.chuangshaClassification = classifyChuangshaParts(getChuangshaMeshSummaries(wrapper));
+    wrapper.userData.hybridAssemblySource = asset.url;
+    buildExportedHybridAssemblyMotionRig(wrapper);
     return wrapper;
   }
 
@@ -3349,9 +4056,14 @@ ${shader.fragmentShader}`;
       options.maxDepth ?? 0.12,
       Math.max(targetSize[depthAxis] * 0.96, options.minDepth ?? 0.052)
     );
-    const sx = (targetSize[widthAxis] / Math.max(sourceSize.x, 0.001)) * fitPadding;
-    const sy = (targetSize.y / Math.max(sourceSize.y, 0.001)) * (options.heightPadding ?? 0.985);
-    const sz = (targetDepth / Math.max(sourceSize.z, 0.001)) * depthPadding;
+    const preserveProductAspect = options.preserveProductAspect === true && options.preserveProductBody !== false;
+    const widthScale = (targetSize[widthAxis] / Math.max(sourceSize.x, 0.001)) * fitPadding;
+    const heightScale = (targetSize.y / Math.max(sourceSize.y, 0.001)) * (options.heightPadding ?? 0.985);
+    const sx = preserveProductAspect ? Math.min(widthScale, heightScale) : widthScale;
+    const sy = preserveProductAspect ? sx : heightScale;
+    const sz = preserveProductAspect
+      ? sx
+      : (targetDepth / Math.max(sourceSize.z, 0.001)) * depthPadding;
     group.rotation.set(0, rotationY, 0);
     group.scale.set(Math.max(sx, 0.001), Math.max(sy, 0.001), Math.max(sz, 0.001));
     group.updateMatrixWorld(true);
@@ -3368,6 +4080,7 @@ ${shader.fragmentShader}`;
       rotationY,
       widthAxis,
       depthAxis,
+      preserveProductAspect,
       scale: group.scale.toArray().map((n) => +n.toFixed(4)),
       targetDepth: +targetDepth.toFixed(4),
       targetBox: boxSnapshot(targetBox),
@@ -3375,15 +4088,108 @@ ${shader.fragmentShader}`;
     };
   }
 
+  function fitHybridWindowAssemblyToBox(group, targetBox, sceneCenter, options = {}) {
+    const targetCenter = targetBox.getCenter(new THREE.Vector3());
+    const targetSize = targetBox.getSize(new THREE.Vector3());
+    const widthAxis = targetSize.x >= targetSize.z ? "x" : "z";
+    const depthAxis = widthAxis === "x" ? "z" : "x";
+    const inward = sceneCenter.clone().sub(targetCenter);
+    const inwardSign = inward[depthAxis] >= 0 ? 1 : -1;
+    const rotationY = widthAxis === "x"
+      ? (inwardSign >= 0 ? 0 : Math.PI)
+      : (inwardSign >= 0 ? Math.PI / 2 : -Math.PI / 2);
+
+    group.position.set(0, 0, 0);
+    group.rotation.set(0, rotationY, 0);
+    group.scale.set(1, 1, 1);
+    group.updateMatrixWorld(true);
+    const sourceBox = new THREE.Box3().setFromObject(group);
+    const sourceSize = sourceBox.getSize(new THREE.Vector3());
+    const fitPadding = options.padding ?? 1;
+    const heightPadding = options.heightPadding ?? 1;
+    const depthPadding = options.depthPadding ?? 1;
+    const sx = (targetSize[widthAxis] / Math.max(sourceSize[widthAxis], 0.001)) * fitPadding;
+    const sy = (targetSize.y / Math.max(sourceSize.y, 0.001)) * heightPadding;
+    const sz = (targetSize[depthAxis] / Math.max(sourceSize[depthAxis], 0.001)) * depthPadding;
+    group.scale.set(Math.max(sx, 0.001), Math.max(sy, 0.001), Math.max(sz, 0.001));
+    group.updateMatrixWorld(true);
+
+    const scaledBox = new THREE.Box3().setFromObject(group);
+    const scaledCenter = scaledBox.getCenter(new THREE.Vector3());
+    group.position.set(
+      targetCenter.x - scaledCenter.x,
+      targetCenter.y - scaledCenter.y,
+      targetCenter.z - scaledCenter.z
+    );
+    group.updateMatrixWorld(true);
+    refreshExportedHybridAssemblyMotionRigBase(group);
+
+    const worldInteriorSign = sceneCenter[depthAxis] >= targetCenter[depthAxis] ? 1 : -1;
+    const worldExteriorSign = -worldInteriorSign;
+    group.userData.hybridPushWindow = {
+      kind: "exported-hybrid-window-assembly",
+      sourceReference: "hybrid-window.html",
+      sourceAsset: "hybrid-window-assembly.glb",
+      normalAxis: depthAxis,
+      widthAxis,
+      depthAxis,
+      interiorSign: worldInteriorSign,
+      exteriorSign: worldExteriorSign,
+      screenSide: "interior",
+      controlsSide: "interior",
+      pushSashSide: "exterior",
+      preservesSourceProductBody: true,
+      exportedWholeAssembly: true,
+      singleHybridWindowAssembly: true,
+      generatedInteriorScreen: false,
+      generatedInteriorControls: false,
+      hasPushSash: true,
+      hasScreen: true,
+      hasHandle: true,
+      hasBottomChainOpener: true,
+      hasDisplay: true,
+      hasControlButton: true,
+      hybridOnly: true
+    };
+    group.userData.hybridOnlyVisualMode = {
+      hiddenOriginalParts: 0,
+      preservedOriginalParts: null,
+      preservedRoles: ["exported-whole-assembly"],
+      sourceProductBody: "hybrid-window-assembly.glb",
+      sourceComposition: "complete exported product assembly from hybrid-window.html"
+    };
+
+    return {
+      rotationY,
+      widthAxis,
+      depthAxis,
+      exportedWholeAssembly: true,
+      scale: group.scale.toArray().map((n) => +n.toFixed(4)),
+      targetBox: boxSnapshot(targetBox),
+      fittedBox: boxSnapshot(new THREE.Box3().setFromObject(group))
+    };
+  }
+
+  function normalizeWindowTags(tags = []) {
+    const list = Array.isArray(tags) ? tags : [tags];
+    return Array.from(new Set(list.map((tag) => String(tag ?? "").trim()).filter(Boolean)));
+  }
+
   function collectWindowReplacementTargets(tags = []) {
-    const tagSet = new Set(tags.map((tag) => String(tag)));
+    const tagSet = new Set(normalizeWindowTags(tags));
     const byTag = new Map();
+    const addMeshToTarget = (item, obj) => {
+      if (!item || item.meshes.includes(obj)) return false;
+      const box = new THREE.Box3().setFromObject(obj);
+      if (!finiteBox(box)) return false;
+      item.meshes.push(obj);
+      item.box.union(box);
+      return true;
+    };
     root.traverse((obj) => {
       if (!isWindowMesh(obj) || obj.userData._windowReplacementHidden) return;
       const tag = obj.userData.windowTag != null ? String(obj.userData.windowTag) : null;
       if (!tag || !tagSet.has(tag)) return;
-      const box = new THREE.Box3().setFromObject(obj);
-      if (!finiteBox(box)) return;
       let item = byTag.get(tag);
       if (!item) {
         item = {
@@ -3397,9 +4203,20 @@ ${shader.fragmentShader}`;
         };
         byTag.set(tag, item);
       }
-      item.meshes.push(obj);
-      item.box.union(box);
+      addMeshToTarget(item, obj);
     });
+    const byExpressID = new Map();
+    byTag.forEach((item) => {
+      if (item.expressID != null) byExpressID.set(String(item.expressID), item);
+    });
+    if (byExpressID.size) {
+      root.traverse((obj) => {
+        if (!isWindowMesh(obj) || obj.userData._windowReplacementHidden) return;
+        const expressID = obj.userData.expressID != null ? String(obj.userData.expressID) : null;
+        if (!expressID) return;
+        addMeshToTarget(byExpressID.get(expressID), obj);
+      });
+    }
     return Array.from(byTag.values()).sort((a, b) => String(a.tag).localeCompare(String(b.tag)));
   }
 
@@ -3412,6 +4229,59 @@ ${shader.fragmentShader}`;
       meshCount: item.meshes.length,
       box: boxSnapshot(item.box)
     }));
+  }
+
+  function debugWindowReplacementState(tags = []) {
+    const tagSet = new Set(normalizeWindowTags(tags));
+    const rows = new Map();
+    const ensureRow = (tag) => {
+      const key = String(tag || "");
+      if (!key) return null;
+      if (!rows.has(key)) {
+        rows.set(key, {
+          tag: key,
+          replacementGroups: 0,
+          originalMeshes: 0,
+          hiddenOriginalMeshes: 0,
+          visibleOriginalMeshes: 0,
+          samples: []
+        });
+      }
+      return rows.get(key);
+    };
+    windowReplacementGroups.forEach((group) => {
+      const tag = String(group?.userData?.replacedWindowTag ?? "");
+      if (tagSet.size && !tagSet.has(tag)) return;
+      const row = ensureRow(tag);
+      if (!row) return;
+      row.replacementGroups++;
+      row.hybridOnlyVisualMode = group.userData.hybridOnlyVisualMode || null;
+      row.samples.push({
+        kind: "replacement",
+        visible: !!group.visible,
+        name: group.name || null
+      });
+    });
+    root.traverse((obj) => {
+      if (!isWindowMesh(obj)) return;
+      const tag = String(obj.userData.windowTag ?? "");
+      if (!tag || (tagSet.size && !tagSet.has(tag))) return;
+      const row = ensureRow(tag);
+      if (!row) return;
+      row.originalMeshes++;
+      if (obj.userData._windowReplacementHidden || !obj.visible) row.hiddenOriginalMeshes++;
+      else row.visibleOriginalMeshes++;
+      if (row.samples.length < 8) {
+        row.samples.push({
+          kind: "original",
+          visible: !!obj.visible,
+          hiddenFlag: !!obj.userData._windowReplacementHidden,
+          name: obj.name || null,
+          expressID: obj.userData.expressID ?? null
+        });
+      }
+    });
+    return Array.from(rows.values()).sort((a, b) => String(a.tag).localeCompare(String(b.tag)));
   }
 
   function unionRoleBox(roleBoxes, role, box) {
@@ -5894,12 +6764,20 @@ ${shader.fragmentShader}`;
       .map((group) => {
         const state = group.userData.chuangshaMotionState || { open: 0, release: 0, stage: "closed" };
         const rig = group.userData.chuangshaMotionRig || null;
+        const assemblyRig = group.userData.hybridAssemblyMotionRig || null;
         return {
           tag: String(group.userData.replacedWindowTag || ""),
           stage: state.stage,
           open: +Number(state.open || 0).toFixed(3),
           release: +Number(state.release || 0).toFixed(3),
-          mechanism: rig?.kind || null,
+          mechanism: assemblyRig?.kind || rig?.kind || null,
+          cycleSeconds: assemblyRig?.cycleSeconds || null,
+          pushPivot: assemblyRig?.pushPivot?.name || null,
+          pushOpenAngleDeg: Number.isFinite(assemblyRig?.pushOpenAngle)
+            ? +THREE.MathUtils.radToDeg(assemblyRig.pushOpenAngle).toFixed(1)
+            : null,
+          screenParts: assemblyRig?.screenParts?.map((part) => part.node?.name || null).filter(Boolean) || [],
+          bottomChainParts: assemblyRig?.bottomChainParts?.map((part) => part.node?.name || null).filter(Boolean) || [],
           openTravel: Number.isFinite(rig?.openTravel) ? +rig.openTravel.toFixed(3) : null,
           movableParts: rig?.parts?.map((part) => ({
             role: part.role,
@@ -5910,15 +6788,63 @@ ${shader.fragmentShader}`;
       });
   }
 
+  function debugHybridPushWindowAssemblies(tags = []) {
+    const tagSet = tags?.length ? new Set(normalizeWindowTags(tags)) : null;
+    return Array.from(windowReplacementGroups)
+      .filter((group) => group.parent && group.userData.replacementAsset === "chuangsha")
+      .filter((group) => !tagSet || tagSet.has(String(group.userData.replacedWindowTag || "")))
+      .map((group) => {
+        let partCount = 0;
+        const roles = {};
+        group.traverse((node) => {
+          if (!node?.userData?.chuangshaGeneratedHybridPart) return;
+          partCount++;
+          const role = node.userData.chuangshaRole || "unknown";
+          roles[role] = (roles[role] || 0) + 1;
+        });
+        const assemblyRig = group.userData.hybridAssemblyMotionRig || null;
+        return {
+          tag: String(group.userData.replacedWindowTag || ""),
+          expressID: group.userData.replacedExpressID ?? null,
+          partCount,
+          roles,
+          autoCycle: {
+            enabled: chuangshaAutoCycleEnabled,
+            cycleSeconds: CHUANGSHA_AUTO_CYCLE_SECONDS,
+            pushPivot: assemblyRig?.pushPivot?.name || null,
+            screenParts: assemblyRig?.screenParts?.length || 0,
+            bottomChainParts: assemblyRig?.bottomChainParts?.length || 0,
+            stage: group.userData.chuangshaAutoCycleState?.stage || null,
+            open: +Number(group.userData.chuangshaAutoCycleState?.open || 0).toFixed(3)
+          },
+          meta: group.userData.hybridPushWindow || null
+        };
+      });
+  }
+
   async function replaceWindowsByTagsFromGlb(url = "./chuangsha.glb", tags = ["181930", "182101"], options = {}) {
-    clearWindowReplacements();
+    const requestedTags = normalizeWindowTags(tags);
+    const useExportedHybridAssembly = options.useExportedHybridAssembly !== false;
+    let asset = null;
+    let assetKind = "chuangsha";
+    if (useExportedHybridAssembly) {
+      try {
+        asset = await loadHybridWindowAssemblyAsset(options.hybridAssemblyUrl || "./hybrid-window-assembly.glb");
+        assetKind = "hybrid-window-assembly";
+      } catch (err) {
+        console.warn("[bp3d] exported hybrid assembly failed; falling back to chuangsha.glb", err);
+      }
+    }
+    if (!asset) asset = await loadChuangshaWindowAsset(url);
+    const cleared = options.append ? clearWindowReplacementsForTags(requestedTags) : clearWindowReplacements();
     clearWindowSelection();
-    const asset = await loadChuangshaWindowAsset(url);
-    const targets = collectWindowReplacementTargets(tags);
+    const targets = collectWindowReplacementTargets(requestedTags);
     const sceneCenter = getSceneHorizontalCenter();
     const result = {
       source: url,
-      requestedTags: tags.map((tag) => String(tag)),
+      requestedTags,
+      append: !!options.append,
+      cleared: cleared ?? null,
       totalTargets: targets.length,
       replaced: 0,
       skipped: 0,
@@ -5926,15 +6852,32 @@ ${shader.fragmentShader}`;
     };
 
     targets.forEach((target) => {
-      const group = prepareChuangshaWindowInstance(asset);
-      group.name = `replacement:window:${target.tag}:chuangsha`;
+      const group = assetKind === "hybrid-window-assembly"
+        ? prepareHybridWindowAssemblyInstance(asset)
+        : prepareChuangshaWindowInstance(asset);
+      group.name = `replacement:window:${target.tag}:${assetKind}`;
       group.userData.system = "architecture";
       group.userData.windowReplacement = true;
       group.userData.replacementAsset = "chuangsha";
+      group.userData.replacementAssetKind = assetKind;
       group.userData.replacedWindowTag = target.tag;
       group.userData.replacedExpressID = target.expressID;
       group.visible = systemEnabled.get("architecture") ?? true;
-      const fitInfo = fitChuangshaWindowToBox(group, target.box, sceneCenter, options);
+      const fitInfo = assetKind === "hybrid-window-assembly"
+        ? fitHybridWindowAssemblyToBox(group, target.box, sceneCenter, options)
+        : fitChuangshaWindowToBox(group, target.box, sceneCenter, options);
+      if (assetKind !== "hybrid-window-assembly" && options.integratedPushWindow !== false) {
+        addHybridPushWindowAssembly(group, target.box, fitInfo, {
+          preserveProductBody: options.preserveProductBody !== false
+        });
+        if (options.hybridOnly !== false) {
+          if (options.preserveProductBody !== false) {
+            preserveHybridChuangshaProductBody(group, group.userData.chuangshaClassification);
+          } else {
+            applyHybridOnlyChuangshaMode(group, group.userData.chuangshaClassification);
+          }
+        }
+      }
       group.userData.chuangshaWidthAxis = fitInfo.widthAxis;
       group.userData.chuangshaDepthAxis = fitInfo.depthAxis;
       group.userData.chuangshaRotationY = fitInfo.rotationY;
@@ -5953,21 +6896,26 @@ ${shader.fragmentShader}`;
         expressID: target.expressID,
         objectType: target.objectType,
         meshCount: target.meshes.length,
+        hybridPushWindow: group.userData.hybridPushWindow || null,
         ...fitInfo
       });
     });
 
     result.skipped = Math.max(0, result.requestedTags.length - result.replaced);
+    result.assetKind = assetKind;
+    chuangshaAutoCycleStartMs = typeof performance !== "undefined" ? performance.now() : Date.now();
     markDirty();
     return result;
   }
 
   function clearWindowReplacements() {
+    let cleared = 0;
     windowReplacementGroups.forEach((group) => {
       group.traverse((node) => {
         try { node.geometry?.dispose?.(); } catch {}
       });
       root.remove(group);
+      cleared++;
     });
     windowReplacementGroups.clear();
     invalidateChuangshaProductCache();
@@ -5978,6 +6926,34 @@ ${shader.fragmentShader}`;
     windowReplacedOriginals.clear();
     root.children.forEach(applyLevelToGroup);
     markDirty();
+    return cleared;
+  }
+
+  function clearWindowReplacementsForTags(tags = []) {
+    const tagSet = new Set(normalizeWindowTags(tags));
+    if (!tagSet.size) return 0;
+    let cleared = 0;
+    Array.from(windowReplacementGroups).forEach((group) => {
+      const tag = String(group?.userData?.replacedWindowTag ?? "");
+      if (!tagSet.has(tag)) return;
+      group.traverse((node) => {
+        try { node.geometry?.dispose?.(); } catch {}
+      });
+      root.remove(group);
+      windowReplacementGroups.delete(group);
+      cleared++;
+    });
+    Array.from(windowReplacedOriginals).forEach((mesh) => {
+      const tag = String(mesh?.userData?.windowTag ?? "");
+      if (!tagSet.has(tag)) return;
+      delete mesh.userData._windowReplacementHidden;
+      mesh.visible = true;
+      windowReplacedOriginals.delete(mesh);
+    });
+    invalidateChuangshaProductCache();
+    root.children.forEach(applyLevelToGroup);
+    markDirty();
+    return cleared;
   }
 
   // ---- Layer filters (system + level) ----
@@ -5992,7 +6968,11 @@ ${shader.fragmentShader}`;
   let levelRange = null;             // null = pass-all, else { min, max }
 
   function isRuntimeHiddenMesh(mesh) {
-    return !!(mesh?.userData?._semanticReplacementHidden || mesh?.userData?._windowReplacementHidden);
+    return !!(
+      mesh?.userData?._semanticReplacementHidden ||
+      mesh?.userData?._windowReplacementHidden ||
+      mesh?.userData?._hybridVisualHidden
+    );
   }
 
   function meshHeightCenter(mesh) {
@@ -6023,7 +7003,7 @@ ${shader.fragmentShader}`;
       // floor view. A 0.12 m tolerance prevents thin floor-slabs from hiding.
       const bb = obj.geometry?.boundingBox;
       if (!bb) {
-        obj.visible = true;
+        obj.visible = !isRuntimeHiddenMesh(obj);
         return;
       }
       obj.updateMatrixWorld(false);
@@ -7751,10 +8731,11 @@ ${shader.fragmentShader}`;
     markDirty();
   }
 
-  function collectWindowInventory() {
+  function collectWindowInventory(options = {}) {
+    const includeHidden = !!options.includeHidden;
     const byKey = new Map();
     root.traverse((obj) => {
-      if (!isWindowMesh(obj) || obj.userData._windowReplacementHidden) return;
+      if (!isWindowMesh(obj) || (!includeHidden && obj.userData._windowReplacementHidden)) return;
       const box = new THREE.Box3().setFromObject(obj);
       if (!finiteBox(box)) return;
       const key = obj.userData.expressID != null ? String(obj.userData.expressID) : obj.uuid;
@@ -7814,8 +8795,8 @@ ${shader.fragmentShader}`;
       }));
   }
 
-  function getWindowInventory() {
-    return collectWindowInventory().map(({ meshes, ...item }) => item);
+  function getWindowInventory(options = {}) {
+    return collectWindowInventory(options).map(({ meshes, ...item }) => item);
   }
 
   function selectAllWindows() {
@@ -8041,9 +9022,12 @@ ${shader.fragmentShader}`;
     debugFurnitureReplacementCandidates,
     debugFurnitureReplacementMaterialLooks,
     debugWindowReplacementTargets,
+    debugWindowReplacementState,
     debugChuangshaProductTour,
     debugChuangshaScreenInstallation,
     debugChuangshaMotionState,
+    debugHybridPushWindowAssemblies,
+    setChuangshaAutoCycleEnabled,
     debugObjectFocusedInteriorTour,
     getWindowInventory,
     selectAllWindows,

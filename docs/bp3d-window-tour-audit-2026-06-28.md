@@ -8,10 +8,10 @@ Project page:
 http://127.0.0.1:8187/bp3d-pure.html
 ```
 
-Latest pushed commit:
+Audit baseline before this follow-up:
 
 ```text
-f543742 Enhance BP3D tour studio and asset replacement
+86c3bba Add local tour JSON import
 ```
 
 ## 1. Executive Summary
@@ -114,8 +114,19 @@ Legacy keys are scanned and listed in the `Saved Tours` card.
 Recovery actions:
 
 - `Recover Old Tour`: chooses the best legacy/current saved tour and binds it.
+- `Save Current Snapshot`: saves the current editor tour into a timestamped
+  browser snapshot key so a good version is not overwritten by later edits.
+- Auto snapshot before overwrite: if the current tour has unsaved edits, Tour
+  Studio automatically creates a browser snapshot before loading a project tour,
+  importing JSON, restoring history, loading a preset, or clearing the editor.
+- `Delete Selected Snapshot`: removes only user-created snapshot keys; it refuses
+  to delete the current autosave key or legacy keys.
+- `Prune Old Snapshots`: keeps the newest 12 snapshots and removes older ones so
+  browser localStorage does not grow forever.
 - `Restore To Editor`: restores the selected tour without forcing main binding.
 - `Restore And Bind Main Tour`: restores and binds to the main `Tour` button.
+- `Download Selected JSON`: exports any selected current, snapshot, or legacy tour
+  as a portable `bp3d-tour/v1` JSON file.
 - `Refresh`: reloads the saved-tour list from localStorage.
 
 This addresses the issue where previously saved tours appeared to be lost after
@@ -182,6 +193,46 @@ UI actions:
 
 This is the first step toward making tours portable across browser profiles,
 machines, and meetings.
+
+### 2.8 Tour Source Status
+
+The `Project Tour File` card now also shows where the current editor tour came
+from, whether it has been edited, and whether the top-right `Tour` button is
+bound to it.
+
+Status badges:
+
+- `PROJECT FILE`: loaded from `assets/tours/one_take_window_product_60s.json`.
+- `LOCAL FILE`: imported through the local JSON file picker.
+- `JSON TEXT`: imported from the advanced JSON text area.
+- `BROWSER SAVE`: restored from the current browser localStorage key.
+- `OLD SAVE`: restored from a legacy browser localStorage key.
+- `SNAPSHOT`: restored from a user-created browser snapshot.
+- `GENERATED`: regenerated from the renderer's built-in product-tour builder.
+- `PRESET`: loaded from the built-in interior preset.
+- `EMPTY`: the editor has no waypoints.
+
+Extra state labels:
+
+- `EDITED`: the user has moved nodes, changed shot cards, retimed, zoomed, or
+  otherwise modified the loaded tour after import.
+- `BOUND TO TOUR BUTTON`: the top-right `Tour` button will play the current
+  editor version.
+- `NOT BOUND`: the editor version exists, but the main `Tour` button may still
+  play another source or the default product tour.
+
+The card also gives a plain-language next step. For example, after importing or
+editing a tour it tells the user to save the current edit to the top-right
+`Tour` button; after a bound edit it reminds the user to download the JSON if
+the version should be kept as a project artifact.
+
+The browser console helper also exposes:
+
+```js
+window.__bp3dPureTourEditor.source()
+```
+
+This returns the current tour metadata for debugging provenance during meetings.
 
 ## 3. Asset Replacement Work
 
@@ -497,13 +548,191 @@ That is useful for:
    - tour JSON
    - product part map
 
-## 10. Untracked Local Files
+## 10. Hybrid Window Placement Update
+
+User request:
+
+```text
+Use the window from WebViewer/hybrid-window.html in the current BP3D scene and
+replace suitable old windows, for example the first-floor single windows.
+```
+
+Findings:
+
+- `hybrid-window.html` uses the same primary runtime asset family as the current
+  BP3D replacement pipeline: `chuangsha.glb`.
+- The hybrid page also contains extra generated/product hardware logic, including
+  screen/detail overlays and external control assets. Those should be ported as a
+  second pass if the exact hybrid-page model needs to be reproduced 1:1.
+- The current stable replacement route is to reuse the BP3D semantic window tag
+  replacement pipeline and fit the Chuangsha window into the IFC window bounding
+  box.
+
+Implemented:
+
+- Added `Find L1 Single Windows` / `Replace L1 Single Windows` UI buttons in
+  `bp3d-pure.html`.
+- Added first-floor single-window candidate detection using:
+  - `levelHint === "L1"`
+  - tagged IFC windows only
+  - narrow single-window width
+  - normal door-height window height
+- Updated the renderer so window replacement can run in append mode. This lets
+  the first-floor single windows be replaced without clearing the existing W21/W22
+  product-tour replacements.
+- Wired the page boot flow so W21/W22 product windows replace first, then L1
+  single-window replacement runs in append mode immediately after that task.
+
+Verified first-floor single-window targets:
+
+```text
+W04 / Tag 146885 / ExpressID 6921 / Level L1 / 750mm x 2200mm
+W01 / Tag 147051 / ExpressID 7025 / Level L1 / 750mm x 2200mm
+```
+
+Replacement verification:
+
+```text
+source: ./chuangsha.glb
+append: true
+requestedTags: 146885, 147051
+replaced: 2 / 2
+skipped: 0
+```
+
+Important note:
+
+- The IFC metadata stores `overallWidth` and `overallHeight` in meters in this
+  project (`0.75 x 2.2`), despite the object name reading `750mm x 2200mm`.
+  The candidate filter now accepts this meter-based data and still supports
+  millimeter-like values if they appear later.
+- Manual UI verification succeeded through the real page buttons:
+  `Find L1 Single Windows` returned the two tags above, and
+  `Replace L1 Single Windows` returned `replaced: 2 / 2`.
+- Full automatic boot verification in headless mode remained unstable because
+  the local IFC/page load repeatedly exceeded the validation timeout. The
+  automatic hook is implemented in code, but this audit should keep the timeout
+  caveat visible rather than treating the headless run as completed.
+
+Follow-up issue:
+
+```text
+The first-floor product should be an integrated push-out window with a screen,
+but the previous BP3D replacement looked like screen-only.
+```
+
+Cause:
+
+- The BP3D replacement pipeline was using `chuangsha.glb`, which represents the
+  indoor screen-machine body.
+- `hybrid-window.html` adds the push-out glass sash, hinges, handle, weather
+  lips, and bottom chain-opener as generated Three.js geometry around that GLB.
+- Those generated hybrid parts had not yet been ported into the BP3D replacement
+  group, so the placed product read visually as "screen only."
+
+Fix:
+
+- `scripts/bp3d-real-renderer.js` now generates an integrated hybrid assembly
+  inside every Chuangsha window replacement:
+  - fixed titanium reveal frame
+  - outward push-out glass sash
+  - recessed glass panel
+  - left hinge leaves/barrels
+  - right free-edge raised push handle
+  - bottom chain-opener housing and linkage
+- Replacement result samples now include `hybridPushWindow` metadata with
+  `hasPushSash`, `hasScreen`, `hasHandle`, and `hasBottomChainOpener`.
+- `bp3d-pure.html` renderer cache-bust was updated so the browser does not keep
+  the older screen-only renderer module.
+
+Follow-up fix on 2026-06-29:
+
+- Fixed a stacked-window bug where level filtering could revive old IFC window
+  meshes hidden by replacement. The no-bounding-box branch now still respects
+  `_windowReplacementHidden`.
+- Window replacement target collection now includes all meshes sharing the same
+  IFC `expressID`, not only tagged fragments found in the first pass.
+- Added `debugWindowReplacementState(tags)` and page dataset
+  `l1SingleWindowDebugState` to verify replacement count and old IFC visibility.
+  For the L1 single windows, verification returned:
+
+```text
+Tag 146885: replacementGroups 1, originalMeshes 4, visibleOriginalMeshes 0
+Tag 147051: replacementGroups 1, originalMeshes 4, visibleOriginalMeshes 0
+```
+
+- Added hybrid-only visual mode. It hides the original GLB backing/frame part
+  that made the product read like two windows stacked together, while preserving
+  the screen, pull bar, display, button, and black label product parts.
+
+Second follow-up on 2026-06-29:
+
+- Tightened hybrid-only mode so the replacement now displays only one generated
+  hybrid single-window assembly. The original `chuangsha.glb` visual parts are
+  hidden completely, rather than partially preserved.
+- The generated hybrid assembly now creates its own integrated screen mesh,
+  screen retainers, black bottom display, satin control button, push sash, handle,
+  hinges, and bottom chain-opener. It no longer needs a second visible GLB window
+  underneath it.
+- Verification for L1 targets:
+
+```text
+Tag 146885: replacementGroups 1, visibleOriginalMeshes 0, hiddenOriginalParts 6
+Tag 147051: replacementGroups 1, visibleOriginalMeshes 0, hiddenOriginalParts 6
+hybridPushWindow.hybridOnly: true
+```
+
+Third follow-up on 2026-06-29:
+
+- Corrected installation orientation using explicit window-normal modeling.
+  The thin axis of the window target is treated as the normal axis; the side
+  pointing toward the scene center is the interior side, and the opposite side is
+  exterior.
+- The hybrid-only assembly now places:
+  - integrated screen mesh on the interior side
+  - black display and satin control button on the interior side
+  - push-out sash, exterior glass face, and hinges on the exterior side
+- Verified metadata for both L1 single windows:
+
+```text
+Tag 146885: normalAxis x, interiorSign -1, exteriorSign 1
+Tag 147051: normalAxis x, interiorSign 1, exteriorSign -1
+screenSide interior, controlsSide interior, pushSashSide exterior
+```
+
+Fourth follow-up on 2026-06-29:
+
+- Root cause of the "hybrid window fell apart" look: BP3D treated
+  `hybrid-window.html` as a set of generated pieces instead of a single product
+  assembly. The earlier hybrid-only mode hid the original `chuangsha.glb` body,
+  so only procedural frame/sash parts remained visible.
+- Corrected policy: old IFC windows are still hidden, but the source product
+  body from `chuangsha.glb` is preserved. BP3D no longer generates a second
+  interior screen, display, or button on top of it.
+- The generated outward sash/frame is now aligned from the preserved product
+  body's local bounding box, not directly from the old IFC opening. This keeps
+  the indoor screen-machine body and outdoor push sash in one shared product
+  coordinate system.
+- Fit behavior now keeps the product as one root assembly while matching the
+  original window opening width, height, and depth by default. A separate
+  `preserveProductAspect: true` option remains available for product-preview
+  shots, but architectural replacement uses opening-size fidelity.
+- Kept `zigbee0625.fbx` as a local source/reference file for the bottom chain
+  mechanism; it is not directly loaded by the current BP3D runtime.
+- Exported `hybrid-window.html` as `hybrid-window-assembly.glb` and switched
+  BP3D window replacement to prefer this complete assembly by default. This
+  makes the L1 single-window replacement an exported product-root fit instead
+  of a BP3D-side approximation.
+- The exported source page's own geometry audit passed before export.
+
+## 11. Untracked Local Files
 
 As of this audit, the following files remain local and uncommitted:
 
 ```text
 ChuangshaAutoScreenAsset_20260623-202958.zip
 zigbee.glb
+zigbee0625.fbx
 宏宇景裕豪园1120260622145142.dxf
 ```
 
