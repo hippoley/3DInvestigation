@@ -204,9 +204,9 @@
     <button type="button" id="btnTourStop" class="ctrl-btn" disabled>■ Stop</button>
   </div>
   <div id="controls">
-    <div class="row"><label for="exp">Exposure</label><input type="range" id="exp" min="0.4" max="2.4" step="0.02" value="0.90"><span class="val" id="expV">0.90</span></div>
+    <div class="row"><label for="exp">Exposure</label><input type="range" id="exp" min="0.4" max="2.4" step="0.02" value="0.88"><span class="val" id="expV">0.88</span></div>
     <div class="row"><label for="blm">Bloom</label><input type="range" id="blm" min="0" max="1.5" step="0.01" value="0"><span class="val" id="blmV">0.00</span></div>
-    <div class="row"><label for="cnt">Contact</label><input type="range" id="cnt" min="0" max="1" step="0.02" value="0.46"><span class="val" id="cntV">0.46</span></div>
+    <div class="row"><label for="cnt">Contact</label><input type="range" id="cnt" min="0" max="1" step="0.02" value="0.12"><span class="val" id="cntV">0.12</span></div>
     <div class="row"><label for="ref">Reflect</label><input type="range" id="ref" min="0" max="0.4" step="0.01" value="0"><span class="val" id="refV">0.00</span></div>
     <div class="row"><label for="sun">Sun</label><input type="range" id="sun" min="5" max="80" step="1" value="32"><span class="val" id="sunV">32°</span></div>
     <div class="row"><label for="tod">Day/Night</label><input type="range" id="tod" min="0" max="1" step="0.01" value="0"><span class="val" id="todV">Day</span></div>
@@ -218,7 +218,7 @@
     <div class="row" style="gap:4px">
       <button type="button" id="btnFPS" class="ctrl-btn">🚶 FPS Walk</button>
     </div>
-    <div class="row"><label for="pfx">PostFX</label><input type="checkbox" id="pfx" checked><span class="val" id="pfxV" style="flex:0 0 auto;font-size:10px;opacity:0.6">ON</span></div>
+    <div class="row"><label for="pfx">PostFX</label><input type="checkbox" id="pfx"><span class="val" id="pfxV" style="flex:0 0 auto;font-size:10px;opacity:0.6">OFF</span></div>
     <div class="row" style="gap:4px">
       <button type="button" id="btnStyleJapandi" class="ctrl-btn">Japandi</button>
       <button type="button" id="btnStyleLuxury" class="ctrl-btn active">轻奢</button>
@@ -415,15 +415,17 @@
       { url: "./samples/duplex-apartment/raw/Duplex_Plumbing_20121113.ifc",          label: "Plumbing",    system: "plumbing",     priority: 3 }
     ];
     const DEFAULT_STYLE = "luxury";
-    const RENDERER_MODULE_URL = "./scripts/bp3d-real-renderer.js?v=one-take-window-20260629-hybrid-screen-up-glass-v5";
+    const RENDERER_MODULE_URL = "./scripts/bp3d-real-renderer.js?v=one-take-window-20260703-screen-readable-fabric-v22";
     const CHUANGSHA_WINDOW_TAGS = ["181930", "182101"];
     const L1_SINGLE_WINDOW_REPLACE_OPTIONS = {
       padding: 1,
       heightPadding: 1,
       depthPadding: 1,
+      preserveProductDepth: true,
+      depthBodyScale: 1,
       minDepth: 0.052,
       useExportedHybridAssembly: true,
-      hybridAssemblyUrl: "./hybrid-window-assembly.glb",
+      hybridAssemblyUrl: "./hybrid-window-assembly.glb?v=20260702-depth-screen-v8",
       append: true
     };
     const L1_SINGLE_WINDOW_FILTER = {
@@ -519,17 +521,20 @@
         }
         applyStyle(DEFAULT_STYLE, { loadTextures: false }); // keep startup fast; hydrate textures once the scene settles
         api.setLightPreset?.('indoor');
+        api.setEnvironmentIntensity?.(0.84);
+        api.setGtaoIntensity?.(0.18);
+        api.setVignette?.(0.84, 0.10);
         api.setLocalClarity?.({
-          strength: 0.64,
-          fine: 0.56,
-          mid: 0.24,
-          threshold: 0.014,
-          chroma: 0.04,
-          limit: 0.038,
-          radius: 0.9,
-          white: 0.12,
-          whiteThreshold: 0.80,
-          rolloff: 0.46
+          strength: 0.30,
+          fine: 0.18,
+          mid: 0.12,
+          threshold: 0.026,
+          chroma: 0.015,
+          limit: 0.026,
+          radius: 1.15,
+          white: 0.04,
+          whiteThreshold: 0.84,
+          rolloff: 0.58
         });
 
         // Slider wiring
@@ -2525,9 +2530,11 @@
               padding: 1,
               heightPadding: 1,
               depthPadding: 1,
+              preserveProductDepth: true,
+              depthBodyScale: 1,
               minDepth: 0.052,
               useExportedHybridAssembly: true,
-              hybridAssemblyUrl: "./hybrid-window-assembly.glb"
+              hybridAssemblyUrl: "./hybrid-window-assembly.glb?v=20260702-depth-screen-v8"
             });
             document.body.dataset.chuangshaWindowReplacement = JSON.stringify(result || {}).slice(0, 4000);
             btn?.classList.toggle("active", !!result?.replaced);

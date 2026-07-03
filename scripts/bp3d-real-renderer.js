@@ -101,7 +101,7 @@ export async function createRealRenderer(canvas) {
 
   // Set initial environment from sky while HDR loads asynchronously
   scene.environment = pmrem.fromScene(scene, 0.04).texture;
-  scene.environmentIntensity = 0.78; // warm daylight without clipping pale interiors
+  scene.environmentIntensity = 0.82; // balanced indoor daylight without washing out glass
   scene.background = new THREE.Color(0xf8f7f2);
 
   // ---- Camera + Controls ----
@@ -494,9 +494,9 @@ export async function createRealRenderer(canvas) {
   const gtao = new GTAOPass(scene, camera, 1024, 1024);
   gtao.output = GTAOPass.OUTPUT.Default; // render scene + blend AO on top
   // AO parameters tuned for indoor arch-viz: moderate radius, visible darkness
-  gtao.updateGtaoMaterial({ radius: 0.44, distanceExponent: 2, thickness: 1.28, scale: 0.76, samples: 16 });
-  gtao.updatePdMaterial({ lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: 4, rings: 2, samples: 16 });
-  gtao.blendIntensity = 0.62;
+  gtao.updateGtaoMaterial({ radius: 0.28, distanceExponent: 2, thickness: 0.72, scale: 0.34, samples: 24 });
+  gtao.updatePdMaterial({ lumaPhi: 14, depthPhi: 2.8, normalPhi: 3.6, radius: 5, rings: 2, samples: 20 });
+  gtao.blendIntensity = 0.22;
   composer.addPass(gtao);
   // SSR: Screen Space Reflections — adds dynamic reflections to all glossy
   // surfaces (metal, glass, polished floors) without needing planar reflectors.
@@ -910,8 +910,11 @@ export async function createRealRenderer(canvas) {
   const windowReplacementGroups = new Set();
   const windowReplacedOriginals = new Set();
   const CHUANGSHA_AUTO_CYCLE_SECONDS = 20;
+  const CHUANGSHA_SHOW_SCREEN_GRID = false;
   let chuangshaAutoCycleEnabled = true;
   let chuangshaAutoCycleStartMs = (typeof performance !== "undefined" ? performance.now() : Date.now());
+  let chuangshaAutoCycleLastUpdateMs = 0;
+  const CHUANGSHA_AUTO_CYCLE_UPDATE_MS = 16;
   let chuangshaProductCache = null;
   let chuangshaMaterialSet = null;
   const WALL_REPLACEMENT_IFC_TYPES = new Set([
@@ -2543,43 +2546,41 @@ ${shader.fragmentShader}`;
 
   function makeChuangshaFineMeshTexture() {
     const textureCanvas = document.createElement("canvas");
-    textureCanvas.width = 96;
-    textureCanvas.height = 96;
+    textureCanvas.width = 256;
+    textureCanvas.height = 256;
     const context = textureCanvas.getContext("2d");
     context.clearRect(0, 0, textureCanvas.width, textureCanvas.height);
-    context.fillStyle = "rgba(42, 50, 48, 0.12)";
+    context.fillStyle = "#dce1d9";
     context.fillRect(0, 0, textureCanvas.width, textureCanvas.height);
-    context.strokeStyle = "rgba(12, 18, 17, 0.62)";
-    context.lineWidth = 0.75;
-    for (let point = 0.5; point < textureCanvas.width; point += 4) {
-      context.beginPath();
-      context.moveTo(point, 0);
-      context.lineTo(point, textureCanvas.height);
-      context.stroke();
-      context.beginPath();
-      context.moveTo(0, point);
-      context.lineTo(textureCanvas.width, point);
-      context.stroke();
+
+    const rand = (seed) => {
+      const n = Math.sin(seed * 17.123) * 43758.5453;
+      return n - Math.floor(n);
+    };
+    for (let index = 0; index < 1200; index++) {
+      const tone = rand(index + 7) > 0.5 ? 245 : 96;
+      const alpha = 0.006 + rand(index + 13) * 0.01;
+      context.fillStyle = `rgba(${tone},${tone},${tone},${alpha})`;
+      context.fillRect(rand(index + 23) * textureCanvas.width, rand(index + 41) * textureCanvas.height, 1, 1);
     }
-    context.strokeStyle = "rgba(230, 238, 234, 0.1)";
-    context.lineWidth = 0.5;
-    for (let point = 2.5; point < textureCanvas.width; point += 4) {
+    context.strokeStyle = "rgba(56, 70, 62, 0.085)";
+    context.lineWidth = 0.42;
+    for (let point = 10.5; point < textureCanvas.width; point += 18) {
       context.beginPath();
-      context.moveTo(point, 0);
-      context.lineTo(point, textureCanvas.height);
-      context.stroke();
-      context.beginPath();
-      context.moveTo(0, point);
-      context.lineTo(textureCanvas.width, point);
+      context.moveTo(point + (rand(point) - 0.5) * 0.8, 0);
+      context.lineTo(point + (rand(point + 9) - 0.5) * 0.8, textureCanvas.height);
       context.stroke();
     }
 
     const texture = new THREE.CanvasTexture(textureCanvas);
-    texture.wrapS = THREE.RepeatWrapping;
-    texture.wrapT = THREE.RepeatWrapping;
-    texture.repeat.set(32, 72);
-    texture.anisotropy = renderer.capabilities?.getMaxAnisotropy?.() || 1;
-    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.wrapS = THREE.ClampToEdgeWrapping;
+    texture.wrapT = THREE.ClampToEdgeWrapping;
+    texture.repeat.set(1, 1);
+    texture.anisotropy = 1;
+    texture.colorSpace = THREE.NoColorSpace || THREE.LinearSRGBColorSpace || THREE.SRGBColorSpace;
+    texture.minFilter = THREE.LinearMipmapLinearFilter;
+    texture.magFilter = THREE.LinearFilter;
+    texture.generateMipmaps = true;
     texture.needsUpdate = true;
     return texture;
   }
@@ -2590,9 +2591,9 @@ ${shader.fragmentShader}`;
     textureCanvas.height = 128;
     const context = textureCanvas.getContext("2d");
     const gradient = context.createLinearGradient(0, 0, textureCanvas.width, 0);
-    gradient.addColorStop(0, "#bfc4c1");
-    gradient.addColorStop(0.5, "#e3e5df");
-    gradient.addColorStop(1, "#aeb6b3");
+    gradient.addColorStop(0, "#9da7a3");
+    gradient.addColorStop(0.5, "#c9cec7");
+    gradient.addColorStop(1, "#899491");
     context.fillStyle = gradient;
     context.fillRect(0, 0, textureCanvas.width, textureCanvas.height);
     for (let y = 0; y < textureCanvas.height; y += 2) {
@@ -2618,19 +2619,56 @@ ${shader.fragmentShader}`;
     return texture;
   }
 
+  function makeChuangshaGlassMicroTexture() {
+    const textureCanvas = document.createElement("canvas");
+    textureCanvas.width = 128;
+    textureCanvas.height = 128;
+    const context = textureCanvas.getContext("2d");
+    context.fillStyle = "#7f7f7f";
+    context.fillRect(0, 0, textureCanvas.width, textureCanvas.height);
+    const rand = (seed) => {
+      const n = Math.sin(seed * 12.9898) * 43758.5453;
+      return n - Math.floor(n);
+    };
+    for (let index = 0; index < 900; index++) {
+      const x = rand(index + 1) * textureCanvas.width;
+      const y = rand(index + 101) * textureCanvas.height;
+      const alpha = 0.018 + rand(index + 201) * 0.032;
+      const tone = rand(index + 301) > 0.5 ? 255 : 36;
+      context.fillStyle = `rgba(${tone},${tone},${tone},${alpha})`;
+      context.fillRect(x, y, 1, 1);
+    }
+    const sheen = context.createLinearGradient(0, 0, textureCanvas.width, textureCanvas.height);
+    sheen.addColorStop(0.0, "rgba(255,255,255,0.06)");
+    sheen.addColorStop(0.34, "rgba(255,255,255,0)");
+    sheen.addColorStop(0.58, "rgba(255,255,255,0.04)");
+    sheen.addColorStop(1.0, "rgba(0,0,0,0.03)");
+    context.fillStyle = sheen;
+    context.fillRect(0, 0, textureCanvas.width, textureCanvas.height);
+    const texture = new THREE.CanvasTexture(textureCanvas);
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.repeat.set(1.8, 3.4);
+    texture.anisotropy = renderer.capabilities?.getMaxAnisotropy?.() || 1;
+    texture.colorSpace = THREE.NoColorSpace || THREE.LinearSRGBColorSpace || THREE.SRGBColorSpace;
+    texture.needsUpdate = true;
+    return texture;
+  }
+
   function getChuangshaMaterialSet() {
     if (chuangshaMaterialSet) return chuangshaMaterialSet;
     const meshTexture = makeChuangshaFineMeshTexture();
     const titaniumTexture = makeChuangshaBrushedTitaniumTexture();
+    const glassMicroTexture = makeChuangshaGlassMicroTexture();
     chuangshaMaterialSet = {
       frame: new THREE.MeshPhysicalMaterial({
-        color: 0xd1d5d2,
+        color: 0xa7afaa,
         map: titaniumTexture,
         roughnessMap: titaniumTexture,
-        roughness: 0.14,
+        roughness: 0.16,
         metalness: 1,
-        envMapIntensity: 2.35,
-        clearcoat: 0.36,
+        envMapIntensity: 2.85,
+        clearcoat: 0.42,
         clearcoatRoughness: 0.2,
         anisotropy: 0.72,
         anisotropyRotation: Math.PI * 0.5
@@ -2659,56 +2697,63 @@ ${shader.fragmentShader}`;
         clearcoatRoughness: 0.12
       }),
       glass: new THREE.MeshPhysicalMaterial({
-        color: 0xc7e6ee,
-        roughness: 0.018,
+        color: 0xd6eef5,
+        roughness: 0.028,
+        roughnessMap: glassMicroTexture,
         metalness: 0.0,
         transparent: true,
-        opacity: 0.48,
-        transmission: 0.58,
+        opacity: 0.22,
+        transmission: 0.0,
         ior: 1.52,
-        thickness: 0.055,
-        envMapIntensity: 2.65,
+        thickness: 0.01,
+        attenuationColor: 0xe9fbff,
+        attenuationDistance: 8.0,
+        envMapIntensity: 2.45,
+        reflectivity: 0.58,
+        specularIntensity: 1.0,
+        specularColor: 0xffffff,
         clearcoat: 1.0,
-        clearcoatRoughness: 0.035,
+        clearcoatRoughness: 0.028,
         side: THREE.DoubleSide,
         depthWrite: false
       }),
       darkTitanium: new THREE.MeshStandardMaterial({
-        color: 0x1e2624,
-        roughness: 0.32,
+        color: 0x2b3430,
+        roughness: 0.42,
         metalness: 0.82,
-        envMapIntensity: 1.4
+        envMapIntensity: 0.9
       }),
       brightTitanium: new THREE.MeshStandardMaterial({
-        color: 0xd7dbd4,
+        color: 0xc0c7c1,
         roughness: 0.16,
         metalness: 0.92,
-        envMapIntensity: 2.0
+        envMapIntensity: 2.35
       }),
       rubber: new THREE.MeshStandardMaterial({
         color: 0x070807,
         roughness: 0.58,
         metalness: 0.12
       }),
-      screen: new THREE.MeshStandardMaterial({
-        color: 0xb8bcb5,
-        roughness: 0.82,
-        metalness: 0,
+      screen: new THREE.MeshBasicMaterial({
+        color: 0x7f8d84,
         map: meshTexture,
-        alphaMap: meshTexture,
+        alphaMap: null,
         transparent: true,
-        opacity: 0.36,
+        opacity: 0.54,
         side: THREE.DoubleSide,
-        depthWrite: false
+        depthWrite: false,
+        alphaTest: 0,
+        depthTest: true
       }),
       lines: new THREE.LineBasicMaterial({
         color: 0x2c302d,
         transparent: true,
-        opacity: 0.22,
+        opacity: 0,
         depthWrite: false
       }),
       texture: meshTexture,
-      titaniumTexture
+      titaniumTexture,
+      glassMicroTexture
     };
     chuangshaMaterialSet.frame.name = "chuangsha_titanium_frame";
     chuangshaMaterialSet.label.name = "chuangsha_black_lower_label";
@@ -2727,6 +2772,7 @@ ${shader.fragmentShader}`;
     if (!set) return;
     try { set.texture?.dispose?.(); } catch {}
     try { set.titaniumTexture?.dispose?.(); } catch {}
+    try { set.glassMicroTexture?.dispose?.(); } catch {}
     ["frame", "label", "display", "button", "glass", "darkTitanium", "brightTitanium", "rubber", "screen", "lines"].forEach((key) => {
       try { set[key]?.dispose?.(); } catch {}
     });
@@ -2943,6 +2989,7 @@ ${shader.fragmentShader}`;
   }
 
   function addChuangshaScreenLines(mesh, lineMaterial, planeInfo = getGeometryPlaneInfo(mesh.geometry)) {
+    if (!CHUANGSHA_SHOW_SCREEN_GRID) return;
     if (!mesh?.geometry) return;
     const { box, size, planeAxes, flatAxis } = planeInfo;
     const majorAxis = planeAxes[0];
@@ -3225,12 +3272,173 @@ ${shader.fragmentShader}`;
   }
 
   function getHybridMotionMaterialName(node) {
-    if (!node?.isMesh) return "";
+    if (!node?.material) return "";
     const materials = Array.isArray(node.material) ? node.material : [node.material];
     return materials
       .map((mat) => String(mat?.name || ""))
       .join(" ")
       .toLowerCase();
+  }
+
+  function getHybridMotionMaterials(node) {
+    if (!node?.material) return [];
+    return Array.isArray(node.material) ? node.material : [node.material];
+  }
+
+  function isHybridScreenThreadNode(node) {
+    const name = getHybridMotionNodeName(node);
+    const materialName = getHybridMotionMaterialName(node);
+    const text = `${name} ${materialName}`;
+    return (
+      name.includes("screen_mesh_threads") ||
+      name.includes("screen_cross_threads") ||
+      name.includes("fine_screen_mesh_threads") ||
+      name.includes("visible_fine_screen") ||
+      name.includes("chuangsha_screen_threads") ||
+      materialName.includes("screen_cross_threads") ||
+      (text.includes("screen") && text.includes("thread"))
+    );
+  }
+
+  function isHybridScreenPanelNode(node) {
+    const name = getHybridMotionNodeName(node);
+    const materialName = getHybridMotionMaterialName(node);
+    return (
+      materialName.includes("semi_transparent_fine_insect_screen_mesh") ||
+      name.includes("test005") ||
+      name.includes("screen_panel") ||
+      name.includes("insect_screen")
+    );
+  }
+
+  function isHybridBottomHardwareNode(node) {
+    const name = getHybridMotionNodeName(node);
+    return (
+      name.includes("bottom_chain_opener") ||
+      name.includes("chain_opener") ||
+      name.includes("bottom_limit_chain") ||
+      name.includes("source_chain_opener_segment")
+    );
+  }
+
+  function isHybridBottomDisplayNode(node) {
+    if (!node?.isMesh) return false;
+    const name = getHybridMotionNodeName(node);
+    return (
+      name.includes("test002") ||
+      name.includes("display_screen") ||
+      name.includes("black_display") ||
+      name.includes("control_display")
+    );
+  }
+
+  function isHybridControlButtonNode(node) {
+    if (!node?.isMesh) return false;
+    const name = getHybridMotionNodeName(node);
+    return (
+      name.includes("test001") ||
+      name.includes("control_button") ||
+      name.includes("satin_control") ||
+      name.includes("bottom_button")
+    );
+  }
+
+  function isHybridDarkSealNode(node) {
+    if (!node?.isMesh) return false;
+    const name = getHybridMotionNodeName(node);
+    return (
+      name.includes("gasket") ||
+      name.includes("seal") ||
+      name.includes("shadow") ||
+      name.includes("pocket") ||
+      name.includes("exit_slot") ||
+      name.includes("rubber") ||
+      name.includes("black")
+    );
+  }
+
+  function isHybridBrightHardwareNode(node) {
+    if (!node?.isMesh) return false;
+    const name = getHybridMotionNodeName(node);
+    return (
+      name.includes("hinge") ||
+      name.includes("handle") ||
+      name.includes("chain") ||
+      name.includes("opener") ||
+      name.includes("clamp") ||
+      name.includes("seat") ||
+      name.includes("cover_plate") ||
+      name.includes("real_wai") ||
+      name.includes("real_nei") ||
+      name.includes("002_") ||
+      name.includes("0024_")
+    );
+  }
+
+  function isHybridTitaniumBodyNode(node) {
+    if (!node?.isMesh) return false;
+    const name = getHybridMotionNodeName(node);
+    const materialName = getHybridMotionMaterialName(node);
+    return (
+      materialName.includes("titanium") ||
+      name.includes("titanium") ||
+      name.includes("frame") ||
+      name.includes("sash") ||
+      name.includes("stile") ||
+      name.includes("rail") ||
+      name.includes("bead") ||
+      name.includes("bevel") ||
+      name.includes("shoulder") ||
+      name.includes("lip") ||
+      name.includes("cover") ||
+      name.includes("pivot") ||
+      name.includes("test003") ||
+      name.includes("test004") ||
+      name === "20260526_test"
+    );
+  }
+
+  function makeHybridAssemblyRoleMaterial(node) {
+    const materialSet = getChuangshaMaterialSet();
+    let material = null;
+    let role = null;
+    if (isHybridBottomDisplayNode(node)) {
+      material = materialSet.display.clone();
+      role = "bottom-display";
+    } else if (isHybridControlButtonNode(node)) {
+      material = materialSet.button.clone();
+      role = "control-button";
+    } else if (isHybridDarkSealNode(node)) {
+      material = materialSet.darkTitanium.clone();
+      role = "dark-seal";
+    } else if (isHybridBrightHardwareNode(node)) {
+      material = materialSet.brightTitanium.clone();
+      role = "bright-hardware";
+    } else if (isHybridTitaniumBodyNode(node)) {
+      material = materialSet.frame.clone();
+      role = "titanium-body";
+    }
+    if (!material) return null;
+    material.name = `hybrid_${role.replace(/-/g, "_")}`;
+    if (material.color?.setHex) {
+      if (role === "titanium-body") material.color.setHex(0x9fa8a3);
+      else if (role === "bright-hardware") material.color.setHex(0xbfc7c1);
+      else if (role === "dark-seal") material.color.setHex(0x2b3430);
+      else if (role === "bottom-display") material.color.setHex(0x010203);
+    }
+    if ("roughness" in material) {
+      if (role === "titanium-body") material.roughness = 0.18;
+      else if (role === "bright-hardware") material.roughness = 0.14;
+      else if (role === "dark-seal") material.roughness = 0.52;
+    }
+    if ("envMapIntensity" in material) {
+      if (role === "titanium-body") material.envMapIntensity = 3.0;
+      else if (role === "bright-hardware") material.envMapIntensity = 2.65;
+      else if (role === "bottom-display") material.envMapIntensity = 1.45;
+    }
+    if (scene.environment && "envMap" in material) material.envMap = scene.environment;
+    material.needsUpdate = true;
+    return { material, role };
   }
 
   function isHybridGlassNode(node) {
@@ -3247,16 +3455,20 @@ ${shader.fragmentShader}`;
 
   function tuneHybridGlassMaterial(material) {
     if (!material) return material;
-    if ("color" in material && material.color?.setHex) material.color.setHex(0xc7e6ee);
-    if ("roughness" in material) material.roughness = 0.018;
+    if ("color" in material && material.color?.setHex) material.color.setHex(0xd6eef5);
+    if ("roughness" in material) material.roughness = 0.028;
     if ("metalness" in material) material.metalness = 0.0;
-    if ("envMapIntensity" in material) material.envMapIntensity = 2.65;
+    if ("envMapIntensity" in material) material.envMapIntensity = 2.45;
     if ("clearcoat" in material) material.clearcoat = 1.0;
-    if ("clearcoatRoughness" in material) material.clearcoatRoughness = 0.035;
-    if ("transmission" in material) material.transmission = Math.max(material.transmission || 0, 0.58);
+    if ("clearcoatRoughness" in material) material.clearcoatRoughness = 0.028;
+    if ("transmission" in material) material.transmission = 0.0;
     if ("ior" in material) material.ior = 1.52;
-    if ("thickness" in material) material.thickness = Math.max(material.thickness || 0, 0.055);
-    if ("opacity" in material) material.opacity = Math.max(material.opacity ?? 0.42, 0.48);
+    if ("thickness" in material) material.thickness = 0.01;
+    if ("attenuationColor" in material && material.attenuationColor?.setHex) material.attenuationColor.setHex(0xe9fbff);
+    if ("attenuationDistance" in material) material.attenuationDistance = Math.max(material.attenuationDistance || 0, 8.0);
+    if ("reflectivity" in material) material.reflectivity = Math.max(material.reflectivity || 0, 0.58);
+    if ("specularIntensity" in material) material.specularIntensity = Math.max(material.specularIntensity || 0, 1.0);
+    if ("opacity" in material) material.opacity = Math.min(Math.max(material.opacity ?? 0.22, 0.18), 0.28);
     material.transparent = true;
     material.depthWrite = false;
     material.side = THREE.DoubleSide;
@@ -3265,16 +3477,65 @@ ${shader.fragmentShader}`;
     return material;
   }
 
+  function makeHybridPremiumGlassMaterial() {
+    const materialSet = getChuangshaMaterialSet();
+    const material = materialSet.glass.clone();
+    material.name = "hybrid_premium_low_iron_glass";
+    if (materialSet.glassMicroTexture?.clone) {
+      material.roughnessMap = materialSet.glassMicroTexture.clone();
+      material.roughnessMap.needsUpdate = true;
+    }
+    if (scene.environment && "envMap" in material) material.envMap = scene.environment;
+    return tuneHybridGlassMaterial(material);
+  }
+
+  function captureHybridScreenVisualState(node) {
+    if (!node?.material) return null;
+    const materials = getHybridMotionMaterials(node);
+    const entries = materials.map((mat) => {
+      const map = mat?.map || null;
+      const alphaMap = mat?.alphaMap || null;
+      return {
+        material: mat,
+        map,
+        alphaMap,
+        mapRepeat: map?.repeat?.clone?.() || null,
+        alphaRepeat: alphaMap?.repeat?.clone?.() || null
+      };
+    });
+    node.userData.hybridScreenVisualState = { entries };
+    return node.userData.hybridScreenVisualState;
+  }
+
+  function updateHybridScreenVisualDensity(part, scaleRatio = 1) {
+    const visual = part?.node?.userData?.hybridScreenVisualState;
+    if (!visual?.entries?.length) return;
+    const ratio = Math.max(0.2, Math.min(8, Number(scaleRatio) || 1));
+    visual.entries.forEach((entry) => {
+      if (entry.map && entry.mapRepeat) {
+        entry.map.repeat.set(entry.mapRepeat.x, entry.mapRepeat.y * ratio);
+      }
+      if (entry.alphaMap && entry.alphaRepeat && entry.alphaMap !== entry.map) {
+        entry.alphaMap.repeat.set(entry.alphaRepeat.x, entry.alphaRepeat.y * ratio);
+      }
+    });
+  }
+
   function getHybridScreenReleaseAxis(node) {
-    if (!node?.isMesh) return "y";
-    if (!node.geometry?.boundingBox) node.geometry?.computeBoundingBox?.();
-    const size = node.geometry?.boundingBox?.getSize(new THREE.Vector3()) || new THREE.Vector3(1, 1, 1);
-    const weighted = {
-      x: Math.abs(size.x * node.scale.x),
-      y: Math.abs(size.y * node.scale.y),
-      z: Math.abs(size.z * node.scale.z)
+    if (!node) return "y";
+    node.updateMatrixWorld(true);
+    const basis = {
+      x: new THREE.Vector3(1, 0, 0),
+      y: new THREE.Vector3(0, 1, 0),
+      z: new THREE.Vector3(0, 0, 1)
     };
-    return Object.entries(weighted).sort((a, b) => b[1] - a[1])[0]?.[0] || "y";
+    const matrix = node.matrixWorld || new THREE.Matrix4();
+    return Object.entries(basis)
+      .map(([axis, vector]) => ({
+        axis,
+        upDot: Math.abs(vector.clone().transformDirection(matrix).dot(new THREE.Vector3(0, 1, 0)))
+      }))
+      .sort((a, b) => b.upDot - a.upDot)[0]?.axis || "y";
   }
 
   function getHybridScreenAxisInfo(node, axis) {
@@ -3297,12 +3558,19 @@ ${shader.fragmentShader}`;
   function captureHybridMotionTransform(node) {
     const worldPosition = new THREE.Vector3();
     node?.getWorldPosition?.(worldPosition);
+    const worldBox = new THREE.Box3().setFromObject(node);
+    const worldCenter = finiteBox(worldBox) ? worldBox.getCenter(new THREE.Vector3()) : worldPosition.clone();
     return {
       node,
       basePosition: node.position.clone(),
       baseRotation: node.rotation.clone(),
       baseScale: node.scale.clone(),
-      baseWorldPosition: worldPosition
+      baseWorldPosition: worldPosition,
+      baseWorldBox: finiteBox(worldBox) ? worldBox.clone() : null,
+      baseWorldCenter: worldCenter,
+      baseWorldTopY: finiteBox(worldBox) ? worldBox.max.y : worldPosition.y,
+      baseWorldBottomY: finiteBox(worldBox) ? worldBox.min.y : worldPosition.y,
+      scratchWorldPosition: worldPosition.clone()
     };
   }
 
@@ -3314,7 +3582,54 @@ ${shader.fragmentShader}`;
     part.basePosition = node.position.clone();
     part.baseRotation = node.rotation.clone();
     part.baseScale = node.scale.clone();
+    const worldBox = new THREE.Box3().setFromObject(node);
+    part.baseWorldBox = finiteBox(worldBox) ? worldBox.clone() : null;
+    part.baseWorldCenter = finiteBox(worldBox) ? worldBox.getCenter(new THREE.Vector3()) : part.baseWorldPosition.clone();
+    part.baseWorldTopY = finiteBox(worldBox) ? worldBox.max.y : part.baseWorldPosition.y;
+    part.baseWorldBottomY = finiteBox(worldBox) ? worldBox.min.y : part.baseWorldPosition.y;
+    part.scratchWorldPosition = part.baseWorldPosition.clone();
     return part;
+  }
+
+  function getUnionWorldBox(parts = []) {
+    const box = new THREE.Box3();
+    let count = 0;
+    parts.forEach((part) => {
+      const node = part?.node;
+      if (!node) return;
+      const nodeBox = new THREE.Box3().setFromObject(node);
+      if (!finiteBox(nodeBox)) return;
+      box.union(nodeBox);
+      count++;
+    });
+    return count ? box : null;
+  }
+
+  function getNodeWorldCenter(node) {
+    const box = new THREE.Box3().setFromObject(node);
+    if (finiteBox(box)) return box.getCenter(new THREE.Vector3());
+    const center = new THREE.Vector3();
+    node?.getWorldPosition?.(center);
+    return center;
+  }
+
+  function estimateHybridPushOpenSign(rig, group) {
+    if (!rig?.pushPivot || !rig.pushBaseWorldMatrix || !rig.pushWorldAxis || !rig.pushBaseWorldPosition) return 1;
+    const meta = group?.userData?.hybridPushWindow || {};
+    const normalAxis = meta.normalAxis || meta.depthAxis || "z";
+    const exteriorSign = Number.isFinite(meta.exteriorSign) ? meta.exteriorSign : 1;
+    const closedCenter = getNodeWorldCenter(rig.pushPivot);
+    const samplePoint = closedCenter.clone();
+    const sampleAngle = Math.max(THREE.MathUtils.degToRad(8), Math.min(rig.pushOpenAngle || 0, THREE.MathUtils.degToRad(16)));
+    const applySample = (sign) => samplePoint.clone()
+      .applyMatrix4(new THREE.Matrix4()
+        .makeTranslation(-rig.pushBaseWorldPosition.x, -rig.pushBaseWorldPosition.y, -rig.pushBaseWorldPosition.z))
+      .applyMatrix4(new THREE.Matrix4().makeRotationAxis(rig.pushWorldAxis, sign * sampleAngle))
+      .applyMatrix4(new THREE.Matrix4()
+        .makeTranslation(rig.pushBaseWorldPosition.x, rig.pushBaseWorldPosition.y, rig.pushBaseWorldPosition.z));
+    const positiveDelta = (applySample(1)[normalAxis] - closedCenter[normalAxis]) * exteriorSign;
+    const negativeDelta = (applySample(-1)[normalAxis] - closedCenter[normalAxis]) * exteriorSign;
+    return positiveDelta >= negativeDelta ? 1 : -1;
   }
 
   function refreshExportedHybridAssemblyMotionRigBase(group) {
@@ -3332,15 +3647,108 @@ ${shader.fragmentShader}`;
       rig.pushPivot.matrixAutoUpdate = false;
     }
     (rig.screenParts || []).forEach(refreshHybridMotionTransform);
+    (rig.screenPullParts || []).forEach(refreshHybridMotionTransform);
     (rig.bottomChainParts || []).forEach(refreshHybridMotionTransform);
     const fittedBox = new THREE.Box3().setFromObject(group);
     if (finiteBox(fittedBox)) {
       const fittedHeight = Math.max(0, fittedBox.max.y - fittedBox.min.y);
-      rig.screenTravel = Math.max(0.38, Math.min(1.1, fittedHeight * 0.36));
+      const screenBox = getUnionWorldBox(rig.screenParts || []);
+      const screenHeight = screenBox && finiteBox(screenBox)
+        ? Math.max(0.001, screenBox.max.y - screenBox.min.y)
+        : Math.max(0.001, fittedHeight * 0.18);
+      rig.screenBaseTopY = screenBox && finiteBox(screenBox) ? screenBox.max.y : fittedBox.max.y;
+      rig.screenBaseBottomY = screenBox && finiteBox(screenBox) ? screenBox.min.y : fittedBox.max.y - screenHeight;
+      const bottomStopMargin = Math.max(0.035, Math.min(0.12, fittedHeight * 0.045));
+      const desiredClosedBottomY = fittedBox.min.y + bottomStopMargin;
+      const maxClosedHeight = Math.max(screenHeight, fittedHeight * 0.92);
+      const screenTopY = Number.isFinite(rig.screenBaseTopY) ? rig.screenBaseTopY : fittedBox.max.y;
+      const screenBaseBottomY = Number.isFinite(rig.screenBaseBottomY) ? rig.screenBaseBottomY : (screenTopY - screenHeight);
+      rig.screenTopY = screenTopY;
+      rig.screenClosedWorldHeight = Math.max(
+        screenHeight,
+        Math.min(maxClosedHeight, screenTopY - desiredClosedBottomY)
+      );
+      rig.screenClosedBottomY = screenTopY - rig.screenClosedWorldHeight;
+      rig.screenClosedScale = Math.max(1, Math.min(6.2, rig.screenClosedWorldHeight / screenHeight));
+      rig.screenTravel = Math.max(0, screenBaseBottomY - rig.screenClosedBottomY);
       rig.bottomChainTravel = Math.max(0.065, Math.min(0.22, fittedHeight * 0.045));
+      const meta = group.userData.hybridPushWindow || {};
+      const normalAxis = meta.normalAxis || meta.depthAxis || "z";
+      const interiorSign = Number.isFinite(meta.interiorSign) ? meta.interiorSign : 1;
+      const sashBox = rig.pushPivot ? new THREE.Box3().setFromObject(rig.pushPivot) : null;
+      const depthSize = Math.max(0.001, fittedBox.max[normalAxis] - fittedBox.min[normalAxis]);
+      const safeGap = Math.max(0.018, Math.min(0.045, depthSize * 0.22));
+      const screenTargetInteriorPlane = finiteBox(sashBox)
+        ? (interiorSign >= 0 ? sashBox.max[normalAxis] + safeGap : sashBox.min[normalAxis] - safeGap)
+        : null;
+      [...(rig.screenParts || []), ...(rig.screenPullParts || [])].forEach((part) => {
+        const partBox = part.baseWorldBox || new THREE.Box3().setFromObject(part.node);
+        if (!finiteBox(partBox) || screenTargetInteriorPlane == null) {
+          part.trackWorldOffset = new THREE.Vector3();
+          return;
+        }
+        const currentPlane = interiorSign >= 0 ? partBox.min[normalAxis] : partBox.max[normalAxis];
+        const offset = new THREE.Vector3();
+        offset[normalAxis] = screenTargetInteriorPlane - currentPlane;
+        part.trackWorldOffset = offset;
+      });
+      (rig.screenParts || []).forEach((part) => {
+        const node = part.node;
+        if (!node?.parent) return;
+        const releaseAxis = part.releaseAxis || "y";
+        const baseTopY = Number.isFinite(part.baseWorldTopY) ? part.baseWorldTopY : part.baseWorldPosition.y;
+        const baseBottomY = Number.isFinite(part.baseWorldBottomY) ? part.baseWorldBottomY : baseTopY;
+        const baseOriginY = Number.isFinite(part.baseWorldPosition?.y) ? part.baseWorldPosition.y : (baseTopY + baseBottomY) * 0.5;
+        const baseAxisScale = Math.abs(part.baseScale?.[releaseAxis] || 1);
+        const baseHeight = Math.max(0.001, Math.abs(baseTopY - baseBottomY));
+        const targetScaleFactor = Math.max(1, Math.min(6.2, rig.screenClosedWorldHeight / baseHeight));
+        part.closedScale = part.baseScale.clone();
+        part.closedScale[releaseAxis] = part.baseScale[releaseAxis] * targetScaleFactor;
+        const closedTopY = Number.isFinite(rig.screenTopY) ? rig.screenTopY : baseTopY;
+        const closedBottomY = Number.isFinite(rig.screenClosedBottomY) ? rig.screenClosedBottomY : baseBottomY;
+        const axisScaleFactor = Math.abs(part.closedScale[releaseAxis]) / Math.max(baseAxisScale, 0.001);
+        const closedOriginY = closedTopY - (baseTopY - baseOriginY) * axisScaleFactor;
+        const closeWorldPosition = part.baseWorldPosition.clone().add(part.trackWorldOffset || new THREE.Vector3());
+        closeWorldPosition.y = closedOriginY;
+        node.parent.updateMatrixWorld(true);
+        part.closedPosition = node.parent.worldToLocal(closeWorldPosition.clone());
+        part.openPosition = node.parent.worldToLocal(part.baseWorldPosition.clone().add(part.trackWorldOffset || new THREE.Vector3()));
+        part.openScale = part.baseScale.clone();
+        part.screenClosedTopY = closedTopY;
+        part.screenClosedBottomY = closedBottomY;
+      });
+      (rig.screenPullParts || []).forEach((part) => {
+        const node = part.node;
+        if (!node?.parent) return;
+        const openWorldPosition = part.baseWorldPosition.clone().add(part.trackWorldOffset || new THREE.Vector3());
+        const closedWorldPosition = openWorldPosition.clone();
+        const closedBottomY = Number.isFinite(rig.screenClosedBottomY) ? rig.screenClosedBottomY : openWorldPosition.y;
+        const baseBottomY = Number.isFinite(rig.screenBaseBottomY) ? rig.screenBaseBottomY : openWorldPosition.y;
+        const pullToScreenBottomOffsetY = Number.isFinite(part.baseWorldPosition?.y)
+          ? part.baseWorldPosition.y - baseBottomY
+          : 0;
+        closedWorldPosition.y = closedBottomY + pullToScreenBottomOffsetY;
+        node.parent.updateMatrixWorld(true);
+        part.openPosition = node.parent.worldToLocal(openWorldPosition.clone());
+        part.closedPosition = node.parent.worldToLocal(closedWorldPosition);
+        part.openScale = part.baseScale.clone();
+        part.closedScale = part.baseScale.clone();
+        part.pullToScreenBottomOffsetY = pullToScreenBottomOffsetY;
+      });
+      rig.chainWorldDirection = new THREE.Vector3();
+      if (meta.normalAxis && Number.isFinite(meta.exteriorSign)) {
+        rig.chainWorldDirection[meta.normalAxis] = meta.exteriorSign;
+      } else {
+        rig.chainWorldDirection.set(0, 0, 1).applyQuaternion(group.getWorldQuaternion(new THREE.Quaternion()));
+        rig.chainWorldDirection.y = 0;
+      }
+      if (rig.chainWorldDirection.lengthSq() < 1e-6) rig.chainWorldDirection.set(0, 0, 1);
+      rig.chainWorldDirection.normalize();
     }
+    rig.pushOpenSign = estimateHybridPushOpenSign(rig, group);
     rig.lastOpen = null;
     rig.lastRelease = null;
+    rig.lastDiagnosticOpen = null;
     return rig;
   }
 
@@ -3348,6 +3756,97 @@ ${shader.fragmentShader}`;
     if (!node?.parent || !worldPosition) return;
     node.parent.updateMatrixWorld(true);
     node.position.copy(node.parent.worldToLocal(worldPosition.clone()));
+  }
+
+  function getHybridWorldNormalDirection(group, side = "interior") {
+    const meta = group?.userData?.hybridPushWindow || {};
+    const axis = meta.normalAxis || meta.depthAxis || "z";
+    const sign = side === "exterior"
+      ? (Number.isFinite(meta.exteriorSign) ? meta.exteriorSign : -1)
+      : (Number.isFinite(meta.interiorSign) ? meta.interiorSign : 1);
+    const direction = new THREE.Vector3();
+    direction[axis] = sign;
+    if (direction.lengthSq() < 1e-6) direction.set(0, 0, side === "exterior" ? -1 : 1);
+    return direction.normalize();
+  }
+
+  function moveHybridMotionPartsByWorldOffset(parts = [], offset = new THREE.Vector3()) {
+    if (!offset || offset.lengthSq() < 1e-10) return;
+    const worldPosition = new THREE.Vector3();
+    parts.forEach((part) => {
+      const node = part?.node;
+      if (!node?.parent) return;
+      node.getWorldPosition(worldPosition);
+      worldPosition.add(offset);
+      moveNodeToWorldPosition(node, worldPosition);
+      node.updateMatrixWorld(true);
+    });
+  }
+
+  function measureHybridScreenSashClearance(group, rig) {
+    const screenBox = getUnionWorldBox([...(rig?.screenParts || []), ...(rig?.screenPullParts || [])]);
+    const sashBox = rig?.pushPivot ? new THREE.Box3().setFromObject(rig.pushPivot) : null;
+    if (!finiteBox(screenBox) || !finiteBox(sashBox)) return null;
+    const meta = group?.userData?.hybridPushWindow || {};
+    const normalAxis = meta.normalAxis || meta.depthAxis || "z";
+    const interiorSign = Number.isFinite(meta.interiorSign) ? meta.interiorSign : 1;
+    const horizontalAxis = normalAxis === "x" ? "z" : "x";
+    const overlapOnAxis = (axis) => Math.min(screenBox.max[axis], sashBox.max[axis]) - Math.max(screenBox.min[axis], sashBox.min[axis]);
+    const overlapHorizontal = overlapOnAxis(horizontalAxis);
+    const overlapVertical = overlapOnAxis("y");
+    const normalGap = interiorSign >= 0
+      ? screenBox.min[normalAxis] - sashBox.max[normalAxis]
+      : sashBox.min[normalAxis] - screenBox.max[normalAxis];
+    return {
+      normalAxis,
+      interiorSign,
+      normalGap,
+      overlapHorizontal,
+      overlapVertical,
+      intersects: overlapHorizontal > 0 && overlapVertical > 0 && normalGap < 0,
+      screenBox,
+      sashBox
+    };
+  }
+
+  function enforceHybridScreenSashClearance(group, rig) {
+    const clearance = measureHybridScreenSashClearance(group, rig);
+    if (!clearance) return null;
+    const fittedBox = new THREE.Box3().setFromObject(group);
+    const fittedHeight = finiteBox(fittedBox) ? Math.max(0.001, fittedBox.max.y - fittedBox.min.y) : 1;
+    const margin = Math.max(0.006, Math.min(0.028, fittedHeight * 0.008));
+    let appliedOffset = 0;
+    if (clearance.overlapHorizontal > 0 && clearance.overlapVertical > 0 && clearance.normalGap < margin) {
+      appliedOffset = Math.min(Math.max(margin - clearance.normalGap, 0), Math.max(0.018, fittedHeight * 0.035));
+      const offset = getHybridWorldNormalDirection(group, "interior").multiplyScalar(appliedOffset);
+      moveHybridMotionPartsByWorldOffset(rig.screenParts || [], offset);
+      moveHybridMotionPartsByWorldOffset(rig.screenPullParts || [], offset);
+    }
+    const after = measureHybridScreenSashClearance(group, rig) || clearance;
+    group.userData.hybridScreenSashClearance = {
+      normalAxis: after.normalAxis,
+      normalGap: +Number(after.normalGap || 0).toFixed(4),
+      overlapHorizontal: +Number(after.overlapHorizontal || 0).toFixed(4),
+      overlapVertical: +Number(after.overlapVertical || 0).toFixed(4),
+      intersects: !!after.intersects,
+      appliedOffset: +Number(appliedOffset || 0).toFixed(4)
+    };
+    return group.userData.hybridScreenSashClearance;
+  }
+
+  function updateHybridAssemblyClearanceDiagnostics(group, rig, open = 0) {
+    const clearance = measureHybridScreenSashClearance(group, rig);
+    if (!clearance) return null;
+    group.userData.hybridScreenSashClearance = {
+      normalAxis: clearance.normalAxis,
+      normalGap: +Number(clearance.normalGap || 0).toFixed(4),
+      overlapHorizontal: +Number(clearance.overlapHorizontal || 0).toFixed(4),
+      overlapVertical: +Number(clearance.overlapVertical || 0).toFixed(4),
+      intersects: !!clearance.intersects,
+      appliedOffset: 0,
+      open: +Number(open || 0).toFixed(3)
+    };
+    return group.userData.hybridScreenSashClearance;
   }
 
   function getObjectWorldHeight(object) {
@@ -3363,6 +3862,8 @@ ${shader.fragmentShader}`;
     const screenPanelNodes = [];
     const screenThreadFallbackNodes = [];
     const screenNodeSet = new Set();
+    const screenPullNodes = [];
+    const screenPullNodeSet = new Set();
     const bottomChainNodes = [];
     const bottomChainNodeSet = new Set();
 
@@ -3372,19 +3873,25 @@ ${shader.fragmentShader}`;
       if (!pushPivot && name.includes("hidden_left_reveal_side_swing_pivot")) {
         pushPivot = node;
       }
-      const isBottomChainNode =
-        name.includes("bottom chain opener moving seat") ||
-        name.includes("chain opener segment");
-      if (isBottomChainNode && !bottomChainNodeSet.has(node)) {
+      const isBottomChainNode = isHybridBottomHardwareNode(node);
+      if ((node.isMesh || node.isGroup || node.type === "Object3D") && isBottomChainNode && !bottomChainNodeSet.has(node)) {
         bottomChainNodeSet.add(node);
         bottomChainNodes.push(node);
       }
-      if (!node.isMesh || screenNodeSet.has(node)) return;
-      const isScreenPanel = materialName.includes("semi_transparent_fine_insect_screen_mesh");
-      const isThreadFallback =
-        name.includes("screen_mesh_threads") ||
-        name.includes("screen_cross_threads") ||
-        materialName.includes("screen_cross_threads");
+      if ((!node.isMesh && !node.isLineSegments) || screenNodeSet.has(node)) return;
+      const isScreenPanel = isHybridScreenPanelNode(node);
+      const isThreadFallback = isHybridScreenThreadNode(node);
+      const isPullBar =
+        name.includes("test003") ||
+        name.includes("test004") ||
+        name.includes("pull_bar") ||
+        name.includes("bottom_bar") ||
+        name.includes("screen_release") ||
+        name.includes("screen_handle");
+      if (isPullBar && !screenPullNodeSet.has(node)) {
+        screenPullNodeSet.add(node);
+        screenPullNodes.push(node);
+      }
       if (isScreenPanel || isThreadFallback) {
         screenNodeSet.add(node);
         if (isScreenPanel) screenPanelNodes.push(node);
@@ -3393,7 +3900,7 @@ ${shader.fragmentShader}`;
     });
 
     const screenNodes = screenPanelNodes.length ? screenPanelNodes : screenThreadFallbackNodes;
-    if (!pushPivot && !screenNodes.length && !bottomChainNodes.length) return null;
+    if (!pushPivot && !screenNodes.length && !screenPullNodes.length && !bottomChainNodes.length) return null;
     const screenHeight = Math.max(...screenNodes.map((node) => getObjectWorldHeight(node)), 0);
     const screenTravel = Math.max(0.22, Math.min(0.7, screenHeight * 0.42 || 0.36));
     const rig = {
@@ -3401,7 +3908,7 @@ ${shader.fragmentShader}`;
       cycleSeconds: CHUANGSHA_AUTO_CYCLE_SECONDS,
       pushPivot,
       pushBaseRotation: pushPivot ? pushPivot.rotation.clone() : null,
-      pushOpenAngle: THREE.MathUtils.degToRad(38),
+      pushOpenAngle: THREE.MathUtils.degToRad(52),
       pushOpenSign: 1,
       screenTravel,
       screenParts: screenNodes.map((node) => {
@@ -3414,8 +3921,12 @@ ${shader.fragmentShader}`;
           releaseSign: axisInfo.releaseSign
         };
       }),
-      bottomChainParts: bottomChainNodes.map((node) => captureHybridMotionTransform(node)),
-      bottomChainTravel: Math.max(0.045, Math.min(0.16, screenTravel * 0.18)),
+      screenPullParts: screenPullNodes.map((node) => captureHybridMotionTransform(node)),
+      bottomChainParts: bottomChainNodes.map((node) => ({
+        ...captureHybridMotionTransform(node),
+        moving: getHybridMotionNodeName(node).includes("moving seat") || getHybridMotionNodeName(node).includes("segment")
+      })),
+      bottomChainTravel: Math.max(0.018, Math.min(0.065, screenTravel * 0.08)),
       lastOpen: null,
       lastRelease: null
     };
@@ -3735,15 +4246,15 @@ ${shader.fragmentShader}`;
     const duration = CHUANGSHA_AUTO_CYCLE_SECONDS;
     const elapsed = Number.isFinite(elapsedSeconds) ? elapsedSeconds : 0;
     const phase = ((elapsed % duration) + duration) % duration;
-    if (phase < 2) return { open: 0, release: 0, stage: "closed-hold", phase, cycleSeconds: duration };
-    if (phase < 7) {
-      const t = smoothChuangshaMotion((phase - 2) / 5);
-      return { open: t, release: Math.min(1, t * 1.25), stage: "opening", phase, cycleSeconds: duration };
+    if (phase < 3) return { open: 0, release: 0, stage: "closed-hold", phase, cycleSeconds: duration };
+    if (phase < 9) {
+      const t = smoothChuangshaMotion((phase - 3) / 6);
+      return { open: t, release: Math.min(1, t * 0.85), stage: "opening", phase, cycleSeconds: duration };
     }
-    if (phase < 10) return { open: 1, release: 0.22, stage: "open-hold", phase, cycleSeconds: duration };
-    if (phase < 16) {
-      const t = smoothChuangshaMotion((phase - 10) / 6);
-      return { open: 1 - t, release: Math.max(0, 0.2 - t * 0.2), stage: "closing", phase, cycleSeconds: duration };
+    if (phase < 12) return { open: 1, release: 0.16, stage: "open-hold", phase, cycleSeconds: duration };
+    if (phase < 18) {
+      const t = smoothChuangshaMotion((phase - 12) / 6);
+      return { open: 1 - t, release: Math.max(0, 0.16 - t * 0.16), stage: "closing", phase, cycleSeconds: duration };
     }
     return { open: 0, release: 0, stage: "closed-rest", phase, cycleSeconds: duration };
   }
@@ -3781,12 +4292,13 @@ ${shader.fragmentShader}`;
     return true;
   }
 
-  function applyExportedHybridAssemblyMotionToGroup(group, openAmount = 0, releaseAmount = 0) {
+  function applyExportedHybridAssemblyMotionToGroup(group, openAmount = 0, releaseAmount = 0, options = {}) {
     const rig = group?.userData?.hybridAssemblyMotionRig;
     if (!rig) return false;
     const open = smoothChuangshaMotion(openAmount);
     const release = smoothChuangshaMotion(releaseAmount);
     if (
+      !options.force &&
       rig.lastOpen !== null &&
       Math.abs((rig.lastOpen || 0) - open) < 0.0005 &&
       Math.abs((rig.lastRelease || 0) - release) < 0.0005
@@ -3819,40 +4331,54 @@ ${shader.fragmentShader}`;
     (rig.screenParts || []).forEach((part) => {
       const node = part.node;
       if (!node?.parent) return;
-      node.position.copy(part.basePosition);
+      const screenDrop = 1 - open;
+      const fromPosition = part.openPosition || part.basePosition;
+      const toPosition = part.closedPosition || part.basePosition;
+      const fromScale = part.openScale || part.baseScale;
+      const toScale = part.closedScale || part.baseScale;
+      node.position.copy(fromPosition).lerp(toPosition, screenDrop);
       node.rotation.copy(part.baseRotation);
-      node.scale.copy(part.baseScale);
-      const worldPosition = part.baseWorldPosition.clone();
-      worldPosition.y += (rig.screenTravel || 0.36) * open;
-      moveNodeToWorldPosition(node, worldPosition);
+      node.scale.copy(fromScale).lerp(toScale, screenDrop);
+      const releaseAxis = part.releaseAxis || "y";
+      const scaleRatio = Math.abs(node.scale[releaseAxis] / Math.max(Math.abs(part.baseScale?.[releaseAxis] || 1), 0.001));
+      updateHybridScreenVisualDensity(part, scaleRatio);
       node.updateMatrixWorld(true);
     });
-    const chainWorldDirection = new THREE.Vector3();
-    const pushMeta = group.userData.hybridPushWindow || null;
-    if (pushMeta?.normalAxis && Number.isFinite(pushMeta.exteriorSign)) {
-      chainWorldDirection[pushMeta.normalAxis] = pushMeta.exteriorSign;
-    } else {
-      chainWorldDirection.set(0, 0, 1).applyQuaternion(group.getWorldQuaternion(new THREE.Quaternion()));
-      chainWorldDirection.y = 0;
-    }
-    if (chainWorldDirection.lengthSq() < 1e-6) chainWorldDirection.set(0, 0, 1);
-    chainWorldDirection.normalize();
+    (rig.screenPullParts || []).forEach((part) => {
+      const node = part.node;
+      if (!node?.parent) return;
+      const screenDrop = 1 - open;
+      const fromPosition = part.openPosition || part.basePosition;
+      const toPosition = part.closedPosition || part.basePosition;
+      node.position.copy(fromPosition).lerp(toPosition, screenDrop);
+      node.rotation.copy(part.baseRotation);
+      node.scale.copy(part.baseScale);
+      node.rotation.z += release * -0.055;
+      node.updateMatrixWorld(true);
+    });
+    const chainWorldDirection = rig.chainWorldDirection || new THREE.Vector3(0, 0, 1);
     (rig.bottomChainParts || []).forEach((part) => {
       const node = part.node;
       if (!node?.parent) return;
+      if (!part.moving) return;
       node.position.copy(part.basePosition);
       node.rotation.copy(part.baseRotation);
       node.scale.copy(part.baseScale);
-      const worldPosition = part.baseWorldPosition.clone().addScaledVector(chainWorldDirection, (rig.bottomChainTravel || 0.08) * open);
+      const worldPosition = part.scratchWorldPosition || new THREE.Vector3();
+      worldPosition.copy(part.baseWorldPosition).addScaledVector(chainWorldDirection, (rig.bottomChainTravel || 0.04) * open);
       moveNodeToWorldPosition(node, worldPosition);
       node.updateMatrixWorld(true);
     });
+    if (rig.lastDiagnosticOpen === null || Math.abs((rig.lastDiagnosticOpen || 0) - open) > 0.18) {
+      rig.lastDiagnosticOpen = open;
+      updateHybridAssemblyClearanceDiagnostics(group, rig, open);
+    }
     return !!(rig.pushPivot || rig.screenParts?.length || rig.bottomChainParts?.length);
   }
 
-  function applyChuangshaProductMotionToGroup(group, openAmount = 0, releaseAmount = 0) {
+  function applyChuangshaProductMotionToGroup(group, openAmount = 0, releaseAmount = 0, options = {}) {
     const screenChanged = applyChuangshaMotionToGroup(group, openAmount, releaseAmount);
-    const assemblyChanged = applyExportedHybridAssemblyMotionToGroup(group, openAmount, releaseAmount);
+    const assemblyChanged = applyExportedHybridAssemblyMotionToGroup(group, openAmount, releaseAmount, options);
     return screenChanged || assemblyChanged;
   }
 
@@ -3861,6 +4387,8 @@ ${shader.fragmentShader}`;
     const groups = getChuangshaMotionGroups();
     if (!groups.length) return false;
     const nowMs = typeof performance !== "undefined" ? performance.now() : Date.now();
+    if (nowMs - chuangshaAutoCycleLastUpdateMs < CHUANGSHA_AUTO_CYCLE_UPDATE_MS) return false;
+    chuangshaAutoCycleLastUpdateMs = nowMs;
     const elapsed = (nowMs - chuangshaAutoCycleStartMs) / 1000;
     const state = getChuangshaAutoCycleStateAt(elapsed);
     let changed = false;
@@ -3868,7 +4396,7 @@ ${shader.fragmentShader}`;
     let screenPartCount = 0;
     let bottomChainPartCount = 0;
     groups.forEach((group) => {
-      changed = applyChuangshaProductMotionToGroup(group, state.open, state.release) || changed;
+      changed = applyChuangshaProductMotionToGroup(group, state.open, state.release, { force: true }) || changed;
       group.userData.chuangshaAutoCycleState = state;
       group.userData.chuangshaMotionState = state;
       const rig = group.userData.hybridAssemblyMotionRig || null;
@@ -3876,7 +4404,8 @@ ${shader.fragmentShader}`;
       screenPartCount += rig?.screenParts?.length || 0;
       bottomChainPartCount += rig?.bottomChainParts?.length || 0;
     });
-    if (typeof document !== "undefined" && document.body) {
+    if (typeof document !== "undefined" && document.body && (!updateChuangshaAutoCycle._lastDatasetMs || nowMs - updateChuangshaAutoCycle._lastDatasetMs > 240)) {
+      updateChuangshaAutoCycle._lastDatasetMs = nowMs;
       document.body.dataset.chuangshaAutoCycleState = JSON.stringify({
         enabled: true,
         elapsed: +elapsed.toFixed(2),
@@ -3928,7 +4457,7 @@ ${shader.fragmentShader}`;
   function resetChuangshaProductMotion(tag = null) {
     let changed = false;
     getChuangshaMotionGroups(tag).forEach((group) => {
-      changed = applyChuangshaProductMotionToGroup(group, 0, 0) || changed;
+      changed = applyChuangshaProductMotionToGroup(group, 0, 0, { force: true }) || changed;
       group.userData.chuangshaMotionState = { open: 0, release: 0, stage: "closed" };
     });
     if (typeof document !== "undefined" && document.body) {
@@ -3995,23 +4524,139 @@ ${shader.fragmentShader}`;
     wrapper.name = "replacement:window:hybrid-assembly";
     const content = asset.root.clone(true);
     content.traverse((node) => {
+      if (isHybridScreenThreadNode(node)) {
+        node.visible = false;
+        node.userData.hybridScreenThreadHiddenForStability = true;
+        if (node.material) {
+          const threadMaterials = Array.isArray(node.material) ? node.material : [node.material];
+          threadMaterials.forEach((mat) => {
+            if (!mat) return;
+            mat.transparent = true;
+            mat.opacity = 0;
+            mat.depthWrite = false;
+            mat.color?.setHex?.(0xd8ded6);
+            mat.needsUpdate = true;
+          });
+        }
+        return;
+      }
       if (node.isMesh) {
         if (node.geometry?.clone) node.geometry = node.geometry.clone();
         const mats = Array.isArray(node.material) ? node.material : [node.material];
         node.material = Array.isArray(node.material)
           ? mats.map((mat) => mat?.clone?.() || mat)
           : (node.material?.clone?.() || node.material);
-        node.castShadow = true;
-        node.receiveShadow = true;
+        node.castShadow = false;
+        node.receiveShadow = false;
         node.frustumCulled = false;
         const materialList = Array.isArray(node.material) ? node.material : [node.material];
         materialList.forEach((mat) => {
           if (!mat) return;
           if (scene.environment && "envMap" in mat) mat.envMap = scene.environment;
           if ("envMapIntensity" in mat) mat.envMapIntensity = Math.max(mat.envMapIntensity || 0, 1.2);
+          const roleMaterial = isHybridGlassNode(node) || isHybridScreenPanelNode(node) || isHybridScreenThreadNode(node)
+            ? null
+            : makeHybridAssemblyRoleMaterial(node);
+          if (roleMaterial) {
+            node.material = roleMaterial.material;
+            node.userData.hybridMaterialRole = roleMaterial.role;
+            if (roleMaterial.role === "bottom-display") {
+              node.castShadow = false;
+              node.receiveShadow = false;
+              node.renderOrder = Math.max(node.renderOrder || 0, 42);
+            } else if (roleMaterial.role === "control-button") {
+              node.renderOrder = Math.max(node.renderOrder || 0, 43);
+            } else if (roleMaterial.role === "bright-hardware") {
+              node.renderOrder = Math.max(node.renderOrder || 0, 32);
+            } else if (roleMaterial.role === "dark-seal") {
+              node.renderOrder = Math.max(node.renderOrder || 0, 30);
+            }
+            return;
+          }
+          if (isHybridGlassNode(node)) {
+            node.material = makeHybridPremiumGlassMaterial();
+            node.castShadow = false;
+            node.receiveShadow = false;
+            node.renderOrder = Math.max(node.renderOrder || 0, 22);
+            node.userData.hybridMaterialRole = "premium-glass";
+            return;
+          }
+          if (isHybridBottomDisplayNode(node)) {
+            const displayMat = getChuangshaMaterialSet().display.clone();
+            displayMat.name = "hybrid_bottom_black_display_screen";
+            if (scene.environment && "envMap" in displayMat) displayMat.envMap = scene.environment;
+            node.material = displayMat;
+            node.castShadow = false;
+            node.receiveShadow = false;
+            node.renderOrder = Math.max(node.renderOrder || 0, 42);
+            node.userData.hybridMaterialRole = "bottom-display";
+            return;
+          }
+          if (isHybridControlButtonNode(node)) {
+            const buttonMat = getChuangshaMaterialSet().button.clone();
+            buttonMat.name = "hybrid_bottom_satin_control_button";
+            if (scene.environment && "envMap" in buttonMat) buttonMat.envMap = scene.environment;
+            node.material = buttonMat;
+            node.renderOrder = Math.max(node.renderOrder || 0, 43);
+            node.userData.hybridMaterialRole = "control-button";
+            return;
+          }
           if (isHybridGlassNode(node)) tuneHybridGlassMaterial(mat);
+          if (isHybridScreenPanelNode(node)) {
+            mat.transparent = true;
+            mat.opacity = Math.min(mat.opacity ?? 0.54, 0.58);
+            mat.depthWrite = false;
+            mat.depthTest = true;
+            if ("alphaTest" in mat) mat.alphaTest = 0;
+            if ("roughness" in mat) mat.roughness = Math.max(mat.roughness ?? 0.85, 0.94);
+            if ("metalness" in mat) mat.metalness = 0;
+            if ("envMapIntensity" in mat) mat.envMapIntensity = Math.min(mat.envMapIntensity || 0.05, 0.08);
+            mat.polygonOffset = true;
+            mat.polygonOffsetFactor = -0.5;
+            mat.polygonOffsetUnits = -0.5;
+          }
+          if (isHybridScreenThreadNode(node)) {
+            mat.transparent = true;
+            mat.opacity = Math.min(mat.opacity ?? 0.035, 0.05);
+            mat.depthWrite = false;
+            mat.depthTest = true;
+          }
           mat.needsUpdate = true;
         });
+        if (isHybridScreenPanelNode(node)) node.renderOrder = Math.max(node.renderOrder || 0, 18);
+        if (isHybridScreenThreadNode(node)) {
+          node.visible = false;
+          node.userData.hybridScreenThreadHiddenForStability = true;
+          node.renderOrder = Math.max(node.renderOrder || 0, 19);
+        }
+        if (isHybridBottomHardwareNode(node)) node.renderOrder = Math.max(node.renderOrder || 0, 35);
+        if (isHybridScreenPanelNode(node)) {
+          node.castShadow = false;
+          node.receiveShadow = false;
+          clearChuangshaGeneratedScreenOverlays(node);
+          const planeInfo = getGeometryPlaneInfo(node.geometry);
+          applyChuangshaScreenUvs(node, planeInfo);
+          addChuangshaScreenInsetRetainers(node, getChuangshaMaterialSet().frame, planeInfo);
+          const screenMaterial = getChuangshaMaterialSet().screen.clone();
+          screenMaterial.name = "hybrid_premium_retractable_screen_mesh";
+          if (screenMaterial.map?.clone) {
+            screenMaterial.map = screenMaterial.map.clone();
+            screenMaterial.map.needsUpdate = true;
+          }
+          screenMaterial.alphaMap = null;
+          screenMaterial.opacity = 0.54;
+          screenMaterial.transparent = true;
+          screenMaterial.depthWrite = false;
+          screenMaterial.depthTest = true;
+          screenMaterial.side = THREE.DoubleSide;
+          if ("alphaTest" in screenMaterial) screenMaterial.alphaTest = 0;
+          screenMaterial.polygonOffset = true;
+          screenMaterial.polygonOffsetFactor = -1;
+          screenMaterial.polygonOffsetUnits = -1;
+          screenMaterial.needsUpdate = true;
+          node.material = screenMaterial;
+          captureHybridScreenVisualState(node);
+        }
       }
     });
     wrapper.add(content);
@@ -4111,7 +4756,11 @@ ${shader.fragmentShader}`;
     const sx = (targetSize[widthAxis] / Math.max(sourceSize[widthAxis], 0.001)) * fitPadding;
     const sy = (targetSize.y / Math.max(sourceSize.y, 0.001)) * heightPadding;
     const sz = (targetSize[depthAxis] / Math.max(sourceSize[depthAxis], 0.001)) * depthPadding;
-    group.scale.set(Math.max(sx, 0.001), Math.max(sy, 0.001), Math.max(sz, 0.001));
+    const preserveProductDepth = options.preserveProductDepth !== false;
+    const productDepthScale = preserveProductDepth
+      ? Math.max(Math.min(sx, sy) * (options.depthBodyScale ?? 1.0), 0.001)
+      : Math.max(sz, 0.001);
+    group.scale.set(Math.max(sx, 0.001), Math.max(sy, 0.001), productDepthScale);
     group.updateMatrixWorld(true);
 
     const scaledBox = new THREE.Box3().setFromObject(group);
@@ -4122,7 +4771,6 @@ ${shader.fragmentShader}`;
       targetCenter.z - scaledCenter.z
     );
     group.updateMatrixWorld(true);
-    refreshExportedHybridAssemblyMotionRigBase(group);
 
     const worldInteriorSign = sceneCenter[depthAxis] >= targetCenter[depthAxis] ? 1 : -1;
     const worldExteriorSign = -worldInteriorSign;
@@ -4158,13 +4806,17 @@ ${shader.fragmentShader}`;
       sourceProductBody: "hybrid-window-assembly.glb",
       sourceComposition: "complete exported product assembly from hybrid-window.html"
     };
+    refreshExportedHybridAssemblyMotionRigBase(group);
 
     return {
       rotationY,
       widthAxis,
       depthAxis,
       exportedWholeAssembly: true,
+      preserveProductDepth,
+      depthScaleMode: preserveProductDepth ? "source-product-depth" : "window-opening-depth",
       scale: group.scale.toArray().map((n) => +n.toFixed(4)),
+      rawDepthScale: +sz.toFixed(4),
       targetBox: boxSnapshot(targetBox),
       fittedBox: boxSnapshot(new THREE.Box3().setFromObject(group))
     };
@@ -6765,6 +7417,10 @@ ${shader.fragmentShader}`;
         const state = group.userData.chuangshaMotionState || { open: 0, release: 0, stage: "closed" };
         const rig = group.userData.chuangshaMotionRig || null;
         const assemblyRig = group.userData.hybridAssemblyMotionRig || null;
+        const screenBox = getUnionWorldBox(assemblyRig?.screenParts || []);
+        const pullBox = getUnionWorldBox(assemblyRig?.screenPullParts || []);
+        const screenBottomY = screenBox && finiteBox(screenBox) ? screenBox.min.y : null;
+        const pullCenterY = pullBox && finiteBox(pullBox) ? pullBox.getCenter(new THREE.Vector3()).y : null;
         return {
           tag: String(group.userData.replacedWindowTag || ""),
           stage: state.stage,
@@ -6776,7 +7432,27 @@ ${shader.fragmentShader}`;
           pushOpenAngleDeg: Number.isFinite(assemblyRig?.pushOpenAngle)
             ? +THREE.MathUtils.radToDeg(assemblyRig.pushOpenAngle).toFixed(1)
             : null,
+          pushOpenSign: assemblyRig?.pushOpenSign ?? null,
           screenParts: assemblyRig?.screenParts?.map((part) => part.node?.name || null).filter(Boolean) || [],
+          screenPullParts: assemblyRig?.screenPullParts?.map((part) => part.node?.name || null).filter(Boolean) || [],
+          screenClosedScale: Number.isFinite(assemblyRig?.screenClosedScale)
+            ? +assemblyRig.screenClosedScale.toFixed(3)
+            : null,
+          screenTravel: Number.isFinite(assemblyRig?.screenTravel)
+            ? +assemblyRig.screenTravel.toFixed(3)
+            : null,
+          screenClosedBottomY: Number.isFinite(assemblyRig?.screenClosedBottomY)
+            ? +assemblyRig.screenClosedBottomY.toFixed(3)
+            : null,
+          screenBaseBottomY: Number.isFinite(assemblyRig?.screenBaseBottomY)
+            ? +assemblyRig.screenBaseBottomY.toFixed(3)
+            : null,
+          screenBottomY: Number.isFinite(screenBottomY) ? +screenBottomY.toFixed(3) : null,
+          pullCenterY: Number.isFinite(pullCenterY) ? +pullCenterY.toFixed(3) : null,
+          screenPullDeltaY: Number.isFinite(screenBottomY) && Number.isFinite(pullCenterY)
+            ? +(pullCenterY - screenBottomY).toFixed(3)
+            : null,
+          screenSashClearance: group.userData.hybridScreenSashClearance || null,
           bottomChainParts: assemblyRig?.bottomChainParts?.map((part) => part.node?.name || null).filter(Boolean) || [],
           openTravel: Number.isFinite(rig?.openTravel) ? +rig.openTravel.toFixed(3) : null,
           movableParts: rig?.parts?.map((part) => ({
@@ -6813,9 +7489,11 @@ ${shader.fragmentShader}`;
             cycleSeconds: CHUANGSHA_AUTO_CYCLE_SECONDS,
             pushPivot: assemblyRig?.pushPivot?.name || null,
             screenParts: assemblyRig?.screenParts?.length || 0,
+            screenPullParts: assemblyRig?.screenPullParts?.length || 0,
             bottomChainParts: assemblyRig?.bottomChainParts?.length || 0,
             stage: group.userData.chuangshaAutoCycleState?.stage || null,
-            open: +Number(group.userData.chuangshaAutoCycleState?.open || 0).toFixed(3)
+            open: +Number(group.userData.chuangshaAutoCycleState?.open || 0).toFixed(3),
+            screenSashClearance: group.userData.hybridScreenSashClearance || null
           },
           meta: group.userData.hybridPushWindow || null
         };
@@ -9028,6 +9706,8 @@ ${shader.fragmentShader}`;
     debugChuangshaMotionState,
     debugHybridPushWindowAssemblies,
     setChuangshaAutoCycleEnabled,
+    setChuangshaProductMotionAtTime,
+    resetChuangshaProductMotion,
     debugObjectFocusedInteriorTour,
     getWindowInventory,
     selectAllWindows,
